@@ -1,0 +1,555 @@
+import { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import type { Friend, GiftRecommendation, SavedGift } from "@shared/schema";
+import { FriendForm } from "../components/FriendForm";
+
+function Home() {
+  const [activeTab, setActiveTab] = useState("friends");
+  const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null);
+  const [recommendations, setRecommendations] = useState<GiftRecommendation[]>([]);
+  const [budget, setBudget] = useState("");
+  const [budgetValue, setBudgetValue] = useState(50); // Numeric value for slider
+  const [showFriendForm, setShowFriendForm] = useState(false);
+  const [editingFriend, setEditingFriend] = useState<Friend | null>(null);
+  const queryClient = useQueryClient();
+
+  // Helper function to get currency symbol
+  const getCurrencySymbol = (currency: string) => {
+    const symbols: Record<string, string> = {
+      'USD': '$',
+      'EUR': '€',
+      'GBP': '£',
+      'JPY': '¥',
+      'CAD': 'C$',
+      'AUD': 'A$',
+      'CHF': 'CHF',
+      'CNY': '¥',
+      'INR': '₹',
+      'BRL': 'R$',
+      'KRW': '₩',
+      'MXN': '$',
+      'RUB': '₽',
+      'ZAR': 'R',
+      'SEK': 'kr',
+      'NOK': 'kr',
+      'DKK': 'kr',
+      'PLN': 'zł',
+      'TRY': '₺',
+      'THB': '฿',
+    };
+    return symbols[currency] || currency;
+  };
+
+  // Get current currency based on selected friend
+  const currentCurrency = selectedFriend?.currency || 'USD';
+  const currencySymbol = getCurrencySymbol(currentCurrency);
+
+  // Update budget format when friend/currency changes
+  useEffect(() => {
+    if (selectedFriend && budget) {
+      // Update budget to use correct currency symbol if it contains a currency symbol
+      const numericPart = budget.replace(/[^\d]/g, '');
+      if (numericPart) {
+        setBudget(`${currencySymbol}${numericPart}`);
+      }
+    }
+  }, [selectedFriend?.currency, currencySymbol]);
+
+  // Fetch friends
+  const { data: friends = [], isLoading: friendsLoading } = useQuery({
+    queryKey: ["friends"],
+    queryFn: async (): Promise<Friend[]> => {
+      const response = await fetch("/api/friends");
+      if (!response.ok) throw new Error("Failed to fetch friends");
+      return response.json();
+    },
+  });
+
+  // Fetch saved gifts
+  const { data: savedGifts = [] } = useQuery({
+    queryKey: ["savedGifts"],
+    queryFn: async (): Promise<SavedGift[]> => {
+      const response = await fetch("/api/saved-gifts");
+      if (!response.ok) throw new Error("Failed to fetch saved gifts");
+      return response.json();
+    },
+  });
+
+  // Generate gift recommendations
+  const generateRecommendationsMutation = useMutation({
+    mutationFn: async ({ friendId, budget }: { friendId: string; budget: string }) => {
+      const response = await fetch("/api/gift-recommendations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ friendId, budget }),
+      });
+      if (!response.ok) throw new Error("Failed to generate recommendations");
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setRecommendations(data);
+      setActiveTab("recommendations");
+    },
+  });
+
+  // Save gift mutation
+  const saveGiftMutation = useMutation({
+    mutationFn: async ({ friendId, giftData }: { friendId: string; giftData: any }) => {
+      const response = await fetch("/api/saved-gifts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ friendId, giftData }),
+      });
+      if (!response.ok) throw new Error("Failed to save gift");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["savedGifts"] });
+    },
+  });
+
+  // Delete friend mutation
+  const deleteFriendMutation = useMutation({
+    mutationFn: async (friendId: string) => {
+      const response = await fetch(`/api/friends/${friendId}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) throw new Error("Failed to delete friend");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["friends"] });
+      queryClient.invalidateQueries({ queryKey: ["savedGifts"] });
+    },
+  });
+
+  // Delete saved gift mutation
+  const deleteSavedGiftMutation = useMutation({
+    mutationFn: async (giftId: string) => {
+      const response = await fetch(`/api/saved-gifts/${giftId}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) throw new Error("Failed to delete saved gift");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["savedGifts"] });
+    },
+  });
+
+  const handleGenerateRecommendations = () => {
+    if (selectedFriend && budget) {
+      generateRecommendationsMutation.mutate({
+        friendId: selectedFriend.id,
+        budget,
+      });
+    }
+  };
+
+  const handleSaveGift = (gift: GiftRecommendation) => {
+    if (selectedFriend) {
+      saveGiftMutation.mutate({
+        friendId: selectedFriend.id,
+        giftData: gift,
+      });
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-6xl mx-auto">
+          <h1 className="text-4xl font-bold text-center mb-8">
+            🎁 Gift Genie
+          </h1>
+          <p className="text-xl text-center text-gray-600 mb-12">
+            Find the perfect gift for your friends with AI-powered recommendations
+          </p>
+
+          {/* Tab Navigation */}
+          <div className="flex justify-center mb-8">
+            <div className="bg-white rounded-lg p-1 shadow-sm border">
+              {["friends", "generate", "recommendations", "saved"].map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`px-4 py-2 rounded-md capitalize transition-colors ${
+                    activeTab === tab
+                      ? "bg-blue-600 text-white"
+                      : "text-gray-600 hover:text-gray-900"
+                  }`}
+                >
+                  {tab === "generate" ? "Generate Gifts" : tab}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Friends Tab */}
+          {activeTab === "friends" && (
+            <div className="bg-white rounded-lg p-6 shadow-sm">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-semibold">👥 Your Friends</h2>
+                <button 
+                  onClick={() => setShowFriendForm(true)}
+                  className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+                >
+                  Add Friend
+                </button>
+              </div>
+              
+              {friendsLoading ? (
+                <div className="text-center py-8">Loading friends...</div>
+              ) : friends.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  No friends added yet. Add your first friend to get started!
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {friends.map((friend) => (
+                    <div
+                      key={friend.id}
+                      className="border rounded-lg p-4 hover:shadow-md transition-shadow"
+                    >
+                      <div className="flex items-center mb-3">
+                        {friend.profilePicture ? (
+                          <img
+                            src={friend.profilePicture}
+                            alt={friend.name}
+                            className="w-12 h-12 rounded-full mr-3 object-cover"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 bg-gray-200 rounded-full mr-3 flex items-center justify-center">
+                            👤
+                          </div>
+                        )}
+                        <div className="flex-1">
+                          <h3 className="font-semibold">{friend.name}</h3>
+                          <p className="text-sm text-gray-500">{friend.country}</p>
+                        </div>
+                        <div className="flex gap-1">
+                          <button
+                            onClick={() => {
+                              setEditingFriend(friend);
+                              setShowFriendForm(true);
+                            }}
+                            className="text-blue-600 hover:text-blue-800 p-1"
+                            title="Edit friend"
+                          >
+                            ✏️
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (confirm(`Are you sure you want to delete ${friend.name}?`)) {
+                                deleteFriendMutation.mutate(friend.id);
+                              }
+                            }}
+                            className="text-red-600 hover:text-red-800 p-1"
+                            title="Delete friend"
+                          >
+                            🗑️
+                          </button>
+                        </div>
+                      </div>
+                      <div className="mb-2">
+                        <p className="text-sm text-gray-600">Interests:</p>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {friend.interests.slice(0, 3).map((interest, index) => (
+                            <span
+                              key={index}
+                              className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded"
+                            >
+                              {interest}
+                            </span>
+                          ))}
+                          {friend.interests.length > 3 && (
+                            <span className="text-xs text-gray-500">
+                              +{friend.interests.length - 3} more
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="mb-3">
+                        <p className="text-sm text-gray-600">Personality:</p>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {friend.personalityTraits.slice(0, 2).map((trait, index) => (
+                            <span
+                              key={index}
+                              className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded"
+                            >
+                              {trait}
+                            </span>
+                          ))}
+                          {friend.personalityTraits.length > 2 && (
+                            <span className="text-xs text-gray-500">
+                              +{friend.personalityTraits.length - 2} more
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setSelectedFriend(friend);
+                          setActiveTab("generate");
+                        }}
+                        className="w-full bg-green-600 text-white py-2 rounded-md hover:bg-green-700 text-sm"
+                      >
+                        Generate Gifts
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Generate Tab */}
+          {activeTab === "generate" && (
+            <div className="bg-white rounded-lg p-6 shadow-sm">
+              <h2 className="text-2xl font-semibold mb-6">🤖 Generate Gift Recommendations</h2>
+              
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Select Friend</label>
+                  <select
+                    value={selectedFriend?.id || ""}
+                    onChange={(e) => {
+                      const friend = friends.find(f => f.id === e.target.value);
+                      setSelectedFriend(friend || null);
+                    }}
+                    className="w-full p-3 border rounded-md"
+                  >
+                    <option value="">Choose a friend...</option>
+                    {friends.map((friend) => (
+                      <option key={friend.id} value={friend.id}>
+                        {friend.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Budget: {currencySymbol}{budgetValue} {currentCurrency !== 'USD' ? `(${currentCurrency})` : ''}
+                  </label>
+                  
+                  {/* Budget slider */}
+                  <div className="mb-4 p-4 bg-gray-50 rounded-lg border">
+                    <div className="mb-2">
+                      <span className="text-sm text-gray-600">Drag to adjust budget</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="10"
+                      max="500"
+                      step="10"
+                      value={budgetValue}
+                      onChange={(e) => {
+                        const value = parseInt(e.target.value);
+                        setBudgetValue(value);
+                        setBudget(`${currencySymbol}${value}`);
+                      }}
+                      className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+                    />
+                    <div className="flex justify-between text-xs text-gray-500 mt-2">
+                      <span>{currencySymbol}10</span>
+                      <span>{currencySymbol}100</span>
+                      <span>{currencySymbol}250</span>
+                      <span>{currencySymbol}500</span>
+                    </div>
+                  </div>
+
+                  {/* Quick budget buttons */}
+                  <div className="grid grid-cols-4 gap-2 mb-4">
+                    {[25, 50, 100, 200].map((amount) => (
+                      <button
+                        key={amount}
+                        type="button"
+                        onClick={() => {
+                          setBudgetValue(amount);
+                          setBudget(`${currencySymbol}${amount}`);
+                        }}
+                        className={`px-3 py-2 rounded-md text-sm ${
+                          budgetValue === amount
+                            ? "bg-green-600 text-white"
+                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                        }`}
+                      >
+                        {currencySymbol}{amount}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Custom budget input */}
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Or enter custom budget:</label>
+                    <input
+                      type="text"
+                      value={budget}
+                      onChange={(e) => setBudget(e.target.value)}
+                      placeholder={`e.g., ${currencySymbol}50, ${currencySymbol}100-200, under ${currencySymbol}30`}
+                      className="w-full p-2 border rounded-md text-sm"
+                    />
+                  </div>
+                </div>
+
+                {selectedFriend && (
+                  <div className="bg-gray-50 p-4 rounded-md">
+                    <h3 className="font-medium mb-2">Friend Profile:</h3>
+                    <p><strong>Name:</strong> {selectedFriend.name}</p>
+                    <p><strong>Country:</strong> {selectedFriend.country}</p>
+                    <p><strong>Currency:</strong> {selectedFriend.currency}</p>
+                    <p><strong>Interests:</strong> {selectedFriend.interests.join(", ")}</p>
+                    <p><strong>Personality:</strong> {selectedFriend.personalityTraits.join(", ")}</p>
+                    {selectedFriend.notes && (
+                      <p><strong>Notes:</strong> {selectedFriend.notes}</p>
+                    )}
+                  </div>
+                )}
+
+                <button
+                  onClick={handleGenerateRecommendations}
+                  disabled={!selectedFriend || !budget || generateRecommendationsMutation.isPending}
+                  className="w-full bg-blue-600 text-white py-3 rounded-md hover:bg-blue-700 disabled:bg-gray-300"
+                >
+                  {generateRecommendationsMutation.isPending
+                    ? "Generating Recommendations..."
+                    : "Generate Gift Recommendations"}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Recommendations Tab */}
+          {activeTab === "recommendations" && (
+            <div className="bg-white rounded-lg p-6 shadow-sm">
+              <h2 className="text-2xl font-semibold mb-6">💡 Gift Recommendations</h2>
+              
+              {recommendations.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  No recommendations yet. Generate some recommendations to see them here!
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {recommendations.map((gift, index) => (
+                    <div key={index} className="border rounded-lg p-4">
+                      <div className="flex justify-between items-start mb-3">
+                        <h3 className="font-semibold text-lg">{gift.name}</h3>
+                        <span className="bg-green-100 text-green-800 text-sm px-2 py-1 rounded">
+                          {gift.matchPercentage}% match
+                        </span>
+                      </div>
+                      
+                      <p className="text-gray-600 mb-3">{gift.description}</p>
+                      <p className="font-semibold text-blue-600 mb-3">{gift.price}</p>
+                      
+                      <div className="mb-3">
+                        <p className="text-sm text-gray-600 mb-1">Matching traits:</p>
+                        <div className="flex flex-wrap gap-1">
+                          {gift.matchingTraits.map((trait, i) => (
+                            <span
+                              key={i}
+                              className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded"
+                            >
+                              {trait}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleSaveGift(gift)}
+                          disabled={saveGiftMutation.isPending}
+                          className="flex-1 bg-green-600 text-white py-2 rounded-md hover:bg-green-700 disabled:bg-gray-300"
+                        >
+                          💝 Save Gift
+                        </button>
+                        {gift.shops.length > 0 && (
+                          <button
+                            onClick={() => window.open(gift.shops[0].url, "_blank")}
+                            className="flex-1 bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700"
+                          >
+                            🛒 Shop Now
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Saved Tab */}
+          {activeTab === "saved" && (
+            <div className="bg-white rounded-lg p-6 shadow-sm">
+              <h2 className="text-2xl font-semibold mb-6">💝 Saved Gifts</h2>
+              
+              {savedGifts.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  No saved gifts yet. Save some recommendations to see them here!
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {savedGifts.map((savedGift) => {
+                    const friend = friends.find(f => f.id === savedGift.friendId);
+                    return (
+                      <div key={savedGift.id} className="border rounded-lg p-4">
+                        <div className="flex justify-between items-start mb-2">
+                          <h3 className="font-semibold">{savedGift.giftData.name}</h3>
+                          <div className="flex gap-1">
+                            <span className="text-sm text-gray-500">
+                              For {friend?.name || "Unknown"}
+                            </span>
+                            <button
+                              onClick={() => {
+                                if (confirm("Are you sure you want to remove this saved gift?")) {
+                                  deleteSavedGiftMutation.mutate(savedGift.id);
+                                }
+                              }}
+                              className="text-red-600 hover:text-red-800 ml-2"
+                              title="Remove saved gift"
+                            >
+                              🗑️
+                            </button>
+                          </div>
+                        </div>
+                        <p className="text-gray-600 text-sm mb-2">{savedGift.giftData.description}</p>
+                        <p className="font-semibold text-blue-600 mb-2">{savedGift.giftData.price}</p>
+                        <div className="flex gap-2">
+                          <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">
+                            {savedGift.giftData.matchPercentage}% match
+                          </span>
+                          {savedGift.giftData.shops.length > 0 && (
+                            <button
+                              onClick={() => window.open(savedGift.giftData.shops[0].url, "_blank")}
+                              className="bg-blue-600 text-white text-xs px-3 py-1 rounded hover:bg-blue-700"
+                            >
+                              Shop Now
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Friend Form Modal */}
+          {showFriendForm && (
+            <FriendForm
+              friend={editingFriend || undefined}
+              onClose={() => {
+                setShowFriendForm(false);
+                setEditingFriend(null);
+              }}
+            />
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default Home;
