@@ -6,6 +6,15 @@ import { generateGiftRecommendations } from "./services/openai";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
+  // Health check endpoint
+  app.get("/api/health", (req, res) => {
+    res.json({ 
+      status: "ok", 
+      timestamp: new Date().toISOString(),
+      service: "GiftGenie API"
+    });
+  });
+  
   // Friends endpoints
   app.get("/api/friends", async (req, res) => {
     try {
@@ -99,6 +108,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         budget,
         friend.name,
         friend.currency || "USD",
+        friend.country || "United States",
         friend.notes || undefined
       );
 

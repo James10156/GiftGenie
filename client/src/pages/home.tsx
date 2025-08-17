@@ -11,6 +11,7 @@ function Home() {
   const [budgetValue, setBudgetValue] = useState(50); // Numeric value for slider
   const [showFriendForm, setShowFriendForm] = useState(false);
   const [editingFriend, setEditingFriend] = useState<Friend | null>(null);
+  const [recommendationsForFriend, setRecommendationsForFriend] = useState<Friend | null>(null); // Track who recommendations are for
   const queryClient = useQueryClient();
 
   // Helper function to get currency symbol
@@ -88,6 +89,7 @@ function Home() {
     },
     onSuccess: (data) => {
       setRecommendations(data);
+      setRecommendationsForFriend(selectedFriend);
       setActiveTab("recommendations");
     },
   });
@@ -423,54 +425,112 @@ function Home() {
             <div className="bg-white rounded-lg p-6 shadow-sm">
               <h2 className="text-2xl font-semibold mb-6">💡 Gift Recommendations</h2>
               
+              {/* Show who recommendations are for */}
+              {recommendationsForFriend && (
+                <div className="bg-gradient-to-r from-blue-50 to-green-50 p-4 rounded-lg mb-6 border border-blue-200">
+                  <div className="flex items-center gap-4">
+                    {recommendationsForFriend.profilePicture ? (
+                      <img
+                        src={recommendationsForFriend.profilePicture}
+                        alt={recommendationsForFriend.name}
+                        className="w-16 h-16 rounded-full object-cover border-2 border-white shadow-md"
+                      />
+                    ) : (
+                      <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-400 to-green-400 flex items-center justify-center text-white text-xl font-bold border-2 border-white shadow-md">
+                        {recommendationsForFriend.name.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <div className="flex-1">
+                      <h3 className="text-lg font-semibold text-gray-800">
+                        Recommendations for {recommendationsForFriend.name}
+                      </h3>
+                      <div className="text-sm text-gray-600 mt-1">
+                        <span className="inline-block mr-4">📍 {recommendationsForFriend.country}</span>
+                        <span className="inline-block mr-4">💰 {recommendationsForFriend.currency}</span>
+                        <span className="inline-block">{recommendations.length} gift{recommendations.length !== 1 ? 's' : ''} found</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {recommendationsForFriend.interests.slice(0, 3).map((interest, i) => (
+                          <span key={i} className="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded">
+                            {interest}
+                          </span>
+                        ))}
+                        {recommendationsForFriend.interests.length > 3 && (
+                          <span className="text-xs text-gray-500">+{recommendationsForFriend.interests.length - 3} more</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
               {recommendations.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
-                  No recommendations yet. Generate some recommendations to see them here!
+                  <div className="text-6xl mb-4">🎁</div>
+                  <h3 className="text-lg font-medium mb-2">No recommendations yet</h3>
+                  <p>Generate some recommendations to see personalized gift ideas here!</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {recommendations.map((gift, index) => (
-                    <div key={index} className="border rounded-lg p-4">
-                      <div className="flex justify-between items-start mb-3">
-                        <h3 className="font-semibold text-lg">{gift.name}</h3>
-                        <span className="bg-green-100 text-green-800 text-sm px-2 py-1 rounded">
-                          {gift.matchPercentage}% match
-                        </span>
-                      </div>
-                      
-                      <p className="text-gray-600 mb-3">{gift.description}</p>
-                      <p className="font-semibold text-blue-600 mb-3">{gift.price}</p>
-                      
-                      <div className="mb-3">
-                        <p className="text-sm text-gray-600 mb-1">Matching traits:</p>
-                        <div className="flex flex-wrap gap-1">
-                          {gift.matchingTraits.map((trait, i) => (
-                            <span
-                              key={i}
-                              className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded"
-                            >
-                              {trait}
-                            </span>
-                          ))}
+                    <div key={index} className="border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                      {/* Gift Image */}
+                      {gift.image && (
+                        <div className="h-48 overflow-hidden">
+                          <img
+                            src={gift.image}
+                            alt={gift.name}
+                            className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                            onError={(e) => {
+                              // Fallback to a placeholder if image fails to load
+                              (e.target as HTMLImageElement).src = `https://via.placeholder.com/400x250/e5e7eb/6b7280?text=${encodeURIComponent(gift.name)}`;
+                            }}
+                          />
                         </div>
-                      </div>
+                      )}
+                      
+                      <div className="p-4">
+                        <div className="flex justify-between items-start mb-3">
+                          <h3 className="font-semibold text-lg text-gray-800">{gift.name}</h3>
+                          <span className="bg-green-100 text-green-800 text-sm px-2 py-1 rounded-full font-medium">
+                            {gift.matchPercentage}% match
+                          </span>
+                        </div>
+                        
+                        <p className="text-gray-600 mb-3 leading-relaxed">{gift.description}</p>
+                        <p className="font-semibold text-blue-600 mb-3 text-lg">{gift.price}</p>
+                        
+                        <div className="mb-4">
+                          <p className="text-sm text-gray-600 mb-2">Why this matches:</p>
+                          <div className="flex flex-wrap gap-1">
+                            {gift.matchingTraits.map((trait, i) => (
+                              <span
+                                key={i}
+                                className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full"
+                              >
+                                {trait}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
 
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleSaveGift(gift)}
-                          disabled={saveGiftMutation.isPending}
-                          className="flex-1 bg-green-600 text-white py-2 rounded-md hover:bg-green-700 disabled:bg-gray-300"
-                        >
-                          💝 Save Gift
-                        </button>
-                        {gift.shops.length > 0 && (
+                        <div className="flex gap-2">
                           <button
-                            onClick={() => window.open(gift.shops[0].url, "_blank")}
-                            className="flex-1 bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700"
+                            onClick={() => handleSaveGift(gift)}
+                            disabled={saveGiftMutation.isPending}
+                            className="flex-1 bg-green-600 text-white py-2 px-3 rounded-md hover:bg-green-700 disabled:bg-gray-300 transition-colors flex items-center justify-center gap-1"
                           >
-                            🛒 Shop Now
+                            💝 Save Gift
                           </button>
-                        )}
+                          {gift.shops && gift.shops.length > 0 && (
+                            <button
+                              onClick={() => window.open(gift.shops[0].url, "_blank")}
+                              className="flex-1 bg-blue-600 text-white py-2 px-3 rounded-md hover:bg-blue-700 transition-colors flex items-center justify-center gap-1"
+                            >
+                              🛒 Shop Now
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   ))}

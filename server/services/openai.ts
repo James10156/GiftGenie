@@ -121,21 +121,140 @@ function getCurrencySymbol(currency: string): string {
   return symbols[currency] || "$";
 }
 
-function generateShops(basePrice: number, budget: number, currency: string) {
-  const shops = [
-    { name: "Amazon", multiplier: 1.0, url: "https://amazon.com" },
-    { name: "Target", multiplier: 0.95, url: "https://target.com" },
-    { name: "Best Buy", multiplier: 1.1, url: "https://bestbuy.com" },
-    { name: "Walmart", multiplier: 0.85, url: "https://walmart.com" },
-    { name: "REI", multiplier: 1.15, url: "https://rei.com" }
+// Reliable image mapping for gift categories
+function getReliableImage(keywords: string): string {
+  const imageMap: Record<string, string> = {
+    // Art & Creative
+    'art': 'https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=250',
+    'paint': 'https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=250',
+    'creative': 'https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=250',
+    'drawing': 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=250',
+    'tablet': 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=250',
+    
+    // Tech
+    'tech': 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=250',
+    'keyboard': 'https://images.unsplash.com/photo-1541140532154-b024d705b90a?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=250',
+    'gaming': 'https://images.unsplash.com/photo-1541140532154-b024d705b90a?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=250',
+    'smart': 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=250',
+    
+    // Fitness & Outdoors
+    'fitness': 'https://images.unsplash.com/photo-1544117519-31a4b719223d?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=250',
+    'yoga': 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=250',
+    'outdoors': 'https://images.unsplash.com/photo-1487730116645-74489c95b41b?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=250',
+    'camping': 'https://images.unsplash.com/photo-1487730116645-74489c95b41b?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=250',
+    'hiking': 'https://images.unsplash.com/photo-1516892366775-8d24e1b9d8b9?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=250',
+    'backpack': 'https://images.unsplash.com/photo-1516892366775-8d24e1b9d8b9?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=250',
+    
+    // Food & Drink
+    'coffee': 'https://images.unsplash.com/photo-1447933601403-0c6688de566e?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=250',
+    'tea': 'https://images.unsplash.com/photo-1447933601403-0c6688de566e?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=250',
+    'cooking': 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=250',
+    'kitchen': 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=250',
+    
+    // Books & Reading
+    'book': 'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=250',
+    'reading': 'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=250',
+    
+    // Fashion & Accessories
+    'watch': 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=250',
+    'jewelry': 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=250',
+    'bag': 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=250',
+    
+    // Music
+    'music': 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=250',
+    'headphones': 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=250',
+    'speaker': 'https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=250'
+  };
+  
+  // Find matching keyword
+  for (const [key, imageUrl] of Object.entries(imageMap)) {
+    if (keywords.includes(key)) {
+      return imageUrl;
+    }
+  }
+  
+  // Default fallback image
+  return 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=250';
+}
+
+function generateShops(basePrice: number, budget: number, currency: string, productName: string = "gift", country: string = "United States") {
+  // UK-specific stores
+  const ukShops = [
+    { 
+      name: "Amazon UK", 
+      multiplier: 1.0, 
+      baseUrl: "https://amazon.co.uk/s?k=",
+      searchTerm: productName.replace(/\s+/g, '+').toLowerCase()
+    },
+    { 
+      name: "Argos", 
+      multiplier: 0.95, 
+      baseUrl: "https://argos.co.uk/search/",
+      searchTerm: productName.replace(/\s+/g, '-').toLowerCase()
+    },
+    { 
+      name: "John Lewis", 
+      multiplier: 1.15, 
+      baseUrl: "https://johnlewis.com/search?search-term=",
+      searchTerm: productName.replace(/\s+/g, '%20').toLowerCase()
+    },
+    { 
+      name: "Currys", 
+      multiplier: 1.05, 
+      baseUrl: "https://currys.co.uk/search?q=",
+      searchTerm: productName.replace(/\s+/g, '+').toLowerCase()
+    },
+    { 
+      name: "ASOS", 
+      multiplier: 0.9, 
+      baseUrl: "https://asos.com/search/?q=",
+      searchTerm: productName.replace(/\s+/g, '%20').toLowerCase()
+    }
   ];
+
+  // US/International stores
+  const usShops = [
+    { 
+      name: "Amazon", 
+      multiplier: 1.0, 
+      baseUrl: "https://amazon.com/s?k=",
+      searchTerm: productName.replace(/\s+/g, '+').toLowerCase()
+    },
+    { 
+      name: "Target", 
+      multiplier: 0.95, 
+      baseUrl: "https://target.com/s?searchTerm=",
+      searchTerm: productName.replace(/\s+/g, '%20').toLowerCase()
+    },
+    { 
+      name: "Best Buy", 
+      multiplier: 1.1, 
+      baseUrl: "https://bestbuy.com/site/searchpage.jsp?st=",
+      searchTerm: productName.replace(/\s+/g, '+').toLowerCase()
+    },
+    { 
+      name: "Walmart", 
+      multiplier: 0.85, 
+      baseUrl: "https://walmart.com/search/?query=",
+      searchTerm: productName.replace(/\s+/g, '%20').toLowerCase()
+    },
+    { 
+      name: "REI", 
+      multiplier: 1.15, 
+      baseUrl: "https://rei.com/search?q=",
+      searchTerm: productName.replace(/\s+/g, '+').toLowerCase()
+    }
+  ];
+
+  // Choose shops based on country
+  const shops = country.toLowerCase().includes('kingdom') || country.toLowerCase().includes('uk') ? ukShops : usShops;
 
   const symbol = getCurrencySymbol(currency);
   return shops.slice(0, 3).map(shop => ({
     name: shop.name,
     price: `${symbol}${Math.round(basePrice * shop.multiplier)}`,
     inStock: Math.random() > 0.2,
-    url: shop.url
+    url: `${shop.baseUrl}${shop.searchTerm}`
   }));
 }
 
@@ -145,6 +264,7 @@ export async function generateGiftRecommendations(
   budget: number,
   friendName: string,
   currency: string = "USD",
+  country: string = "United States",
   notes?: string
 ): Promise<GiftRecommendation[]> {
   try {
@@ -207,10 +327,11 @@ Respond in JSON format with this structure:
     for (const rec of aiResponse.recommendations || []) {
       // Generate realistic shop pricing
       const basePrice = Math.random() * (budget * 0.8) + (budget * 0.2);
-      const shops = generateShops(basePrice, budget, currency);
+      const shops = generateShops(basePrice, budget, currency, rec.name || "gift", country);
       
-      // Generate Unsplash image URL
-      const imageUrl = `https://images.unsplash.com/photo-${Math.floor(Math.random() * 1000000000) + 1500000000}?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=250&q=${encodeURIComponent(rec.imageSearchTerm || 'gift')}`;
+      // Generate reliable image URL with fallback system
+      const imageKeywords = rec.imageSearchTerm || rec.name || 'gift';
+      const imageUrl = getReliableImage(imageKeywords.toLowerCase());
 
       recommendations.push({
         name: rec.name || "Personalized Gift",
@@ -232,7 +353,7 @@ Respond in JSON format with this structure:
     console.error('OpenAI API error:', error);
     
     // Fallback to enhanced template-based recommendations
-    return generateFallbackRecommendations(personalityTraits, interests, budget, friendName, currency, notes);
+    return generateFallbackRecommendations(personalityTraits, interests, budget, friendName, currency, country, notes);
   }
 }
 
@@ -243,6 +364,7 @@ async function generateFallbackRecommendations(
   budget: number,
   friendName: string,
   currency: string = "USD",
+  country: string = "United States",
   notes?: string
 ): Promise<GiftRecommendation[]> {
   console.log(`Using fallback recommendations for ${friendName}`);
@@ -274,7 +396,7 @@ async function generateFallbackRecommendations(
             matchPercentage,
             matchingTraits: gift.matchingTraits.filter(t => personalityTraits.includes(t)),
             image: gift.image,
-            shops: generateShops(gift.basePrice, budget, currency)
+            shops: generateShops(gift.basePrice, budget, currency, gift.name, country)
           });
         }
       }
@@ -303,7 +425,7 @@ async function generateFallbackRecommendations(
       matchPercentage,
       matchingTraits: randomGift.matchingTraits.filter(t => personalityTraits.includes(t)),
       image: randomGift.image,
-      shops: generateShops(randomGift.basePrice, budget, currency)
+      shops: generateShops(randomGift.basePrice, budget, currency, randomGift.name, country)
     });
   }
 

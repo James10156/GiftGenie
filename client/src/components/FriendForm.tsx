@@ -8,6 +8,17 @@ interface FriendFormProps {
 }
 
 // Predefined options for quick selection
+const COUNTRIES = [
+  'United Kingdom', 'United States', 'Canada', 'Australia', 'Germany', 'France', 'Italy', 'Spain', 'Netherlands',
+  'Belgium', 'Switzerland', 'Austria', 'Sweden', 'Norway', 'Denmark', 'Finland', 'Ireland', 'Portugal',
+  'Japan', 'South Korea', 'Singapore', 'Hong Kong', 'Taiwan', 'China', 'India', 'Thailand', 'Malaysia',
+  'Philippines', 'Indonesia', 'Vietnam', 'Brazil', 'Mexico', 'Argentina', 'Chile', 'Colombia', 'Peru',
+  'South Africa', 'Egypt', 'Morocco', 'Nigeria', 'Kenya', 'Ghana', 'Israel', 'United Arab Emirates',
+  'Saudi Arabia', 'Turkey', 'Russia', 'Poland', 'Czech Republic', 'Hungary', 'Romania', 'Greece',
+  'Bulgaria', 'Croatia', 'Slovenia', 'Slovakia', 'Estonia', 'Latvia', 'Lithuania', 'Ukraine',
+  'New Zealand', 'Iceland', 'Luxembourg', 'Cyprus', 'Malta', 'Other'
+].sort();
+
 const COMMON_PERSONALITY_TRAITS = [
   "Adventurous", "Artistic", "Analytical", "Cheerful", "Creative", "Curious",
   "Determined", "Empathetic", "Energetic", "Funny", "Generous", "Intellectual",
@@ -32,8 +43,8 @@ export function FriendForm({ friend, onClose }: FriendFormProps) {
     personalityTraits: friend?.personalityTraits || [],
     interests: friend?.interests || [],
     notes: friend?.notes || "",
-    country: friend?.country || "United States",
-    currency: friend?.currency || "USD",
+    country: friend?.country || "United Kingdom",
+    currency: friend?.currency || "GBP",
     profilePicture: friend?.profilePicture || "",
   });
 
@@ -184,13 +195,17 @@ export function FriendForm({ friend, onClose }: FriendFormProps) {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-2">Country</label>
-                <input
-                  type="text"
+                <select
                   value={formData.country}
                   onChange={(e) => setFormData({ ...formData, country: e.target.value })}
                   className="w-full p-3 border rounded-md"
-                  placeholder="United States"
-                />
+                >
+                  {COUNTRIES.map((country) => (
+                    <option key={country} value={country}>
+                      {country}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className="block text-sm font-medium mb-2">Currency</label>
