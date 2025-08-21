@@ -7,12 +7,31 @@ function Home() {
   const [activeTab, setActiveTab] = useState("friends");
   const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null);
   const [recommendations, setRecommendations] = useState<GiftRecommendation[]>([]);
-  const [budget, setBudget] = useState("");
+  const [budget, setBudget] = useState("£50");
   const [budgetValue, setBudgetValue] = useState(50); // Numeric value for slider
   const [showFriendForm, setShowFriendForm] = useState(false);
   const [editingFriend, setEditingFriend] = useState<Friend | null>(null);
   const [recommendationsForFriend, setRecommendationsForFriend] = useState<Friend | null>(null); // Track who recommendations are for
+  const [dropdownOpen, setDropdownOpen] = useState<{[key: string]: boolean}>({});
   const queryClient = useQueryClient();
+
+  // Helper function to toggle dropdown
+  const toggleDropdown = (giftIndex: number, section: string = 'generated') => {
+    const key = `${section}-${giftIndex}`;
+    setDropdownOpen(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => {
+      setDropdownOpen({});
+    };
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, []);
 
   // Helper function to get currency symbol
   const getCurrencySymbol = (currency: string) => {
@@ -422,7 +441,7 @@ function Home() {
 
           {/* Recommendations Tab */}
           {activeTab === "recommendations" && (
-            <div className="bg-white rounded-lg p-6 shadow-sm">
+            <div className="bg-white rounded-lg p-6 shadow-sm" style={{overflow: 'visible'}}>
               <h2 className="text-2xl font-semibold mb-6">💡 Gift Recommendations</h2>
               
               {/* Show who recommendations are for */}
@@ -471,25 +490,31 @@ function Home() {
                   <p>Generate some recommendations to see personalized gift ideas here!</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6" style={{overflow: 'visible'}}>
                   {recommendations.map((gift, index) => (
-                    <div key={index} className="border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                                        <div key={index} className="border rounded-lg shadow-sm hover:shadow-md transition-shadow relative flex flex-col" style={{overflow: 'visible'}}>
                       {/* Gift Image */}
                       {gift.image && (
-                        <div className="h-48 overflow-hidden">
+                        <div className="h-48 overflow-hidden rounded-t-lg flex-shrink-0">
                           <img
                             src={gift.image}
                             alt={gift.name}
                             className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
                             onError={(e) => {
-                              // Fallback to a placeholder if image fails to load
-                              (e.target as HTMLImageElement).src = `https://via.placeholder.com/400x250/e5e7eb/6b7280?text=${encodeURIComponent(gift.name)}`;
+                              // Fallback to a reliable placeholder if image fails to load
+                              const img = e.target as HTMLImageElement;
+                              if (img.src !== 'https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300') {
+                                img.src = 'https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300';
+                              } else {
+                                // If even our fallback fails, use a simple placeholder
+                                img.src = `https://via.placeholder.com/400x300/e5e7eb/6b7280?text=${encodeURIComponent(gift.name)}`;
+                              }
                             }}
                           />
                         </div>
                       )}
                       
-                      <div className="p-4">
+                      <div className="p-4 flex-grow flex flex-col">
                         <div className="flex justify-between items-start mb-3">
                           <h3 className="font-semibold text-lg text-gray-800">{gift.name}</h3>
                           <span className="bg-green-100 text-green-800 text-sm px-2 py-1 rounded-full font-medium">
@@ -497,7 +522,7 @@ function Home() {
                           </span>
                         </div>
                         
-                        <p className="text-gray-600 mb-3 leading-relaxed">{gift.description}</p>
+                        <p className="text-gray-600 mb-3 leading-relaxed flex-grow">{gift.description}</p>
                         <p className="font-semibold text-blue-600 mb-3 text-lg">{gift.price}</p>
                         
                         <div className="mb-4">
@@ -514,7 +539,7 @@ function Home() {
                           </div>
                         </div>
 
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 mt-auto">
                           <button
                             onClick={() => handleSaveGift(gift)}
                             disabled={saveGiftMutation.isPending}
@@ -523,12 +548,51 @@ function Home() {
                             💝 Save Gift
                           </button>
                           {gift.shops && gift.shops.length > 0 && (
-                            <button
-                              onClick={() => window.open(gift.shops[0].url, "_blank")}
-                              className="flex-1 bg-blue-600 text-white py-2 px-3 rounded-md hover:bg-blue-700 transition-colors flex items-center justify-center gap-1"
-                            >
-                              🛒 Shop Now
-                            </button>
+                            <div className="flex-1 relative">
+                              {gift.shops.length === 1 ? (
+                                <button
+                                  onClick={() => window.open(gift.shops[0].url, "_blank")}
+                                  className="w-full bg-blue-600 text-white py-2 px-3 rounded-md hover:bg-blue-700 transition-colors flex items-center justify-center gap-1"
+                                >
+                                  🛒 Shop at {gift.shops[0].name}
+                                </button>
+                              ) : (
+                                <div className="relative">
+                                  <button 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      toggleDropdown(index, 'generated');
+                                    }}
+                                    className="w-full bg-blue-600 text-white py-2 px-3 rounded-md hover:bg-blue-700 transition-colors flex items-center justify-center gap-1"
+                                  >
+                                    🛒 Shop Now ({gift.shops.length} stores) ▼
+                                  </button>
+                                  {dropdownOpen[`generated-${index}`] && (
+                                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-2xl z-50 max-h-60 overflow-y-auto">
+                                      {gift.shops.map((shop, shopIndex) => (
+                                        <button
+                                          key={shopIndex}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            window.open(shop.url, "_blank");
+                                            setDropdownOpen(prev => ({...prev, [`generated-${index}`]: false}));
+                                          }}
+                                          className="w-full text-left px-3 py-2 text-gray-700 hover:bg-gray-50 flex items-center justify-between text-sm border-b border-gray-100 last:border-b-0"
+                                        >
+                                          <span className="font-medium">{shop.name}</span>
+                                          <div className="flex items-center gap-2">
+                                            <span className="text-green-600 font-semibold">{shop.price}</span>
+                                            {shop.inStock && (
+                                              <span className="text-xs text-green-500">✓ In Stock</span>
+                                            )}
+                                          </div>
+                                        </button>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
                           )}
                         </div>
                       </div>
@@ -541,7 +605,7 @@ function Home() {
 
           {/* Saved Tab */}
           {activeTab === "saved" && (
-            <div className="bg-white rounded-lg p-6 shadow-sm">
+            <div className="bg-white rounded-lg p-6 shadow-sm" style={{overflow: 'visible'}}>
               <h2 className="text-2xl font-semibold mb-6">💝 Saved Gifts</h2>
               
               {savedGifts.length === 0 ? (
@@ -550,7 +614,7 @@ function Home() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {savedGifts.map((savedGift) => {
+                  {savedGifts.map((savedGift, index) => {
                     const friend = friends.find(f => f.id === savedGift.friendId);
                     return (
                       <div key={savedGift.id} className="border rounded-lg p-4">
@@ -580,12 +644,46 @@ function Home() {
                             {savedGift.giftData.matchPercentage}% match
                           </span>
                           {savedGift.giftData.shops.length > 0 && (
-                            <button
-                              onClick={() => window.open(savedGift.giftData.shops[0].url, "_blank")}
-                              className="bg-blue-600 text-white text-xs px-3 py-1 rounded hover:bg-blue-700"
-                            >
-                              Shop Now
-                            </button>
+                            <div className="relative">
+                              {savedGift.giftData.shops.length === 1 ? (
+                                <button
+                                  onClick={() => window.open(savedGift.giftData.shops[0].url, "_blank")}
+                                  className="bg-blue-600 text-white text-xs px-3 py-1 rounded hover:bg-blue-700"
+                                >
+                                  Shop at {savedGift.giftData.shops[0].name}
+                                </button>
+                              ) : (
+                                <>
+                                  <button 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      toggleDropdown(index, 'saved');
+                                    }}
+                                    className="bg-blue-600 text-white text-xs px-3 py-1 rounded hover:bg-blue-700"
+                                  >
+                                    Shop ({savedGift.giftData.shops.length}) ▼
+                                  </button>
+                                  {dropdownOpen[`saved-${index}`] && (
+                                    <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-md shadow-2xl z-50 min-w-48 max-h-60 overflow-y-auto">
+                                      {savedGift.giftData.shops.map((shop, shopIndex) => (
+                                        <button
+                                          key={shopIndex}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            window.open(shop.url, "_blank");
+                                            setDropdownOpen(prev => ({...prev, [`saved-${index}`]: false}));
+                                          }}
+                                          className="w-full text-left px-3 py-2 text-gray-700 hover:bg-gray-50 flex items-center justify-between text-xs border-b border-gray-100 last:border-b-0"
+                                        >
+                                          <span className="font-medium">{shop.name}</span>
+                                          <span className="text-green-600 font-semibold">{shop.price}</span>
+                                        </button>
+                                      ))}
+                                    </div>
+                                  )}
+                                </>
+                              )}
+                            </div>
                           )}
                         </div>
                       </div>

@@ -319,9 +319,9 @@ export function FriendForm({ friend, onClose }: FriendFormProps) {
 
               {/* Selected traits */}
               <div className="flex flex-wrap gap-2">
-                {formData.personalityTraits.map((trait) => (
+                {formData.personalityTraits.map((trait, index) => (
                   <span
-                    key={trait}
+                    key={`trait-${trait}-${index}`}
                     className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm flex items-center gap-2"
                   >
                     {trait}
@@ -329,6 +329,7 @@ export function FriendForm({ friend, onClose }: FriendFormProps) {
                       type="button"
                       onClick={() => removeTrait(trait)}
                       className="text-blue-600 hover:text-blue-800"
+                      aria-label={`Remove ${trait} trait`}
                     >
                       ×
                     </button>
@@ -387,9 +388,9 @@ export function FriendForm({ friend, onClose }: FriendFormProps) {
 
               {/* Selected interests */}
               <div className="flex flex-wrap gap-2">
-                {formData.interests.map((interest) => (
+                {formData.interests.map((interest, index) => (
                   <span
-                    key={interest}
+                    key={`interest-${interest}-${index}`}
                     className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm flex items-center gap-2"
                   >
                     {interest}
@@ -397,6 +398,7 @@ export function FriendForm({ friend, onClose }: FriendFormProps) {
                       type="button"
                       onClick={() => removeInterest(interest)}
                       className="text-green-600 hover:text-green-800"
+                      aria-label={`Remove ${interest} interest`}
                     >
                       ×
                     </button>
