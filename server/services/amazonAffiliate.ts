@@ -162,7 +162,7 @@ async function createAmazonSignedRequest(params: Record<string, any>): Promise<s
 }
 
 // Fallback: Try to extract Amazon ASIN from URLs and construct image URLs
-export function getAmazonImageFromUrl(amazonUrl: string): string | null {
+export async function getAmazonImageFromUrl(amazonUrl: string): Promise<string | null> {
   try {
     // Extract ASIN from Amazon URL
     const asinMatch = amazonUrl.match(/\/dp\/([A-Z0-9]{10})|\/product\/([A-Z0-9]{10})|\/gp\/product\/([A-Z0-9]{10})/);
@@ -172,7 +172,21 @@ export function getAmazonImageFromUrl(amazonUrl: string): string | null {
       // Construct Amazon image URL (this is a common pattern, though not guaranteed)
       const imageUrl = `https://m.media-amazon.com/images/I/${asin}._AC_SL1500_.jpg`;
       console.log(`[AMAZON_API] Constructed image URL from ASIN ${asin}: ${imageUrl}`);
-      return imageUrl;
+      
+      // Validate the constructed URL
+      try {
+        const response = await fetch(imageUrl, { method: 'HEAD' });
+        if (response.ok) {
+          console.log(`[AMAZON_API] ✅ Constructed URL is valid: ${imageUrl}`);
+          return imageUrl;
+        } else {
+          console.log(`[AMAZON_API] ❌ Constructed URL returned ${response.status}, URL invalid: ${imageUrl}`);
+          return null;
+        }
+      } catch (fetchError) {
+        console.log(`[AMAZON_API] ❌ Failed to validate constructed URL: ${fetchError instanceof Error ? fetchError.message : String(fetchError)}`);
+        return null;
+      }
     }
 
     console.log(`[AMAZON_API] Could not extract ASIN from URL: ${amazonUrl}`);

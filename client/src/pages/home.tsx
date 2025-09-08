@@ -13,6 +13,9 @@ function Home() {
   const [editingFriend, setEditingFriend] = useState<Friend | null>(null);
   const [recommendationsForFriend, setRecommendationsForFriend] = useState<Friend | null>(null); // Track who recommendations are for
   const [dropdownOpen, setDropdownOpen] = useState<{[key: string]: boolean}>({});
+  const [hoveredImageIndex, setHoveredImageIndex] = useState<number | null>(null);
+  const [hoveredFriendProfileIndex, setHoveredFriendProfileIndex] = useState<number | null>(null);
+  const [showRecommendationsFriendProfile, setShowRecommendationsFriendProfile] = useState(false);
   const queryClient = useQueryClient();
 
   // Helper function to toggle dropdown
@@ -225,18 +228,37 @@ function Home() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {friends.map((friend) => (
+                  {friends.map((friend, index) => (
                     <div
                       key={friend.id}
                       className="border rounded-lg p-4 hover:shadow-md transition-shadow"
                     >
                       <div className="flex items-center mb-3">
                         {friend.profilePicture ? (
-                          <img
-                            src={friend.profilePicture}
-                            alt={friend.name}
-                            className="w-12 h-12 rounded-full mr-3 object-cover"
-                          />
+                          <div 
+                            className="relative mr-3 cursor-pointer group"
+                            onMouseEnter={() => setHoveredFriendProfileIndex(index)}
+                            onMouseLeave={() => setHoveredFriendProfileIndex(null)}
+                          >
+                            <img
+                              src={friend.profilePicture}
+                              alt={friend.name}
+                              className="w-12 h-12 rounded-full object-cover transition-transform duration-300 group-hover:scale-105"
+                            />
+                            
+                            {/* Full profile picture overlay on hover */}
+                            {hoveredFriendProfileIndex === index && (
+                              <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 transition-opacity duration-300">
+                                <div className="max-w-2xl max-h-full p-4">
+                                  <img 
+                                    src={friend.profilePicture} 
+                                    alt={friend.name}
+                                    className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+                                  />
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         ) : (
                           <div className="w-12 h-12 bg-gray-200 rounded-full mr-3 flex items-center justify-center">
                             👤
@@ -449,11 +471,30 @@ function Home() {
                 <div className="bg-gradient-to-r from-blue-50 to-green-50 p-4 rounded-lg mb-6 border border-blue-200">
                   <div className="flex items-center gap-4">
                     {recommendationsForFriend.profilePicture ? (
-                      <img
-                        src={recommendationsForFriend.profilePicture}
-                        alt={recommendationsForFriend.name}
-                        className="w-16 h-16 rounded-full object-cover border-2 border-white shadow-md"
-                      />
+                      <div 
+                        className="relative cursor-pointer group"
+                        onMouseEnter={() => setShowRecommendationsFriendProfile(true)}
+                        onMouseLeave={() => setShowRecommendationsFriendProfile(false)}
+                      >
+                        <img
+                          src={recommendationsForFriend.profilePicture}
+                          alt={recommendationsForFriend.name}
+                          className="w-16 h-16 rounded-full object-cover border-2 border-white shadow-md transition-transform duration-300 group-hover:scale-105"
+                        />
+                        
+                        {/* Full profile picture overlay on hover */}
+                        {showRecommendationsFriendProfile && (
+                          <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 transition-opacity duration-300">
+                            <div className="max-w-2xl max-h-full p-4">
+                              <img 
+                                src={recommendationsForFriend.profilePicture} 
+                                alt={recommendationsForFriend.name}
+                                className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     ) : (
                       <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-400 to-green-400 flex items-center justify-center text-white text-xl font-bold border-2 border-white shadow-md">
                         {recommendationsForFriend.name.charAt(0).toUpperCase()}
@@ -495,11 +536,19 @@ function Home() {
                                         <div key={index} className="border rounded-lg shadow-sm hover:shadow-md transition-shadow relative flex flex-col" style={{overflow: 'visible'}}>
                       {/* Gift Image */}
                       {gift.image && (
-                        <div className="h-48 overflow-hidden rounded-t-lg flex-shrink-0">
+                        <div 
+                          className="h-48 rounded-t-lg flex-shrink-0 relative cursor-pointer group overflow-hidden"
+                          onMouseEnter={() => setHoveredImageIndex(index)}
+                          onMouseLeave={() => setHoveredImageIndex(null)}
+                        >
                           <img
                             src={gift.image}
                             alt={gift.name}
-                            className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                            className={`w-full h-full transition-all duration-500 ease-in-out ${
+                              hoveredImageIndex === index 
+                                ? 'object-contain scale-110' 
+                                : 'object-contain hover:scale-105'
+                            }`}
                             onError={(e) => {
                               // Fallback to a reliable placeholder if image fails to load
                               const img = e.target as HTMLImageElement;

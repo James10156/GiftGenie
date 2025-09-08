@@ -1,9 +1,8 @@
 import OpenAI from "openai";
 import type { GiftRecommendation } from "@shared/schema";
 import { getProductImage } from "./imageService.ts";
-import { extractBestProductImage } from "./imageExtractor.ts";
-import { getAmazonProductImage, getAmazonImageFromUrl } from "./amazonAffiliate.ts";
 import { generateRealProductUrls, findBestProductMatch, PRODUCT_DATABASE } from "./productDatabase.ts";
+import { getProductImageFromGoogle } from './googleImageScraper.ts';
 
 const openai = new OpenAI({ 
   apiKey: process.env.OPENAI_API_KEY 
@@ -631,77 +630,44 @@ Respond in JSON format with this structure:
       
       // Generate reliable image URL using new priority system
       const imageKeywords = rec.imageSearchTerm || rec.name || 'gift';
-      let imageUrl: string;
-      let priceRange: string;
+      let imageUrl: string = ""; // Initialize with empty string
+      let priceRange: string = `${symbol}${Math.round(basePrice * 0.8)} - ${symbol}${Math.round(basePrice * 1.2)}`; // Initialize with calculated range
 
       // Generate shops first (needed for image extraction)
       const shops = await generateShops(basePrice, budget, currency, rec.name || 'gift', country);
       console.log(`[DIAGNOSTIC] Generated ${shops.length} shops. First URL: ${shops[0]?.url}`);
 
-      // PRIORITY 1: Try Amazon Affiliate API first
-      console.log(`[DIAGNOSTIC] Priority 1: Trying Amazon Affiliate API for "${rec.name}"`);
-      let amazonImage: string | null = null;
-      try {
-        amazonImage = await getAmazonProductImage(rec.name || '', basePrice * 1.5); // Allow 50% over base price
-        if (amazonImage) {
-          console.log(`[DIAGNOSTIC] ✅ Amazon API returned image: ${amazonImage}`);
-        } else {
-          console.log(`[DIAGNOSTIC] ❌ Amazon API returned no results`);
-          
-          // Fallback: Try to extract Amazon image from shop URLs
-          for (const shop of shops) {
-            if (shop.url.includes('amazon.com') && !shop.url.includes('/s?k=')) {
-              amazonImage = getAmazonImageFromUrl(shop.url);
-              if (amazonImage) {
-                console.log(`[DIAGNOSTIC] ✅ Extracted Amazon image from URL: ${amazonImage}`);
-                break;
-              }
-            }
-          }
-        }
-      } catch (error) {
-        console.log(`[DIAGNOSTIC] ❌ Amazon API error: ${error instanceof Error ? error.message : String(error)}`);
+      // Check for database match first (simplified for dev environment)
+      const productKey = findBestProductMatch(rec.name || '');
+      
+      if (productKey && PRODUCT_DATABASE[productKey]) {
+        // Database match found - skip validation for performance in dev
+        const product = PRODUCT_DATABASE[productKey];
+        console.log(`[DIAGNOSTIC] 🎯 Database match found! Key: "${productKey}", Name: "${product.name}"`);
+        console.log(`[DIAGNOSTIC] ✅ Using database info (validation skipped for dev performance)`);
+        
+        // Use database price range but skip image validation
+        priceRange = `${symbol}${product.price_range[0]} - ${symbol}${product.price_range[1]}`;
+        console.log(`[DIAGNOSTIC] ✅ Using database price range: ${priceRange}`);
+        // Note: Database image skipped to improve performance - will use priority system
       }
 
-      if (amazonImage) {
-        imageUrl = amazonImage;
-        console.log(`[DIAGNOSTIC] Using Amazon image: ${imageUrl}`);
-      } else {
-        // PRIORITY 2: Try metadata extractor from product URLs
-        console.log(`[DIAGNOSTIC] Priority 2: Trying metadata extraction from product URLs`);
-        let extractedImage: string | null = null;
-        if (shops.length > 0) {
-          // Try to extract from direct product URLs (skip search URLs)
-          for (const shop of shops) {
-            if (!shop.url.includes('/s?k=') && !shop.url.includes('/search')) {
-              try {
-                extractedImage = await extractBestProductImage(shop.url);
-                if (extractedImage) {
-                  console.log(`[DIAGNOSTIC] ✅ Extracted image from ${shop.name}: ${extractedImage}`);
-                  break;
-                }
-              } catch (error) {
-                console.log(`[DIAGNOSTIC] ❌ Image extraction failed for ${shop.name}: ${error instanceof Error ? error.message : String(error)}`);
-              }
-            }
-          }
-        }
-
-        if (extractedImage) {
-          imageUrl = extractedImage;
-          console.log(`[DIAGNOSTIC] Using extracted product image: ${imageUrl}`);
-        } else {
-          // PRIORITY 3: Try database match
-          console.log(`[DIAGNOSTIC] Priority 3: Checking product database`);
-          const productKey = findBestProductMatch(rec.name || '');
-          if (productKey && PRODUCT_DATABASE[productKey]) {
-            const product = PRODUCT_DATABASE[productKey];
-            console.log(`[DIAGNOSTIC] ✅ Found DB match. Key: "${productKey}", Name: "${product.name}"`);
-            imageUrl = product.image;
-            console.log(`[DIAGNOSTIC] Using DB image: ${imageUrl}`);
+      // If we don't have a valid imageUrl yet (either no database match or database validation failed), use simplified priority system
+      if (!imageUrl || imageUrl.trim() === "") {
+        console.log(`[DIAGNOSTIC] No valid image found yet. Using simplified priority system for "${rec.name}" (dev environment).`);
+        
+        // PRIORITY 1: Google Images scraper (primary method in dev)
+        console.log(`[DIAGNOSTIC] Priority 1: Trying Google Images search for "${rec.name}"`);
+        try {
+          const googleImage = await getProductImageFromGoogle(rec.name || '', rec.description);
+          if (googleImage) {
+            imageUrl = googleImage;
+            console.log(`[DIAGNOSTIC] ✅ Google Images returned: ${imageUrl}`);
           } else {
-            // PRIORITY 4: Generic fallback images
-            console.log(`[DIAGNOSTIC] Priority 4: Using generic fallback images`);
+            console.log(`[DIAGNOSTIC] ❌ Google Images found no results`);
+            
+            // PRIORITY 2: Generic fallback images (ultimate fallback)
+            console.log(`[DIAGNOSTIC] Priority 2: Using generic fallback images`);
             try {
               imageUrl = await getProductImage(imageKeywords, rec.description);
               console.log(`[DIAGNOSTIC] ✅ Generic image service returned: ${imageUrl}`);
@@ -712,16 +678,23 @@ Respond in JSON format with this structure:
               console.log(`[DIAGNOSTIC] Using ultimate fallback image: ${imageUrl}`);
             }
           }
+        } catch (googleError) {
+          console.error(`[DIAGNOSTIC] ❌ Google Images search failed:`, googleError);
+          
+          // PRIORITY 2: Generic fallback images (ultimate fallback)
+          console.log(`[DIAGNOSTIC] Priority 2: Using generic fallback images`);
+          try {
+            imageUrl = await getProductImage(imageKeywords, rec.description);
+            console.log(`[DIAGNOSTIC] ✅ Generic image service returned: ${imageUrl}`);
+          } catch (error) {
+            console.error(`[DIAGNOSTIC] ❌ Generic image service failed:`, error);
+            // Ultimate fallback to a reliable generic image
+            imageUrl = 'https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300';
+            console.log(`[DIAGNOSTIC] Using ultimate fallback image: ${imageUrl}`);
+          }
         }
-      }
-
-      // Set price range (prefer database if we have a match, otherwise calculate)
-      const productKey = findBestProductMatch(rec.name || '');
-      if (productKey && PRODUCT_DATABASE[productKey]) {
-        const product = PRODUCT_DATABASE[productKey];
-        priceRange = `${symbol}${product.price_range[0]} - ${symbol}${product.price_range[1]}`;
-        console.log(`[DIAGNOSTIC] Using DB price range: ${priceRange}`);
-      } else {
+        
+        // Set price range for non-database products
         priceRange = rec.price || `${symbol}${Math.round(basePrice * 0.8)} - ${symbol}${Math.round(basePrice * 1.2)}`;
         console.log(`[DIAGNOSTIC] Using calculated price range: ${priceRange}`);
       }
@@ -737,9 +710,18 @@ Respond in JSON format with this structure:
       image: imageUrl,
       shops: shops
     });
+    
+    // Log final recommendation details for debugging
+    console.log(`[FINAL_REC] "${rec.name}" -> Image: ${imageUrl.substring(0, 50)}...`);
     }
 
     console.log(`Generated ${recommendations.length} AI-powered recommendations for ${friendName}`);
+    
+    // Log the final recommendations for debugging
+    recommendations.forEach((rec, index) => {
+      console.log(`[FINAL_CHECK] Rec ${index + 1}: "${rec.name}" -> Image: ${rec.image}`);
+    });
+    
     return recommendations;
 
   } catch (error) {

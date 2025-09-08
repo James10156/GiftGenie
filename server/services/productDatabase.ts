@@ -73,7 +73,7 @@ export const PRODUCT_DATABASE: { [key: string]: ProductInfo } = {
       'dick\'s sporting goods': 'https://www.dickssportinggoods.com/p/nike-elite-all-court-basketball-21nikuelltcrtbsktbbal',
       'target': 'https://www.target.com/p/nike-elite-all-court-basketball/-/A-81234567'
     },
-    image: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300',
+    image: 'https://m.media-amazon.com/images/I/71J6wwcsEgL._AC_SX679_.jpg',
     price_range: [25, 35]
   },
   
