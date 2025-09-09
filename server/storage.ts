@@ -43,7 +43,7 @@ export class MemStorage implements IStorage {
         notes: "Loves outdoor art sessions and nature photography",
         country: "United States",
         currency: "USD",
-        profilePicture: null,
+        profilePicture: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=face",
         createdAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(), // 2 weeks ago
       },
       {
@@ -54,7 +54,7 @@ export class MemStorage implements IStorage {
         notes: "Always exploring new digital art tools and techniques",
         country: "Canada",
         currency: "CAD",
-        profilePicture: null,
+        profilePicture: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&h=400&fit=crop&crop=face",
         createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(), // 1 month ago
       },
       {
@@ -65,7 +65,7 @@ export class MemStorage implements IStorage {
         notes: "Very active, loves team sports and working out",
         country: "United States",
         currency: "USD",
-        profilePicture: null,
+        profilePicture: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop&crop=face",
         createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 days ago
       },
     ];

@@ -15,8 +15,6 @@ function Home() {
   const [recommendationsForFriend, setRecommendationsForFriend] = useState<Friend | null>(null); // Track who recommendations are for
   const [dropdownOpen, setDropdownOpen] = useState<{[key: string]: boolean}>({});
   const [hoveredImageIndex, setHoveredImageIndex] = useState<number | null>(null);
-  const [hoveredFriendProfileIndex, setHoveredFriendProfileIndex] = useState<number | null>(null);
-  const [showRecommendationsFriendProfile, setShowRecommendationsFriendProfile] = useState(false);
   const queryClient = useQueryClient();
 
   // Helper function to toggle dropdown
@@ -236,32 +234,15 @@ function Home() {
                     >
                       <div className="flex items-center mb-3">
                         {friend.profilePicture ? (
-                          <div 
-                            className="relative mr-3 cursor-pointer group"
-                            onMouseEnter={() => setHoveredFriendProfileIndex(index)}
-                            onMouseLeave={() => setHoveredFriendProfileIndex(null)}
-                          >
+                          <div className="w-16 h-16 mr-4 overflow-hidden rounded-full">
                             <img
                               src={friend.profilePicture}
                               alt={friend.name}
-                              className="w-12 h-12 rounded-full object-cover transition-transform duration-300 group-hover:scale-105"
+                              className="w-full h-full object-cover transition-all duration-300 hover:scale-125 ring-2 ring-blue-200 hover:ring-blue-400 rounded-full"
                             />
-                            
-                            {/* Full profile picture overlay on hover */}
-                            {hoveredFriendProfileIndex === index && (
-                              <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 transition-opacity duration-300">
-                                <div className="max-w-2xl max-h-full p-4">
-                                  <img 
-                                    src={friend.profilePicture} 
-                                    alt={friend.name}
-                                    className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
-                                  />
-                                </div>
-                              </div>
-                            )}
                           </div>
                         ) : (
-                          <div className="w-12 h-12 bg-gray-200 rounded-full mr-3 flex items-center justify-center">
+                          <div className="w-16 h-16 bg-gray-200 rounded-full mr-4 flex items-center justify-center text-xl">
                             👤
                           </div>
                         )}
@@ -499,32 +480,15 @@ function Home() {
                 <div className="bg-gradient-to-r from-blue-50 to-green-50 p-4 rounded-lg mb-6 border border-blue-200">
                   <div className="flex items-center gap-4">
                     {recommendationsForFriend.profilePicture ? (
-                      <div 
-                        className="relative cursor-pointer group"
-                        onMouseEnter={() => setShowRecommendationsFriendProfile(true)}
-                        onMouseLeave={() => setShowRecommendationsFriendProfile(false)}
-                      >
+                      <div className="w-20 h-20 overflow-hidden rounded-full border-2 border-white shadow-lg">
                         <img
                           src={recommendationsForFriend.profilePicture}
                           alt={recommendationsForFriend.name}
-                          className="w-16 h-16 rounded-full object-cover border-2 border-white shadow-md transition-transform duration-300 group-hover:scale-105"
+                          className="w-full h-full object-cover transition-all duration-300 hover:scale-125 ring-2 ring-blue-200 hover:ring-blue-400 rounded-full"
                         />
-                        
-                        {/* Full profile picture overlay on hover */}
-                        {showRecommendationsFriendProfile && (
-                          <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 transition-opacity duration-300">
-                            <div className="max-w-2xl max-h-full p-4">
-                              <img 
-                                src={recommendationsForFriend.profilePicture} 
-                                alt={recommendationsForFriend.name}
-                                className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
-                              />
-                            </div>
-                          </div>
-                        )}
                       </div>
                     ) : (
-                      <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-400 to-green-400 flex items-center justify-center text-white text-xl font-bold border-2 border-white shadow-md">
+                      <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-400 to-green-400 flex items-center justify-center text-white text-2xl font-bold border-2 border-white shadow-lg">
                         {recommendationsForFriend.name.charAt(0).toUpperCase()}
                       </div>
                     )}
