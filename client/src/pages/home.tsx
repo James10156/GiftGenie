@@ -234,15 +234,15 @@ function Home() {
                     >
                       <div className="flex items-center mb-3">
                         {friend.profilePicture ? (
-                          <div className="w-16 h-16 mr-4 overflow-hidden rounded-full">
+                          <div className="w-16 h-16 mr-4 rounded-full transition-all duration-300 hover:scale-125 hover:shadow-lg ring-2 ring-blue-200 hover:ring-blue-400">
                             <img
                               src={friend.profilePicture}
                               alt={friend.name}
-                              className="w-full h-full object-cover transition-all duration-300 hover:scale-125 ring-2 ring-blue-200 hover:ring-blue-400 rounded-full"
+                              className="w-full h-full object-cover rounded-full"
                             />
                           </div>
                         ) : (
-                          <div className="w-16 h-16 bg-gray-200 rounded-full mr-4 flex items-center justify-center text-xl">
+                          <div className="w-16 h-16 bg-gray-200 rounded-full mr-4 flex items-center justify-center text-xl transition-all duration-300 hover:scale-125 hover:shadow-lg">
                             👤
                           </div>
                         )}
@@ -480,15 +480,15 @@ function Home() {
                 <div className="bg-gradient-to-r from-blue-50 to-green-50 p-4 rounded-lg mb-6 border border-blue-200">
                   <div className="flex items-center gap-4">
                     {recommendationsForFriend.profilePicture ? (
-                      <div className="w-20 h-20 overflow-hidden rounded-full border-2 border-white shadow-lg">
+                      <div className="w-20 h-20 rounded-full border-2 border-white shadow-lg transition-all duration-300 hover:scale-125 hover:shadow-xl ring-2 ring-blue-200 hover:ring-blue-400">
                         <img
                           src={recommendationsForFriend.profilePicture}
                           alt={recommendationsForFriend.name}
-                          className="w-full h-full object-cover transition-all duration-300 hover:scale-125 ring-2 ring-blue-200 hover:ring-blue-400 rounded-full"
+                          className="w-full h-full object-cover rounded-full"
                         />
                       </div>
                     ) : (
-                      <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-400 to-green-400 flex items-center justify-center text-white text-2xl font-bold border-2 border-white shadow-lg">
+                      <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-400 to-green-400 flex items-center justify-center text-white text-2xl font-bold border-2 border-white shadow-lg transition-all duration-300 hover:scale-125 hover:shadow-xl">
                         {recommendationsForFriend.name.charAt(0).toUpperCase()}
                       </div>
                     )}
