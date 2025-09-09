@@ -226,3 +226,17 @@
 .slider:focus::-webkit-slider-thumb {
   box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.3);
 }
+
+/* Loading animations */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(400%);
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 2s infinite;
+}

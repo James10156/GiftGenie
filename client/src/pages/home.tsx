@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Friend, GiftRecommendation, SavedGift } from "@shared/schema";
 import { FriendForm } from "../components/FriendForm";
+import { GiftWrappingAnimation } from "../components/gift-wrapping-animation";
 
 function Home() {
   const [activeTab, setActiveTab] = useState("friends");
@@ -448,15 +449,42 @@ function Home() {
                   </div>
                 )}
 
-                <button
-                  onClick={handleGenerateRecommendations}
-                  disabled={!selectedFriend || !budget || generateRecommendationsMutation.isPending}
-                  className="w-full bg-blue-600 text-white py-3 rounded-md hover:bg-blue-700 disabled:bg-gray-300"
-                >
-                  {generateRecommendationsMutation.isPending
-                    ? "Generating Recommendations..."
-                    : "Generate Gift Recommendations"}
-                </button>
+                {/* Loading Animation */}
+                {generateRecommendationsMutation.isPending && (
+                  <div className="mb-6 flex justify-center">
+                    <GiftWrappingAnimation />
+                  </div>
+                )}
+
+                {/* Generate Button with Loading Bar */}
+                <div className="relative">
+                  <button
+                    onClick={handleGenerateRecommendations}
+                    disabled={!selectedFriend || !budget || generateRecommendationsMutation.isPending}
+                    className={`w-full py-3 rounded-md transition-all duration-300 relative overflow-hidden ${
+                      generateRecommendationsMutation.isPending
+                        ? "bg-blue-400 text-white cursor-not-allowed"
+                        : !selectedFriend || !budget
+                        ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                        : "bg-blue-600 text-white hover:bg-blue-700"
+                    }`}
+                  >
+                    {/* Loading Bar Background */}
+                    {generateRecommendationsMutation.isPending && (
+                      <div className="absolute inset-0 bg-blue-500">
+                        <div className="h-full bg-blue-600 animate-pulse"></div>
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-blue-400 to-transparent animate-shimmer"></div>
+                      </div>
+                    )}
+                    
+                    {/* Button Text */}
+                    <span className="relative z-10 font-medium">
+                      {generateRecommendationsMutation.isPending
+                        ? "🎁 Generating Perfect Gifts..."
+                        : "Generate Gift Recommendations"}
+                    </span>
+                  </button>
+                </div>
               </div>
             </div>
           )}
