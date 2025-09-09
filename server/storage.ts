@@ -68,6 +68,39 @@ export class MemStorage implements IStorage {
         profilePicture: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop&crop=face",
         createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 days ago
       },
+      {
+        id: randomUUID(),
+        name: "Mariel Cabrera",
+        personalityTraits: ["Empathetic", "Kind", "Thoughtful"],
+        interests: ["Fashion", "Gaming", "Food"],
+        notes: "Loves luxury brands like Gucci and Prada",
+        country: "United Kingdom",
+        currency: "GBP",
+        profilePicture: "https://lh3.googleusercontent.com/d/1NMP8bNLZxORMwEDqI1H53FDeUVJA0SMg",
+        createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(), // 1 week ago
+      },
+      {
+        id: randomUUID(),
+        name: "Danielle Quintana",
+        personalityTraits: ["Quiet", "Thoughtful", "Reliable"],
+        interests: ["Running", "Tennis", "Cooking"],
+        notes: "Loves designer glasses and athletic activities",
+        country: "United Kingdom",
+        currency: "GBP",
+        profilePicture: "https://lh3.googleusercontent.com/d/19CGhqEKtXxSOLdL1FTg1KYvwZE2Aychb",
+        createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(), // 10 days ago
+      },
+      {
+        id: randomUUID(),
+        name: "Gian de Belen",
+        personalityTraits: ["Curious", "Analytical", "Romantic"],
+        interests: ["Gaming", "Anime", "Badminton"],
+        notes: "Really loves Gundam models and anime culture",
+        country: "United Kingdom",
+        currency: "GBP",
+        profilePicture: "https://lh3.googleusercontent.com/d/1LvyJQAyeuQK9PkDfqtndRSg92PxPcxbG",
+        createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), // 5 days ago
+      },
     ];
 
     demoFriends.forEach(friend => {
