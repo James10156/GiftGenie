@@ -17,7 +17,12 @@ export async function getGoogleImageResult(searchTerm: string): Promise<string |
     
     console.log(`[GOOGLE_IMAGES] Fetching: ${searchUrl}`);
     
+    // Add timeout to prevent hanging
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
     const response = await fetch(searchUrl, {
+      signal: controller.signal,
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
@@ -31,6 +36,8 @@ export async function getGoogleImageResult(searchTerm: string): Promise<string |
         'Upgrade-Insecure-Requests': '1'
       }
     });
+
+    clearTimeout(timeoutId); // Clear timeout if request completes
 
     if (!response.ok) {
       console.log(`[GOOGLE_IMAGES] HTTP error: ${response.status}`);
@@ -88,12 +95,20 @@ export async function getGoogleImageResult(searchTerm: string): Promise<string |
     for (const imageUrl of uniqueImages.slice(0, 5)) {
       try {
         console.log(`[GOOGLE_IMAGES] Testing image: ${imageUrl.substring(0, 100)}...`);
+        
+        // Add timeout to prevent hanging
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout for image validation
+        
         const imageResponse = await fetch(imageUrl, { 
           method: 'HEAD',
+          signal: controller.signal,
           headers: {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
           }
         });
+        
+        clearTimeout(timeoutId); // Clear timeout if request completes
         
         if (imageResponse.ok && imageResponse.headers.get('content-type')?.startsWith('image/')) {
           console.log(`[GOOGLE_IMAGES] ✅ Found valid image: ${imageUrl}`);
@@ -101,6 +116,7 @@ export async function getGoogleImageResult(searchTerm: string): Promise<string |
         }
       } catch (error) {
         // Continue to next image if this one fails
+        console.log(`[GOOGLE_IMAGES] ⚠️ Image validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
         continue;
       }
     }
