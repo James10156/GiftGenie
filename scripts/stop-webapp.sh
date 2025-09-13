@@ -1,12 +1,12 @@
 #!/bin/bash
 
 # GiftGenie Web App Stop Script
-# This script stops the webapp and tunnel
+# This script stops the development servers and tunnel
 
 set -e
 
 LOG_DIR="logs"
-PID_FILE="$LOG_DIR/webapp.pid"
+DEV_PID_FILE="$LOG_DIR/webapp.pid"
 TUNNEL_PID_FILE="$LOG_DIR/tunnel.pid"
 
 # Function to stop process by PID file
@@ -43,7 +43,7 @@ stop_process() {
     fi
 }
 
-echo "🛑 Stopping GiftGenie Web App..."
+echo "🛑 Stopping GiftGenie Web App (Development Mode)..."
 
 # Stop tunnel first
 stop_process "$TUNNEL_PID_FILE" "Serveo tunnel"
@@ -51,12 +51,14 @@ stop_process "$TUNNEL_PID_FILE" "Serveo tunnel"
 # Also kill any SSH processes to serveo
 pkill -f "ssh.*serveo.net" 2>/dev/null && echo "✅ Killed remaining serveo processes" || true
 
-# Stop server
-stop_process "$PID_FILE" "GiftGenie server"
+# Stop development servers
+stop_process "$DEV_PID_FILE" "Development servers"
 
-# Also kill any remaining server processes
+# Also kill any remaining development processes
+pkill -f "npm run dev" 2>/dev/null && echo "✅ Killed remaining npm dev processes" || true
+pkill -f "concurrently" 2>/dev/null && echo "✅ Killed remaining concurrently processes" || true
 pkill -f "tsx server/index.ts" 2>/dev/null && echo "✅ Killed remaining tsx processes" || true
-pkill -f "node.*server/index.ts" 2>/dev/null && echo "✅ Killed remaining node processes" || true
+pkill -f "vite.*--port 3000" 2>/dev/null && echo "✅ Killed remaining vite processes" || true
 
 # Clean up URL file
 rm -f "$LOG_DIR/public_url.txt"

@@ -1,14 +1,15 @@
 #!/bin/bash
 
 # GiftGenie Web App Status Script
-# This script checks the status of the webapp and tunnel
+# This script checks the status of the development servers and tunnel
 
 set -e
 
 LOG_DIR="logs"
-PID_FILE="$LOG_DIR/webapp.pid"
+DEV_PID_FILE="$LOG_DIR/webapp.pid"
 TUNNEL_PID_FILE="$LOG_DIR/tunnel.pid"
-PORT=5000
+FRONTEND_PORT=3000
+BACKEND_PORT=5000
 
 # Function to check if process is running
 check_process_status() {
@@ -30,19 +31,34 @@ check_process_status() {
     fi
 }
 
-echo "📊 GiftGenie Web App Status"
-echo "=============================="
+echo "📊 GiftGenie Web App Status (Development Mode)"
+echo "=============================================="
 
-# Check server status
-server_running=false
-if check_process_status "$PID_FILE" "GiftGenie server"; then
-    server_running=true
+# Check development servers status
+dev_servers_running=false
+if check_process_status "$DEV_PID_FILE" "Development servers"; then
+    dev_servers_running=true
     
-    # Test if server is responding
-    if curl -s -f "http://localhost:$PORT/api/health" > /dev/null 2>&1; then
-        echo "✅ Server is responding on http://localhost:$PORT"
+    # Test if both servers are responding
+    backend_responding=false
+    frontend_responding=false
+    
+    if curl -s -f "http://localhost:$BACKEND_PORT/api/friends" > /dev/null 2>&1; then
+        echo "✅ Backend API is responding on http://localhost:$BACKEND_PORT"
+        backend_responding=true
     else
-        echo "⚠️  Server process is running but not responding"
+        echo "❌ Backend API is not responding on http://localhost:$BACKEND_PORT"
+    fi
+    
+    if curl -s -f "http://localhost:$FRONTEND_PORT/" > /dev/null 2>&1; then
+        echo "✅ Frontend is responding on http://localhost:$FRONTEND_PORT"
+        frontend_responding=true
+    else
+        echo "❌ Frontend is not responding on http://localhost:$FRONTEND_PORT"
+    fi
+    
+    if [ "$backend_responding" = false ] || [ "$frontend_responding" = false ]; then
+        echo "⚠️  Some services are not responding properly"
     fi
 fi
 
@@ -62,14 +78,14 @@ fi
 echo ""
 
 # Overall status
-if [ "$server_running" = true ] && [ "$tunnel_running" = true ]; then
+if [ "$dev_servers_running" = true ] && [ "$tunnel_running" = true ]; then
     echo "🚀 GiftGenie is fully operational!"
-elif [ "$server_running" = true ]; then
-    echo "⚠️  GiftGenie server is running but tunnel is down"
+elif [ "$dev_servers_running" = true ]; then
+    echo "⚠️  GiftGenie development servers are running but tunnel is down"
     echo "   Run: ./scripts/start-webapp.sh to start tunnel"
 elif [ "$tunnel_running" = true ]; then
-    echo "⚠️  Tunnel is running but server is down"
-    echo "   Run: ./scripts/start-webapp.sh to start server"
+    echo "⚠️  Tunnel is running but development servers are down"
+    echo "   Run: ./scripts/start-webapp.sh to start servers"
 else
     echo "❌ GiftGenie is not running"
     echo "   Run: ./scripts/start-webapp.sh to start"

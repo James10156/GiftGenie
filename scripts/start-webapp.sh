@@ -1,29 +1,33 @@
 #!/bin/bash
 
 # GiftGenie Web App Startup Script
-# This script starts the webapp if it's not already running and exposes it via serveo
+# This script starts the webapp using the development setup:
+# - Frontend (React/Vite) on port 3000
+# - Backend (Express API) on port 5000
+# - Exposes frontend via serveo tunnel
 
 set -e
 
-PORT=5000
+FRONTEND_PORT=3000
+BACKEND_PORT=5000
 LOG_DIR="logs"
 SERVER_LOG="$LOG_DIR/server.log"
 TUNNEL_LOG="$LOG_DIR/tunnel.log"
-PID_FILE="$LOG_DIR/webapp.pid"
+DEV_PID_FILE="$LOG_DIR/webapp.pid"
 TUNNEL_PID_FILE="$LOG_DIR/tunnel.pid"
 
 # Create logs directory if it doesn't exist
 mkdir -p "$LOG_DIR"
 
-# Function to check if server is running
-check_server() {
-    if [ -f "$PID_FILE" ]; then
-        local pid=$(cat "$PID_FILE")
+# Function to check if development servers are running
+check_dev_servers() {
+    if [ -f "$DEV_PID_FILE" ]; then
+        local pid=$(cat "$DEV_PID_FILE")
         if kill -0 "$pid" 2>/dev/null; then
-            return 0  # Server is running
+            return 0  # Dev servers are running
         else
-            rm -f "$PID_FILE"  # Remove stale PID file
-            return 1  # Server is not running
+            rm -f "$DEV_PID_FILE"  # Remove stale PID file
+            return 1  # Dev servers are not running
         fi
     else
         return 1  # PID file doesn't exist
@@ -45,49 +49,78 @@ check_tunnel() {
     fi
 }
 
-# Function to start the server
-start_server() {
-    echo "Starting GiftGenie server on port $PORT..."
+# Function to start the development servers
+start_dev_servers() {
+    echo "Starting GiftGenie development servers..."
+    echo "  Frontend: http://localhost:$FRONTEND_PORT"
+    echo "  Backend API: http://localhost:$BACKEND_PORT"
     
-    # Kill any existing server processes
+    # Kill any existing processes
+    pkill -f "npm run dev" 2>/dev/null || true
+    pkill -f "concurrently" 2>/dev/null || true
     pkill -f "tsx server/index.ts" 2>/dev/null || true
-    pkill -f "node.*server/index.ts" 2>/dev/null || true
+    pkill -f "vite.*--port 3000" 2>/dev/null || true
     
-    # Start the server in background
+    # Start the development servers in background
     cd "$(dirname "$0")/.."
-    NODE_ENV=development node --import tsx/esm server/index.ts > "$SERVER_LOG" 2>&1 &
-    local server_pid=$!
+    npm run dev > "$SERVER_LOG" 2>&1 &
+    local dev_pid=$!
     
-    echo $server_pid > "$PID_FILE"
-    echo "Server started with PID: $server_pid"
+    echo $dev_pid > "$DEV_PID_FILE"
+    echo "Development servers started with PID: $dev_pid"
     
-    # Wait a moment for server to start
-    sleep 3
+    # Wait a moment for servers to start
+    sleep 5
     
-    # Check if server is actually running
-    if ! kill -0 "$server_pid" 2>/dev/null; then
-        echo "Error: Server failed to start. Check $SERVER_LOG for details."
+    # Check if development process is still running
+    if ! kill -0 "$dev_pid" 2>/dev/null; then
+        echo "Error: Development servers failed to start. Check $SERVER_LOG for details."
         cat "$SERVER_LOG"
         exit 1
     fi
     
-    # Test if server is responding
-    if curl -s -f "http://localhost:$PORT/api/health" > /dev/null 2>&1; then
-        echo "Server is responding on http://localhost:$PORT"
+    # Test if both servers are responding
+    echo "Testing server connectivity..."
+    local backend_ready=false
+    local frontend_ready=false
+    
+    # Wait up to 30 seconds for servers to be ready
+    for i in {1..30}; do
+        if curl -s -f "http://localhost:$BACKEND_PORT/api/friends" > /dev/null 2>&1; then
+            backend_ready=true
+        fi
+        if curl -s -f "http://localhost:$FRONTEND_PORT/" > /dev/null 2>&1; then
+            frontend_ready=true
+        fi
+        
+        if [ "$backend_ready" = true ] && [ "$frontend_ready" = true ]; then
+            break
+        fi
+        sleep 1
+    done
+    
+    if [ "$backend_ready" = true ]; then
+        echo "✅ Backend API is responding on http://localhost:$BACKEND_PORT"
     else
-        echo "Warning: Server started but may not be fully ready yet"
+        echo "⚠️  Backend API may not be fully ready yet"
+    fi
+    
+    if [ "$frontend_ready" = true ]; then
+        echo "✅ Frontend is responding on http://localhost:$FRONTEND_PORT"
+    else
+        echo "⚠️  Frontend may not be fully ready yet"
     fi
 }
 
 # Function to start the tunnel
 start_tunnel() {
-    echo "Starting serveo tunnel..."
+    echo "Starting serveo tunnel for frontend..."
     
     # Kill any existing SSH tunnel processes to serveo
     pkill -f "ssh.*serveo.net" 2>/dev/null || true
     
-    # Start the tunnel in background
-    ssh -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -o StrictHostKeyChecking=no -R 80:localhost:$PORT serveo.net > "$TUNNEL_LOG" 2>&1 &
+    # Start the tunnel in background (tunnel the frontend port)
+    ssh -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -o StrictHostKeyChecking=no -R 80:localhost:$FRONTEND_PORT serveo.net > "$TUNNEL_LOG" 2>&1 &
     local tunnel_pid=$!
     
     echo $tunnel_pid > "$TUNNEL_PID_FILE"
@@ -119,13 +152,13 @@ start_tunnel() {
 }
 
 # Main execution
-echo "🎁 Starting GiftGenie Web App..."
+echo "🎁 Starting GiftGenie Web App (Development Mode)..."
 
-# Check if server is already running
-if check_server; then
-    echo "✅ Server is already running (PID: $(cat "$PID_FILE"))"
+# Check if development servers are already running
+if check_dev_servers; then
+    echo "✅ Development servers are already running (PID: $(cat "$DEV_PID_FILE"))"
 else
-    start_server
+    start_dev_servers
 fi
 
 # Check if tunnel is already running
@@ -140,13 +173,15 @@ fi
 
 echo ""
 echo "🚀 GiftGenie is running!"
-echo "   Local:  http://localhost:$PORT"
+echo "   Frontend: http://localhost:$FRONTEND_PORT"
+echo "   Backend:  http://localhost:$BACKEND_PORT"
 if [ -f "$LOG_DIR/public_url.txt" ]; then
-    echo "   Public: $(cat "$LOG_DIR/public_url.txt")"
+    echo "   Public:   $(cat "$LOG_DIR/public_url.txt")"
 fi
 echo ""
 echo "📋 Management commands:"
 echo "   Stop:    ./scripts/stop-webapp.sh"
 echo "   Restart: ./scripts/restart-webapp.sh"
+echo "   Status:  ./scripts/status-webapp.sh"
 echo "   Logs:    tail -f logs/server.log logs/tunnel.log"
 echo ""
