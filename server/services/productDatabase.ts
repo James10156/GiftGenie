@@ -192,12 +192,9 @@ export function findBestProductMatch(productName: string): string | null {
     .replace(/\s+/g, ' ')
     .trim();
 
-  console.log(`Searching for product match: "${productName}" -> cleaned: "${cleanName}"`);
-
   // Direct keyword matching
   for (const [key, product] of Object.entries(PRODUCT_DATABASE)) {
     if (cleanName.includes(key) || key.includes(cleanName)) {
-      console.log(`Found direct match: ${key} for product: ${productName}`);
       return key;
     }
   }
@@ -250,12 +247,10 @@ export function findBestProductMatch(productName: string): string | null {
 
   for (const [variation, productKey] of Object.entries(variations)) {
     if (cleanName.includes(variation)) {
-      console.log(`Found fuzzy match: ${variation} -> ${productKey} for product: ${productName}`);
       return productKey;
     }
   }
 
-  console.log(`No match found for product: ${productName}`);
   return null;
 }
 

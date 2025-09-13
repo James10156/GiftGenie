@@ -298,12 +298,10 @@ async function generateShops(basePrice: number, budget: number, currency: string
   // Fallback to our existing database system
   const realProductUrls = generateRealProductUrls(productName, country, basePrice);
   if (realProductUrls && realProductUrls.length > 0) {
-    console.log(`Found database URLs for: ${productName}`);
     return realProductUrls;
   }
 
   // Final fallback to search-based URLs
-  console.log(`Using search-based URLs for: ${productName}`);
   const cleanProduct = productName.toLowerCase();
   const shops: any[] = [];
 
@@ -621,7 +619,6 @@ Respond in JSON format with this structure:
     const recommendations: GiftRecommendation[] = [];
 
     for (const rec of aiResponse.recommendations || []) {
-      console.log(`[DIAGNOSTIC] AI recommendation received: "${rec.name}"`);
       // Generate realistic shop pricing
       const basePrice = Math.random() * (budget * 0.8) + (budget * 0.2);
       
@@ -635,7 +632,6 @@ Respond in JSON format with this structure:
 
       // Generate shops first (needed for image extraction)
       const shops = await generateShops(basePrice, budget, currency, rec.name || 'gift', country);
-      console.log(`[DIAGNOSTIC] Generated ${shops.length} shops. First URL: ${shops[0]?.url}`);
 
       // Check for database match first (simplified for dev environment)
       const productKey = findBestProductMatch(rec.name || '');
@@ -643,60 +639,46 @@ Respond in JSON format with this structure:
       if (productKey && PRODUCT_DATABASE[productKey]) {
         // Database match found - skip validation for performance in dev
         const product = PRODUCT_DATABASE[productKey];
-        console.log(`[DIAGNOSTIC] 🎯 Database match found! Key: "${productKey}", Name: "${product.name}"`);
-        console.log(`[DIAGNOSTIC] ✅ Using database info (validation skipped for dev performance)`);
         
         // Use database price range but skip image validation
         priceRange = `${symbol}${product.price_range[0]} - ${symbol}${product.price_range[1]}`;
-        console.log(`[DIAGNOSTIC] ✅ Using database price range: ${priceRange}`);
         // Note: Database image skipped to improve performance - will use priority system
       }
 
       // If we don't have a valid imageUrl yet (either no database match or database validation failed), use simplified priority system
       if (!imageUrl || imageUrl.trim() === "") {
-        console.log(`[DIAGNOSTIC] No valid image found yet. Using simplified priority system for "${rec.name}" (dev environment).`);
         
         // PRIORITY 1: Google Images scraper (primary method in dev)
-        console.log(`[DIAGNOSTIC] Priority 1: Trying Google Images search for "${rec.name}"`);
         try {
           const googleImage = await getProductImageFromGoogle(rec.name || '', rec.description);
           if (googleImage) {
             imageUrl = googleImage;
-            console.log(`[DIAGNOSTIC] ✅ Google Images returned: ${imageUrl}`);
           } else {
-            console.log(`[DIAGNOSTIC] ❌ Google Images found no results`);
             
             // PRIORITY 2: Generic fallback images (ultimate fallback)
-            console.log(`[DIAGNOSTIC] Priority 2: Using generic fallback images`);
             try {
               imageUrl = await getProductImage(imageKeywords, rec.description);
-              console.log(`[DIAGNOSTIC] ✅ Generic image service returned: ${imageUrl}`);
             } catch (error) {
-              console.error(`[DIAGNOSTIC] ❌ Generic image service failed:`, error);
+              console.error(`Generic image service failed:`, error);
               // Ultimate fallback to a reliable generic image
               imageUrl = 'https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300';
-              console.log(`[DIAGNOSTIC] Using ultimate fallback image: ${imageUrl}`);
             }
           }
         } catch (googleError) {
-          console.error(`[DIAGNOSTIC] ❌ Google Images search failed:`, googleError);
+          console.error(`Google Images search failed:`, googleError);
           
           // PRIORITY 2: Generic fallback images (ultimate fallback)
-          console.log(`[DIAGNOSTIC] Priority 2: Using generic fallback images`);
           try {
             imageUrl = await getProductImage(imageKeywords, rec.description);
-            console.log(`[DIAGNOSTIC] ✅ Generic image service returned: ${imageUrl}`);
           } catch (error) {
-            console.error(`[DIAGNOSTIC] ❌ Generic image service failed:`, error);
+            console.error(`Generic image service failed:`, error);
             // Ultimate fallback to a reliable generic image
             imageUrl = 'https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300';
-            console.log(`[DIAGNOSTIC] Using ultimate fallback image: ${imageUrl}`);
           }
         }
         
         // Set price range for non-database products
         priceRange = rec.price || `${symbol}${Math.round(basePrice * 0.8)} - ${symbol}${Math.round(basePrice * 1.2)}`;
-        console.log(`[DIAGNOSTIC] Using calculated price range: ${priceRange}`);
       }
 
     recommendations.push({
@@ -711,16 +693,11 @@ Respond in JSON format with this structure:
       shops: shops
     });
     
-    // Log final recommendation details for debugging
-    console.log(`[FINAL_REC] "${rec.name}" -> Image: ${imageUrl.substring(0, 50)}...`);
     }
 
     console.log(`Generated ${recommendations.length} AI-powered recommendations for ${friendName}`);
     
     // Log the final recommendations for debugging
-    recommendations.forEach((rec, index) => {
-      console.log(`[FINAL_CHECK] Rec ${index + 1}: "${rec.name}" -> Image: ${rec.image}`);
-    });
     
     return recommendations;
 

@@ -6,16 +6,12 @@ import fetch from 'node-fetch';
  */
 export async function getGoogleImageResult(searchTerm: string): Promise<string | null> {
   try {
-    console.log(`[GOOGLE_IMAGES] Searching for: "${searchTerm}"`);
-    
     // Clean and encode the search term
     const cleanSearchTerm = searchTerm.replace(/[^\w\s-]/g, '').trim();
     const encodedTerm = encodeURIComponent(cleanSearchTerm);
     
     // Use Google Images search URL
     const searchUrl = `https://www.google.com/search?q=${encodedTerm}&tbm=isch&tbs=isz:m`;
-    
-    console.log(`[GOOGLE_IMAGES] Fetching: ${searchUrl}`);
     
     // Add timeout to prevent hanging
     const controller = new AbortController();
@@ -40,7 +36,6 @@ export async function getGoogleImageResult(searchTerm: string): Promise<string |
     clearTimeout(timeoutId); // Clear timeout if request completes
 
     if (!response.ok) {
-      console.log(`[GOOGLE_IMAGES] HTTP error: ${response.status}`);
       return null;
     }
 
@@ -89,13 +84,9 @@ export async function getGoogleImageResult(searchTerm: string): Promise<string |
     // Remove duplicates and get the first few results
     const uniqueImages = Array.from(new Set(foundImages));
     
-    console.log(`[GOOGLE_IMAGES] Found ${uniqueImages.length} potential images`);
-    
     // Try to validate and return the first working image
     for (const imageUrl of uniqueImages.slice(0, 5)) {
       try {
-        console.log(`[GOOGLE_IMAGES] Testing image: ${imageUrl.substring(0, 100)}...`);
-        
         // Add timeout to prevent hanging
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout for image validation
@@ -111,21 +102,21 @@ export async function getGoogleImageResult(searchTerm: string): Promise<string |
         clearTimeout(timeoutId); // Clear timeout if request completes
         
         if (imageResponse.ok && imageResponse.headers.get('content-type')?.startsWith('image/')) {
-          console.log(`[GOOGLE_IMAGES] ✅ Found valid image: ${imageUrl}`);
           return imageUrl;
         }
       } catch (error) {
         // Continue to next image if this one fails
-        console.log(`[GOOGLE_IMAGES] ⚠️ Image validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
         continue;
       }
     }
 
-    console.log(`[GOOGLE_IMAGES] ❌ No valid images found for: "${searchTerm}"`);
     return null;
 
   } catch (error) {
-    console.error(`[GOOGLE_IMAGES] Error searching for "${searchTerm}":`, error instanceof Error ? error.message : String(error));
+    // Log only critical errors, not normal search failures
+    if (error instanceof Error && !error.message.includes('abort')) {
+      console.error(`[GOOGLE_IMAGES] Error searching for "${searchTerm}":`, error.message);
+    }
     return null;
   }
 }
