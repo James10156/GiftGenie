@@ -118,6 +118,16 @@ function Home() {
     },
   });
 
+  // Update selectedFriend when friends data changes (e.g., after editing)
+  useEffect(() => {
+    if (selectedFriend && friends.length > 0) {
+      const updatedSelectedFriend = friends.find(f => f.id === selectedFriend.id);
+      if (updatedSelectedFriend && JSON.stringify(updatedSelectedFriend) !== JSON.stringify(selectedFriend)) {
+        setSelectedFriend(updatedSelectedFriend);
+      }
+    }
+  }, [friends, selectedFriend]);
+
   // Fetch saved gifts
   const { data: savedGifts = [] } = useQuery({
     queryKey: ["savedGifts"],
@@ -412,6 +422,91 @@ function Home() {
                       </option>
                     ))}
                   </select>
+
+                  {/* Selected Friend Display */}
+                  {selectedFriend && (
+                    <div className="mt-4 p-6 bg-gradient-to-r from-blue-50 to-green-50 rounded-lg border border-blue-200 shadow-sm">
+                      <div className="flex items-start gap-6">
+                        {selectedFriend.profilePicture ? (
+                          <div className="w-20 h-20 rounded-full border-3 border-white shadow-lg ring-2 ring-blue-200 flex-shrink-0">
+                            <img
+                              src={selectedFriend.profilePicture}
+                              alt={selectedFriend.name}
+                              className="w-full h-full object-cover rounded-full"
+                            />
+                          </div>
+                        ) : (
+                          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-400 to-green-400 flex items-center justify-center text-white text-xl font-bold border-3 border-white shadow-lg flex-shrink-0">
+                            {selectedFriend.name.charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-2">
+                            <h3 className="text-xl font-semibold text-gray-800">
+                              {selectedFriend.name}
+                            </h3>
+                            <button
+                              onClick={() => {
+                                setEditingFriend(selectedFriend);
+                                setShowFriendForm(true);
+                              }}
+                              className="flex items-center gap-2 px-3 py-1.5 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors shadow-sm"
+                              title="Edit friend"
+                            >
+                              <span>✏️</span>
+                              Edit
+                            </button>
+                          </div>
+                          
+                          {/* Location & Currency */}
+                          <div className="flex flex-wrap items-center gap-4 mb-3 text-sm text-gray-600">
+                            <span className="flex items-center gap-1">
+                              <span>📍</span>
+                              <strong>{selectedFriend.country}</strong>
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <span>💰</span>
+                              <strong>{selectedFriend.currency}</strong>
+                            </span>
+                          </div>
+
+                          {/* Interests */}
+                          <div className="mb-3">
+                            <h4 className="text-sm font-medium text-gray-700 mb-2">Interests</h4>
+                            <div className="flex flex-wrap gap-2">
+                              {selectedFriend.interests.map((interest, i) => (
+                                <span key={i} className="bg-blue-100 text-blue-700 text-xs px-3 py-1 rounded-full border border-blue-200">
+                                  {interest}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Personality Traits */}
+                          <div className="mb-3">
+                            <h4 className="text-sm font-medium text-gray-700 mb-2">Personality</h4>
+                            <div className="flex flex-wrap gap-2">
+                              {selectedFriend.personalityTraits.map((trait, i) => (
+                                <span key={i} className="bg-green-100 text-green-700 text-xs px-3 py-1 rounded-full border border-green-200">
+                                  {trait}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Notes */}
+                          {selectedFriend.notes && (
+                            <div>
+                              <h4 className="text-sm font-medium text-gray-700 mb-2">Notes</h4>
+                              <p className="text-sm text-gray-600 bg-white p-3 rounded-md border border-gray-200 italic">
+                                "{selectedFriend.notes}"
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div>
@@ -478,20 +573,6 @@ function Home() {
                     />
                   </div>
                 </div>
-
-                {selectedFriend && (
-                  <div className="bg-gray-50 p-4 rounded-md">
-                    <h3 className="font-medium mb-2">Friend Profile:</h3>
-                    <p><strong>Name:</strong> {selectedFriend.name}</p>
-                    <p><strong>Country:</strong> {selectedFriend.country}</p>
-                    <p><strong>Currency:</strong> {selectedFriend.currency}</p>
-                    <p><strong>Interests:</strong> {selectedFriend.interests.join(", ")}</p>
-                    <p><strong>Personality:</strong> {selectedFriend.personalityTraits.join(", ")}</p>
-                    {selectedFriend.notes && (
-                      <p><strong>Notes:</strong> {selectedFriend.notes}</p>
-                    )}
-                  </div>
-                )}
 
                 {/* Loading Animation */}
                 {generateRecommendationsMutation.isPending && (
