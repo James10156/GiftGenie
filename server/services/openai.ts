@@ -285,7 +285,7 @@ function getReliableImage(productDescription: string): string {
 }
 
 // Enhanced product categorization for better shopping targeting
-// Enhanced shopping platform detection and URL generation with price range alignment
+// Enhanced shopping platform detection and URL generation with brand-specific routing
 async function generateShopsWithRange(basePrice: number, priceRange: string, currency: string, productName: string = "gift", country: string = "United States") {
   const symbol = getCurrencySymbol(currency);
   
@@ -311,8 +311,8 @@ async function generateShopsWithRange(basePrice: number, priceRange: string, cur
     console.warn('Could not parse price range:', priceRange, error);
   }
   
-  // Use the existing shop generation but override prices to fit range
-  const shops = await generateShops(basePrice, maxPrice * 1.5, currency, productName, country);
+  // Use the enhanced shop generation with brand routing
+  const shops = await generateShopsWithBrandRouting(basePrice, maxPrice * 1.5, currency, productName, country);
   
   // Adjust shop prices to fit within the displayed price range
   return shops.map((shop, index) => {
@@ -330,6 +330,313 @@ async function generateShopsWithRange(basePrice: number, priceRange: string, cur
       price: `${symbol}${Math.round(finalPrice)}`
     };
   });
+}
+
+// Enhanced brand-aware shop generation
+async function generateShopsWithBrandRouting(basePrice: number, budget: number, currency: string, productName: string = "gift", country: string = "United States") {
+  const brandInfo = detectBrandAndType(productName);
+  const isUK = country.toLowerCase().includes('kingdom') || country.toLowerCase().includes('uk');
+  const symbol = getCurrencySymbol(currency);
+  
+  // Safety check for NaN values
+  if (isNaN(basePrice) || isNaN(budget)) {
+    console.warn('NaN detected in generateShopsWithBrandRouting:', { basePrice, budget });
+    basePrice = isNaN(basePrice) ? 50 : basePrice;
+    budget = isNaN(budget) ? 100 : budget;
+  }
+  
+  // For luxury brands, prioritize brand-specific retailers
+  if (brandInfo.isLuxury && brandInfo.brand) {
+    const brandSpecificShops = generateBrandSpecificShops(brandInfo, productName, basePrice, symbol, isUK);
+    if (brandSpecificShops.length > 0) {
+      return brandSpecificShops;
+    }
+  }
+  
+  // Fallback to existing database system
+  const realProductUrls = generateRealProductUrls(productName, country, basePrice);
+  if (realProductUrls && realProductUrls.length > 0) {
+    return realProductUrls;
+  }
+
+  // Final fallback to category-based retailers
+  const shops = await generateShops(basePrice, budget, currency, productName, country);
+  return shops;
+}
+
+// Detect luxury brands and product types
+function detectBrandAndType(productName: string) {
+  const cleanName = productName.toLowerCase();
+  
+  const luxuryBrands = {
+    // Fashion & Accessories
+    'gucci': { type: 'fashion', isLuxury: true, hasOwnStore: true },
+    'louis vuitton': { type: 'fashion', isLuxury: true, hasOwnStore: true },
+    'chanel': { type: 'fashion', isLuxury: true, hasOwnStore: true },
+    'prada': { type: 'fashion', isLuxury: true, hasOwnStore: true },
+    'hermès': { type: 'fashion', isLuxury: true, hasOwnStore: true },
+    'hermes': { type: 'fashion', isLuxury: true, hasOwnStore: true },
+    'burberry': { type: 'fashion', isLuxury: true, hasOwnStore: true },
+    'versace': { type: 'fashion', isLuxury: true, hasOwnStore: true },
+    'valentino': { type: 'fashion', isLuxury: true, hasOwnStore: true },
+    'balenciaga': { type: 'fashion', isLuxury: true, hasOwnStore: true },
+    'givenchy': { type: 'fashion', isLuxury: true, hasOwnStore: true },
+    'saint laurent': { type: 'fashion', isLuxury: true, hasOwnStore: true },
+    'ysl': { type: 'fashion', isLuxury: true, hasOwnStore: true },
+    'dior': { type: 'fashion', isLuxury: true, hasOwnStore: true },
+    'fendi': { type: 'fashion', isLuxury: true, hasOwnStore: true },
+    'bottega veneta': { type: 'fashion', isLuxury: true, hasOwnStore: true },
+    'tiffany': { type: 'jewelry', isLuxury: true, hasOwnStore: true },
+    'cartier': { type: 'jewelry', isLuxury: true, hasOwnStore: true },
+    'bulgari': { type: 'jewelry', isLuxury: true, hasOwnStore: true },
+    
+    // Watches
+    'rolex': { type: 'watches', isLuxury: true, hasOwnStore: true },
+    'omega': { type: 'watches', isLuxury: true, hasOwnStore: true },
+    'tag heuer': { type: 'watches', isLuxury: true, hasOwnStore: true },
+    'breitling': { type: 'watches', isLuxury: true, hasOwnStore: true },
+    'patek philippe': { type: 'watches', isLuxury: true, hasOwnStore: true },
+    'audemars piguet': { type: 'watches', isLuxury: true, hasOwnStore: true },
+    
+    // Premium but not ultra-luxury brands
+    'kate spade': { type: 'fashion', isLuxury: false, hasOwnStore: true },
+    'michael kors': { type: 'fashion', isLuxury: false, hasOwnStore: true },
+    'coach': { type: 'fashion', isLuxury: false, hasOwnStore: true },
+    'marc jacobs': { type: 'fashion', isLuxury: false, hasOwnStore: true },
+    'calvin klein': { type: 'fashion', isLuxury: false, hasOwnStore: true },
+    'tommy hilfiger': { type: 'fashion', isLuxury: false, hasOwnStore: true },
+    'hugo boss': { type: 'fashion', isLuxury: false, hasOwnStore: true },
+    'ralph lauren': { type: 'fashion', isLuxury: false, hasOwnStore: true },
+    'polo ralph lauren': { type: 'fashion', isLuxury: false, hasOwnStore: true }
+  };
+  
+  let detectedBrand = null;
+  let brandInfo = { type: 'general', isLuxury: false, hasOwnStore: false };
+  
+  for (const [brand, info] of Object.entries(luxuryBrands)) {
+    if (cleanName.includes(brand)) {
+      detectedBrand = brand;
+      brandInfo = info;
+      break;
+    }
+  }
+  
+  return {
+    brand: detectedBrand,
+    ...brandInfo
+  };
+}
+
+// Generate brand-specific shop recommendations
+function generateBrandSpecificShops(brandInfo: any, productName: string, basePrice: number, symbol: string, isUK: boolean) {
+  const shops: any[] = [];
+  const searchQuery = encodeURIComponent(productName.replace(/\s+/g, ' ').trim());
+  const brandName = brandInfo.brand;
+  
+  // Brand official stores (if they have one)
+  if (brandInfo.hasOwnStore && brandName) {
+    const officialStore = generateOfficialStoreLink(brandName, searchQuery, isUK);
+    if (officialStore) {
+      shops.push({
+        name: formatBrandName(brandName),
+        price: `${symbol}${Math.round(basePrice * (1.0 + Math.random() * 0.05))}`, // Official stores usually have MSRP
+        inStock: Math.random() > 0.05, // High stock probability for official stores
+        url: officialStore,
+        isOfficialStore: true
+      });
+    }
+  }
+  
+  // Luxury department stores for high-end brands
+  if (brandInfo.isLuxury) {
+    if (isUK) {
+      shops.push({
+        name: "Harrods",
+        price: `${symbol}${Math.round(basePrice * (1.05 + Math.random() * 0.1))}`,
+        inStock: Math.random() > 0.2,
+        url: `https://www.harrods.com/en-gb/search/${searchQuery}`
+      });
+      shops.push({
+        name: "Selfridges",
+        price: `${symbol}${Math.round(basePrice * (1.03 + Math.random() * 0.1))}`,
+        inStock: Math.random() > 0.15,
+        url: `https://www.selfridges.com/GB/en/search/${searchQuery}`
+      });
+      shops.push({
+        name: "Harvey Nichols",
+        price: `${symbol}${Math.round(basePrice * (1.07 + Math.random() * 0.1))}`,
+        inStock: Math.random() > 0.25,
+        url: `https://www.harveynichols.com/search?keywords=${searchQuery}`
+      });
+    } else {
+      shops.push({
+        name: "Neiman Marcus",
+        price: `${symbol}${Math.round(basePrice * (1.05 + Math.random() * 0.1))}`,
+        inStock: Math.random() > 0.2,
+        url: `https://www.neimanmarcus.com/search.jsp?query=${searchQuery}`
+      });
+      shops.push({
+        name: "Saks Fifth Avenue",
+        price: `${symbol}${Math.round(basePrice * (1.03 + Math.random() * 0.1))}`,
+        inStock: Math.random() > 0.15,
+        url: `https://www.saksfifthavenue.com/search?query=${searchQuery}`
+      });
+      shops.push({
+        name: "Bergdorf Goodman",
+        price: `${symbol}${Math.round(basePrice * (1.07 + Math.random() * 0.1))}`,
+        inStock: Math.random() > 0.25,
+        url: `https://www.bergdorfgoodman.com/search.jsp?query=${searchQuery}`
+      });
+    }
+  } else {
+    // Premium department stores for mid-tier brands
+    if (isUK) {
+      shops.push({
+        name: "John Lewis",
+        price: `${symbol}${Math.round(basePrice * (1.02 + Math.random() * 0.08))}`,
+        inStock: Math.random() > 0.15,
+        url: `https://www.johnlewis.com/search?search-term=${searchQuery}`
+      });
+    } else {
+      shops.push({
+        name: "Nordstrom",
+        price: `${symbol}${Math.round(basePrice * (1.02 + Math.random() * 0.08))}`,
+        inStock: Math.random() > 0.15,
+        url: `https://www.nordstrom.com/sr?keyword=${searchQuery}`
+      });
+      shops.push({
+        name: "Bloomingdale's",
+        price: `${symbol}${Math.round(basePrice * (1.04 + Math.random() * 0.08))}`,
+        inStock: Math.random() > 0.18,
+        url: `https://www.bloomingdales.com/search?keyword=${searchQuery}`
+      });
+    }
+  }
+  
+  // Add one general retailer as fallback (but lower priority)
+  const generalRetailer = isUK ? "Farfetch" : "SSENSE";
+  const generalUrl = isUK 
+    ? `https://www.farfetch.com/shopping/search/items.aspx?q=${searchQuery}`
+    : `https://www.ssense.com/en-us/search?q=${searchQuery}`;
+  
+  shops.push({
+    name: generalRetailer,
+    price: `${symbol}${Math.round(basePrice * (0.95 + Math.random() * 0.1))}`,
+    inStock: Math.random() > 0.1,
+    url: generalUrl
+  });
+  
+  return shops.slice(0, 4);
+}
+
+// Generate official brand store links
+function generateOfficialStoreLink(brandName: string, searchQuery: string, isUK: boolean) {
+  const brandUrls: { [key: string]: { us: string, uk: string, searchPath: string } } = {
+    'gucci': {
+      us: 'https://www.gucci.com/us/en',
+      uk: 'https://www.gucci.com/uk/en_gb',
+      searchPath: '/search?q='
+    },
+    'louis vuitton': {
+      us: 'https://us.louisvuitton.com',
+      uk: 'https://uk.louisvuitton.com',
+      searchPath: '/eng-us/search/'
+    },
+    'chanel': {
+      us: 'https://www.chanel.com/us',
+      uk: 'https://www.chanel.com/gb',
+      searchPath: '/fashion/' // Chanel doesn't have a direct search, link to fashion section
+    },
+    'prada': {
+      us: 'https://www.prada.com/us/en',
+      uk: 'https://www.prada.com/gb/en',
+      searchPath: '/search?q='
+    },
+    'hermès': {
+      us: 'https://www.hermes.com/us/en',
+      uk: 'https://www.hermes.com/uk/en',
+      searchPath: '/search/?q='
+    },
+    'hermes': {
+      us: 'https://www.hermes.com/us/en',
+      uk: 'https://www.hermes.com/uk/en',
+      searchPath: '/search/?q='
+    },
+    'burberry': {
+      us: 'https://us.burberry.com',
+      uk: 'https://uk.burberry.com',
+      searchPath: '/search?q='
+    },
+    'coach': {
+      us: 'https://www.coach.com',
+      uk: 'https://uk.coach.com',
+      searchPath: '/search?q='
+    },
+    'kate spade': {
+      us: 'https://www.katespade.com',
+      uk: 'https://www.katespade.co.uk',
+      searchPath: '/search?q='
+    },
+    'michael kors': {
+      us: 'https://www.michaelkors.com',
+      uk: 'https://www.michaelkors.co.uk',
+      searchPath: '/search?q='
+    },
+    'calvin klein': {
+      us: 'https://www.calvinklein.us',
+      uk: 'https://www.calvinklein.co.uk',
+      searchPath: '/search?q='
+    },
+    'ralph lauren': {
+      us: 'https://www.ralphlauren.com',
+      uk: 'https://www.ralphlauren.co.uk',
+      searchPath: '/search?q='
+    },
+    'polo ralph lauren': {
+      us: 'https://www.ralphlauren.com',
+      uk: 'https://www.ralphlauren.co.uk',
+      searchPath: '/search?q='
+    }
+  };
+  
+  const brandData = brandUrls[brandName];
+  if (!brandData) return null;
+  
+  const baseUrl = isUK ? brandData.uk : brandData.us;
+  
+  // For brands like Chanel that don't have search, just link to main category
+  if (brandName === 'chanel') {
+    return baseUrl + brandData.searchPath;
+  }
+  
+  return baseUrl + brandData.searchPath + encodeURIComponent(searchQuery);
+}
+
+// Format brand names for display
+function formatBrandName(brandName: string) {
+  const specialCases: { [key: string]: string } = {
+    'louis vuitton': 'Louis Vuitton',
+    'hermès': 'Hermès',
+    'hermes': 'Hermès',
+    'ysl': 'Saint Laurent',
+    'saint laurent': 'Saint Laurent',
+    'kate spade': 'Kate Spade',
+    'michael kors': 'Michael Kors',
+    'calvin klein': 'Calvin Klein',
+    'tommy hilfiger': 'Tommy Hilfiger',
+    'hugo boss': 'Hugo Boss',
+    'ralph lauren': 'Ralph Lauren',
+    'polo ralph lauren': 'Polo Ralph Lauren',
+    'marc jacobs': 'Marc Jacobs',
+    'tag heuer': 'TAG Heuer',
+    'patek philippe': 'Patek Philippe',
+    'audemars piguet': 'Audemars Piguet',
+    'bottega veneta': 'Bottega Veneta'
+  };
+  
+  return specialCases[brandName] || brandName.split(' ').map(word => 
+    word.charAt(0).toUpperCase() + word.slice(1)
+  ).join(' ');
 }
 
 // Enhanced product categorization for better shopping targeting
@@ -385,10 +692,11 @@ function analyzeProductForRetailers(productName: string) {
   return analysis;
 }
 
-// UK-specific retailer mapping with real product links
+// UK-specific retailer mapping with enhanced URL targeting
 function getUKRetailers(analysis: any, productName: string, basePrice: number, symbol: string) {
   const retailers: any[] = [];
   const searchQuery = encodeURIComponent(productName.replace(/\s+/g, ' ').trim());
+  const optimizedQuery = optimizeSearchQuery(productName);
   
   // Safety check for NaN
   if (isNaN(basePrice)) {
@@ -396,27 +704,27 @@ function getUKRetailers(analysis: any, productName: string, basePrice: number, s
     basePrice = 50;
   }
   
-  // Always include Amazon UK as primary
+  // Always include Amazon UK as primary with enhanced search
   retailers.push({
     name: "Amazon UK",
     price: `${symbol}${Math.round(basePrice * (0.95 + Math.random() * 0.1))}`,
     inStock: Math.random() > 0.1,
-    url: `https://www.amazon.co.uk/s?k=${searchQuery}&ref=nb_sb_noss`
+    url: generateAmazonUKURL(productName, optimizedQuery)
   });
 
-  // Category-specific retailers
+  // Category-specific retailers with better URLs
   if (analysis.isElectronics) {
     retailers.push({
       name: "Currys PC World",
       price: `${symbol}${Math.round(basePrice * (1.0 + Math.random() * 0.1))}`,
       inStock: Math.random() > 0.15,
-      url: `https://www.currys.co.uk/search?q=${searchQuery}`
+      url: `https://www.currys.co.uk/search?q=${optimizedQuery}&sort=relevance&tab=product`
     });
     retailers.push({
       name: "Argos",
       price: `${symbol}${Math.round(basePrice * (0.9 + Math.random() * 0.1))}`,
       inStock: Math.random() > 0.2,
-      url: `https://www.argos.co.uk/search/${productName.replace(/\s+/g, '-').toLowerCase()}/`
+      url: `https://www.argos.co.uk/search/${productName.replace(/\s+/g, '-').toLowerCase()}/?clickOrigin=searchbar:search:term:${optimizedQuery}`
     });
   }
   
@@ -425,13 +733,13 @@ function getUKRetailers(analysis: any, productName: string, basePrice: number, s
       name: "ASOS",
       price: `${symbol}${Math.round(basePrice * (0.85 + Math.random() * 0.2))}`,
       inStock: Math.random() > 0.1,
-      url: `https://www.asos.com/search/?q=${searchQuery}`
+      url: `https://www.asos.com/search/?q=${optimizedQuery}&currentpricerange=0-1000&refine=currentpricerange:0-1000`
     });
     retailers.push({
       name: "Next",
       price: `${symbol}${Math.round(basePrice * (1.1 + Math.random() * 0.1))}`,
       inStock: Math.random() > 0.15,
-      url: `https://www.next.co.uk/search?w=${searchQuery}`
+      url: `https://www.next.co.uk/search?w=${optimizedQuery}#1`
     });
   }
   
@@ -440,13 +748,13 @@ function getUKRetailers(analysis: any, productName: string, basePrice: number, s
       name: "Boots",
       price: `${symbol}${Math.round(basePrice * (1.05 + Math.random() * 0.1))}`,
       inStock: Math.random() > 0.1,
-      url: `https://www.boots.com/search?text=${searchQuery}`
+      url: `https://www.boots.com/search?text=${optimizedQuery}&sort=relevance&pagesize=24`
     });
     retailers.push({
       name: "Superdrug",
       price: `${symbol}${Math.round(basePrice * (0.9 + Math.random() * 0.1))}`,
       inStock: Math.random() > 0.15,
-      url: `https://www.superdrug.com/search?text=${searchQuery}`
+      url: `https://www.superdrug.com/search?text=${optimizedQuery}&sort=relevance`
     });
   }
   
@@ -455,13 +763,13 @@ function getUKRetailers(analysis: any, productName: string, basePrice: number, s
       name: "Waterstones",
       price: `${symbol}${Math.round(basePrice * (1.0 + Math.random() * 0.05))}`,
       inStock: Math.random() > 0.05,
-      url: `https://www.waterstones.com/books/search/term/${searchQuery}`
+      url: `https://www.waterstones.com/books/search/term/${optimizedQuery}?breadcrumb=books`
     });
     retailers.push({
       name: "WHSmith",
       price: `${symbol}${Math.round(basePrice * (1.05 + Math.random() * 0.1))}`,
       inStock: Math.random() > 0.1,
-      url: `https://www.whsmith.co.uk/search?w=${searchQuery}`
+      url: `https://www.whsmith.co.uk/search?w=${optimizedQuery}&af=brand`
     });
   }
   
@@ -470,31 +778,73 @@ function getUKRetailers(analysis: any, productName: string, basePrice: number, s
       name: "Jackson's Art",
       price: `${symbol}${Math.round(basePrice * (1.0 + Math.random() * 0.1))}`,
       inStock: Math.random() > 0.05,
-      url: `https://www.jacksonsart.com/search?q=${searchQuery}`
+      url: `https://www.jacksonsart.com/search?q=${optimizedQuery}&type=product`
     });
     retailers.push({
       name: "The Works",
       price: `${symbol}${Math.round(basePrice * (0.8 + Math.random() * 0.1))}`,
       inStock: Math.random() > 0.1,
-      url: `https://www.theworks.co.uk/search?q=${searchQuery}`
+      url: `https://www.theworks.co.uk/search?q=${optimizedQuery}&lang=en_GB`
     });
   }
 
-  // Add John Lewis as premium option
+  // Add John Lewis as premium option with enhanced search
   retailers.push({
     name: "John Lewis",
     price: `${symbol}${Math.round(basePrice * (1.15 + Math.random() * 0.1))}`,
     inStock: Math.random() > 0.2,
-    url: `https://www.johnlewis.com/search?search-term=${searchQuery}`
+    url: `https://www.johnlewis.com/search?search-term=${optimizedQuery}&esid=search_${optimizedQuery.replace(/%20/g, '_')}`
   });
 
   return retailers;
 }
 
-// US-specific retailer mapping
+// Generate optimized Amazon UK URLs
+function generateAmazonUKURL(productName: string, optimizedQuery: string) {
+  // Similar brand detection for UK Amazon
+  const brandSections: { [key: string]: string } = {
+    'apple': '&rh=n%3A560798', // Apple store UK
+    'nike': '&rh=n%3A11052591', // Nike UK
+    'adidas': '&rh=n%3A11052592', // Adidas UK
+    'lululemon': '&rh=n%3A83450031',
+    'coach': '&rh=n%3A11052671',
+    'kate spade': '&rh=n%3A11052671',
+    'stanley': '&rh=n%3A11052798',
+    'yeti': '&rh=n%3A11052798',
+    'instant pot': '&rh=n%3A11052799',
+    'kindle': '&rh=n%3A341689031'
+  };
+  
+  const lowerName = productName.toLowerCase();
+  let categoryFilter = '';
+  
+  for (const [brand, filter] of Object.entries(brandSections)) {
+    if (lowerName.includes(brand)) {
+      categoryFilter = filter;
+      break;
+    }
+  }
+  
+  const baseUrl = 'https://www.amazon.co.uk/s';
+  const params = [
+    `k=${optimizedQuery}`,
+    'crid=1234567890ABC',
+    'sprefix=' + optimizedQuery.split('+')[0] + '%2Caps%2C123',
+    'ref=nb_sb_noss_2'
+  ];
+  
+  if (categoryFilter) {
+    params.push(categoryFilter.substring(1));
+  }
+  
+  return baseUrl + '?' + params.join('&');
+}
+
+// US-specific retailer mapping with enhanced URL targeting
 function getUSRetailers(analysis: any, productName: string, basePrice: number, symbol: string) {
   const retailers: any[] = [];
   const searchQuery = encodeURIComponent(productName.replace(/\s+/g, ' ').trim());
+  const optimizedQuery = optimizeSearchQuery(productName);
   
   // Safety check for NaN
   if (isNaN(basePrice)) {
@@ -502,27 +852,27 @@ function getUSRetailers(analysis: any, productName: string, basePrice: number, s
     basePrice = 50;
   }
   
-  // Always include Amazon as primary
+  // Always include Amazon as primary with optimized search
   retailers.push({
     name: "Amazon",
     price: `${symbol}${Math.round(basePrice * (0.95 + Math.random() * 0.1))}`,
     inStock: Math.random() > 0.05,
-    url: `https://www.amazon.com/s?k=${searchQuery}&ref=nb_sb_noss`
+    url: generateAmazonURL(productName, optimizedQuery)
   });
 
-  // Category-specific retailers
+  // Category-specific retailers with better URLs
   if (analysis.isElectronics) {
     retailers.push({
       name: "Best Buy",
       price: `${symbol}${Math.round(basePrice * (1.05 + Math.random() * 0.1))}`,
       inStock: Math.random() > 0.15,
-      url: `https://www.bestbuy.com/site/searchpage.jsp?st=${searchQuery}`
+      url: `https://www.bestbuy.com/site/searchpage.jsp?st=${optimizedQuery}&_dyncharset=UTF-8&_dynSessConf=&id=pcat17071&type=page&sc=Global&cp=1&nrp=&sp=&qp=&list=n&af=true&iht=y&usc=All+Categories&ks=960&keys=keys`
     });
     retailers.push({
       name: "B&H Photo",
       price: `${symbol}${Math.round(basePrice * (1.0 + Math.random() * 0.1))}`,
       inStock: Math.random() > 0.1,
-      url: `https://www.bhphotovideo.com/c/search?Ntt=${searchQuery}`
+      url: `https://www.bhphotovideo.com/c/search?Ntt=${optimizedQuery}&N=0&InitialSearch=yes&sts=ma`
     });
   }
   
@@ -531,13 +881,13 @@ function getUSRetailers(analysis: any, productName: string, basePrice: number, s
       name: "Nordstrom",
       price: `${symbol}${Math.round(basePrice * (1.2 + Math.random() * 0.2))}`,
       inStock: Math.random() > 0.15,
-      url: `https://www.nordstrom.com/sr?keyword=${searchQuery}`
+      url: `https://www.nordstrom.com/sr?keyword=${optimizedQuery}&origin=keywordsearch&autosuggestion=true`
     });
     retailers.push({
       name: "Macy's",
       price: `${symbol}${Math.round(basePrice * (0.9 + Math.random() * 0.2))}`,
       inStock: Math.random() > 0.1,
-      url: `https://www.macys.com/shop/search?keyword=${searchQuery}`
+      url: `https://www.macys.com/shop/search?keyword=${optimizedQuery}&cm_kws=${optimizedQuery}`
     });
   }
   
@@ -546,13 +896,13 @@ function getUSRetailers(analysis: any, productName: string, basePrice: number, s
       name: "Sephora",
       price: `${symbol}${Math.round(basePrice * (1.1 + Math.random() * 0.1))}`,
       inStock: Math.random() > 0.1,
-      url: `https://www.sephora.com/search?keyword=${searchQuery}`
+      url: `https://www.sephora.com/search?keyword=${optimizedQuery}&pageSize=60&content=product&currentPage=1`
     });
     retailers.push({
       name: "Ulta Beauty",
       price: `${symbol}${Math.round(basePrice * (1.0 + Math.random() * 0.1))}`,
       inStock: Math.random() > 0.15,
-      url: `https://www.ulta.com/search?query=${searchQuery}`
+      url: `https://www.ulta.com/search?query=${optimizedQuery}&sort=relevance`
     });
   }
   
@@ -561,7 +911,7 @@ function getUSRetailers(analysis: any, productName: string, basePrice: number, s
       name: "Barnes & Noble",
       price: `${symbol}${Math.round(basePrice * (1.0 + Math.random() * 0.05))}`,
       inStock: Math.random() > 0.05,
-      url: `https://www.barnesandnoble.com/s/${searchQuery}`
+      url: `https://www.barnesandnoble.com/s/${optimizedQuery}?Ntk=P_key_Contributor_List&Ns=P_Sales_Rank&Ntx=mode+matchall`
     });
   }
   
@@ -570,25 +920,141 @@ function getUSRetailers(analysis: any, productName: string, basePrice: number, s
       name: "Blick Art Materials",
       price: `${symbol}${Math.round(basePrice * (1.0 + Math.random() * 0.1))}`,
       inStock: Math.random() > 0.05,
-      url: `https://www.dickblick.com/search/?q=${searchQuery}`
+      url: `https://www.dickblick.com/search/?q=${optimizedQuery}&x=0&y=0`
     });
     retailers.push({
       name: "Michaels",
       price: `${symbol}${Math.round(basePrice * (0.85 + Math.random() * 0.1))}`,
       inStock: Math.random() > 0.1,
-      url: `https://www.michaels.com/search?q=${searchQuery}`
+      url: `https://www.michaels.com/search?q=${optimizedQuery}&pmpt=qualifying&promotioncode=&start=0`
+    });
+  }
+  
+  if (analysis.isSports) {
+    retailers.push({
+      name: "Dick's Sporting Goods",
+      price: `${symbol}${Math.round(basePrice * (0.95 + Math.random() * 0.1))}`,
+      inStock: Math.random() > 0.1,
+      url: `https://www.dickssportinggoods.com/search/SearchDisplay?categoryId=&storeId=15108&catalogId=12301&langId=-1&sType=SimpleSearch&resultCatEntryType=2&showResultsPage=true&searchSource=Q&pageView=&beginIndex=0&pageSize=48&searchTerm=${optimizedQuery}`
     });
   }
 
-  // Add Target as general retailer
+  // Add Target as general retailer with enhanced search
   retailers.push({
     name: "Target",
     price: `${symbol}${Math.round(basePrice * (0.9 + Math.random() * 0.1))}`,
     inStock: Math.random() > 0.15,
-    url: `https://www.target.com/s?searchTerm=${searchQuery}`
+    url: `https://www.target.com/s?searchTerm=${optimizedQuery}&category=0%7CAll%7Cmatchallpartial%7Call+categories&tref=typeahead%7Cterm%7C0%7C${optimizedQuery}%7C%7C%7Cservice`
   });
 
   return retailers;
+}
+
+// Optimize search queries for better product matching
+function optimizeSearchQuery(productName: string) {
+  // Extract key terms from product name, prioritizing brand and model
+  const words = productName.toLowerCase().split(/\s+/);
+  
+  // Define important brand terms that should be prioritized
+  const importantBrands = [
+    'apple', 'samsung', 'sony', 'nintendo', 'microsoft', 'google',
+    'nike', 'adidas', 'lululemon', 'under armour',
+    'coach', 'kate spade', 'michael kors', 'gucci', 'louis vuitton',
+    'stanley', 'yeti', 'hydroflask', 'contigo',
+    'instant pot', 'kitchenaid', 'cuisinart', 'vitamix',
+    'kindle', 'ipad', 'macbook', 'airpods',
+    'winsor newton', 'prismacolor', 'wacom', 'copic'
+  ];
+  
+  // Define model/type indicators
+  const modelIndicators = [
+    'pro', 'max', 'mini', 'air', 'plus', 'ultra', 'oled', 'elite',
+    'generation', 'gen', '2nd', '3rd', '4th', '5th',
+    'duo', 'essential', 'deluxe', 'premium', 'standard'
+  ];
+  
+  // Extract brand if present
+  let brand = '';
+  let model = '';
+  let productType = '';
+  
+  for (const word of words) {
+    if (importantBrands.some(b => b.includes(word) || word.includes(b))) {
+      brand = word;
+      break;
+    }
+  }
+  
+  // Extract model indicators
+  for (const word of words) {
+    if (modelIndicators.includes(word) || /\d+(st|nd|rd|th|oz|inch|gb|tb)/.test(word)) {
+      model += word + ' ';
+    }
+  }
+  
+  // For products with clear brand and model, use those primarily
+  if (brand && model.trim()) {
+    return encodeURIComponent(`${brand} ${model.trim()}`);
+  }
+  
+  // For products with brand but no clear model, include product type
+  if (brand) {
+    const remainingWords = words.filter(w => w !== brand && !modelIndicators.includes(w));
+    const keyWords = remainingWords.slice(0, 2); // Take first 2 non-brand words
+    return encodeURIComponent(`${brand} ${keyWords.join(' ')}`);
+  }
+  
+  // Fallback: use the most important words (first 3-4 words, excluding common words)
+  const stopWords = ['the', 'a', 'an', 'and', 'or', 'but', 'with', 'for', 'by'];
+  const filteredWords = words.filter(w => !stopWords.includes(w)).slice(0, 4);
+  
+  return encodeURIComponent(filteredWords.join(' '));
+}
+
+// Generate optimized Amazon URLs with better targeting
+function generateAmazonURL(productName: string, optimizedQuery: string) {
+  // Detect if it's a specific brand that has a dedicated Amazon store/section
+  const brandSections: { [key: string]: string } = {
+    'apple': '&rh=n%3A2407747011', // Apple store on Amazon
+    'nike': '&rh=n%3A7147440011', // Nike store
+    'adidas': '&rh=n%3A14553805011', // Adidas store
+    'lululemon': '&rh=n%3A2353394011', // Athletic apparel
+    'coach': '&rh=n%3A7147441011', // Handbags & accessories
+    'kate spade': '&rh=n%3A7147441011',
+    'michael kors': '&rh=n%3A7147441011',
+    'stanley': '&rh=n%3A3741341', // Kitchen & dining
+    'yeti': '&rh=n%3A3741341',
+    'instant pot': '&rh=n%3A289851',
+    'kitchenaid': '&rh=n%3A289851',
+    'kindle': '&rh=n%3A6669702011', // Kindle store
+    'nintendo': '&rh=n%3A468642', // Video games
+    'sony': '&rh=n%3A172282'
+  };
+  
+  const lowerName = productName.toLowerCase();
+  let categoryFilter = '';
+  
+  for (const [brand, filter] of Object.entries(brandSections)) {
+    if (lowerName.includes(brand)) {
+      categoryFilter = filter;
+      break;
+    }
+  }
+  
+  // Build enhanced Amazon URL
+  const baseUrl = 'https://www.amazon.com/s';
+  const params = [
+    `k=${optimizedQuery}`,
+    'crid=1234567890ABC', // Helps with tracking
+    'sprefix=' + optimizedQuery.split('+')[0] + '%2Caps%2C123',
+    'ref=nb_sb_noss_2'
+  ];
+  
+  if (categoryFilter) {
+    params.push(categoryFilter.substring(1)); // Remove the & at the beginning
+  }
+  
+  return baseUrl + '?' + params.join('&');
 }
 
 export async function generateGiftRecommendations(
@@ -606,46 +1072,66 @@ export async function generateGiftRecommendations(
     
     console.log(`Generating AI-powered gifts for ${friendName} with traits: ${personalityTraits.join(', ')}, interests: ${interests.join(', ')}, budget: ${symbol}${budget}, currency: ${currency}${additionalContext ? '. Additional notes: ' + notes : ''}`);
     
-    const prompt = `You are a thoughtful gift recommendation expert. Generate 5-6 personalized gift ideas for ${friendName} based on their profile:
+    const prompt = `You are a thoughtful gift recommendation expert who specializes in finding REAL, commercially available products. Generate 5-6 personalized gift ideas for ${friendName} based on their profile:
 
 Personality Traits: ${personalityTraits.join(', ')}
 Interests: ${interests.join(', ')}
 Budget: ${symbol}${budget} (MAXIMUM - do not exceed this amount)
 Currency: ${currency}${additionalContext}
 
-CRITICAL: All gift prices must be within the budget of ${symbol}${budget}. Do not recommend anything that costs more than this amount.
+CRITICAL REQUIREMENTS:
+- All gift prices must be within the budget of ${symbol}${budget}. Do not recommend anything that costs more than this amount.
+- Recommend ONLY real, commercially available products with specific brand names and models
+- Use popular, well-known brands that are widely available at major retailers
+- For luxury brands (Gucci, Louis Vuitton, etc.), suggest their most accessible items within budget
+
+PRODUCT SELECTION GUIDELINES:
+1. For tech products: Use current, popular models from Apple, Samsung, Sony, Nintendo, etc.
+2. For fashion: Use accessible lines from well-known brands (Coach outlet items, Kate Spade, Michael Kors, etc.)
+3. For beauty: Use popular products from Sephora/Ulta brands (Fenty, Urban Decay, Charlotte Tilotte, etc.)
+4. For home items: Use popular brands like Stanley, Yeti, Le Creuset, KitchenAid, etc.
+5. For books: Use bestsellers or popular titles, include author names
+6. For art supplies: Use established brands like Winsor & Newton, Prismacolor, Wacom, etc.
+7. For sports: Use Nike, Adidas, Under Armour, Lululemon, etc.
 
 For each gift recommendation, provide:
-1. A creative, SPECIFIC gift name with exact brands/models when possible (e.g. "Nike Elite All-Court Basketball", "Apple AirPods Pro", "Winsor & Newton Cotman Watercolor Set", "Stanley Adventure Quencher Tumbler", "Lululemon Align Leggings")
+1. A SPECIFIC, REAL product name with exact brand and model (e.g. "Coach Outlet Madison Leather Handbag", "Apple AirPods Pro 2nd Generation", "Stanley Adventure Quencher Tumbler 40oz", "Nintendo Switch OLED Console")
 2. A detailed description (2-3 sentences) explaining why it's perfect for them
 3. An estimated price range WITHIN the ${symbol}${budget} budget (never exceed this amount)
 4. A match percentage (how well it fits their profile)
 5. Which specific traits/interests it matches
 6. A realistic product search term for images
-7. A specific product search term for shopping (use exact product names, model numbers, or specific descriptive terms)
+7. A specific product search term for shopping (use exact product names and model numbers)
 
-IMPORTANT: Use specific, well-known product names and brands. Examples of good specific names:
-- "Nike Elite All-Court Basketball" (not just "basketball")
-- "Apple AirPods Pro 2nd Generation" (not just "wireless earbuds") 
-- "Instant Pot Duo 7-in-1 Pressure Cooker" (not just "pressure cooker")
-- "Lululemon Align High-Rise Leggings" (not just "yoga pants")
-- "Stanley Adventure Quencher Tumbler 40oz" (not just "water bottle")
-- "Nintendo Switch OLED Model" (not just "gaming console")
-- "Winsor & Newton Cotman Watercolor Set" (not just "paint set")
+EXCELLENT EXAMPLES of specific, real products:
+- "Apple AirPods Pro 2nd Generation with MagSafe Case" (not just "wireless earbuds")
+- "Coach Outlet Crossgrain Leather City Zip Tote" (not just "handbag")
+- "Stanley Adventure Quencher Travel Tumbler 40oz Charcoal" (not just "water bottle") 
+- "Nintendo Switch OLED Console with Neon Blue and Red Joy-Con" (not just "gaming console")
+- "Lululemon Align High-Rise Pant 28" in Black" (not just "yoga pants")
+- "Instant Pot Duo 7-in-1 Electric Pressure Cooker 6-Quart" (not just "pressure cooker")
+- "Kindle Paperwhite 11th Generation 6.8 inch Display" (not just "e-reader")
+- "Yeti Rambler 20oz Tumbler with MagSlider Lid" (not just "tumbler")
 
-Consider their personality and interests deeply. Be creative and think of unique, thoughtful gifts that someone with these specific traits would genuinely appreciate. Use specific product names and models for better shopping results.
+BRAND TIER GUIDANCE:
+- Luxury (over $200): Gucci, Louis Vuitton, Chanel (suggest their most affordable items)
+- Premium ($50-200): Coach, Kate Spade, Michael Kors, Apple, Lululemon, Yeti
+- Mid-range ($20-50): Nike, Adidas, Stanley, Instant Pot, Kindle
+- Affordable (under $20): Books, small accessories, beauty items
+
+Consider their personality and interests deeply. Be creative and think of unique, thoughtful gifts that someone with these specific traits would genuinely appreciate and that they can actually find and purchase.
 
 Respond in JSON format with this structure:
 {
   "recommendations": [
     {
-      "name": "Specific Brand Product Name with Model",
+      "name": "Exact Brand Product Name with Specific Model/Size/Color",
       "description": "Why this gift is perfect for them...",
       "price": "${symbol}XX - ${symbol}XX",
       "matchPercentage": 85,
       "matchingTraits": ["trait1", "trait2"],
-      "imageSearchTerm": "specific product name",
-      "shopSearchTerm": "Exact Brand Model Product Name for shopping"
+      "imageSearchTerm": "brand product name model",
+      "shopSearchTerm": "Exact Brand Model Product Name with specifications"
     }
   ]
 }`;
