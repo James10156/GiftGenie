@@ -1,11 +1,11 @@
 import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useAuth } from "@/hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -14,59 +14,117 @@ interface AuthModalProps {
 }
 
 export function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalProps) {
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [activeTab, setActiveTab] = useState("login");
   const [loginData, setLoginData] = useState({ username: "", password: "" });
   const [registerData, setRegisterData] = useState({
     username: "",
     password: "",
-    email: "",
-    displayName: ""
+    confirmPassword: ""
+  });
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const loginMutation = useMutation({
+    mutationFn: async ({ username, password }: { username: string; password: string }) => {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password }),
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Login failed");
+      }
+      return response.json();
+    },
+    onSuccess: (user) => {
+      toast({ title: "Welcome back!", description: `Logged in as ${user.username}` });
+      queryClient.invalidateQueries({ queryKey: ["friends"] });
+      queryClient.invalidateQueries({ queryKey: ["savedGifts"] });
+      onAuthSuccess(user);
+      onClose();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Login failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
   });
 
-  const { login } = useAuth();
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError("");
-
-    try {
-      // Simple demo authentication
-      if (loginData.username === "demo" && loginData.password === "demo123") {
-        const user = {
-          id: "demo-user",
-          username: "demo",
-          email: "demo@example.com",
-          displayName: "Demo User"
-        };
-        
-        login(user);
-        onAuthSuccess(user);
-        onClose();
-      } else {
-        throw new Error("Invalid credentials. Try username: demo, password: demo123");
+  const registerMutation = useMutation({
+    mutationFn: async ({ username, password }: { username: string; password: string }) => {
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password }),
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Registration failed");
       }
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setIsLoading(false);
+      return response.json();
+    },
+    onSuccess: (user) => {
+      toast({ title: "Welcome to GiftGenie!", description: `Account created for ${user.username}` });
+      queryClient.invalidateQueries({ queryKey: ["friends"] });
+      queryClient.invalidateQueries({ queryKey: ["savedGifts"] });
+      onAuthSuccess(user);
+      onClose();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Registration failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!loginData.username || !loginData.password) {
+      toast({
+        title: "Missing information",
+        description: "Please enter both username and password",
+        variant: "destructive",
+      });
+      return;
     }
+    loginMutation.mutate(loginData);
   };
 
-  const handleRegister = async (e: React.FormEvent) => {
+  const handleRegister = (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    setError("");
-
-    try {
-      // For now, registration just shows a message
-      setError("Registration feature coming soon! Please use the demo account: username 'demo', password 'demo123'");
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setIsLoading(false);
+    if (!registerData.username || !registerData.password || !registerData.confirmPassword) {
+      toast({
+        title: "Missing information",
+        description: "Please fill in all fields",
+        variant: "destructive",
+      });
+      return;
     }
+    if (registerData.password !== registerData.confirmPassword) {
+      toast({
+        title: "Password mismatch",
+        description: "Passwords do not match",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (registerData.password.length < 6) {
+      toast({
+        title: "Password too short",
+        description: "Password must be at least 6 characters",
+        variant: "destructive",
+      });
+      return;
+    }
+    registerMutation.mutate({
+      username: registerData.username,
+      password: registerData.password,
+    });
   };
 
   if (!isOpen) return null;
@@ -86,20 +144,14 @@ export function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalProps) {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="login">
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="login">Login</TabsTrigger>
               <TabsTrigger value="register">Register</TabsTrigger>
             </TabsList>
             
             <TabsContent value="login">
-              <form onSubmit={handleLogin} className="space-y-4">
-                {error && (
-                  <Alert variant="destructive">
-                    <AlertDescription>{error}</AlertDescription>
-                  </Alert>
-                )}
-                
+              <form onSubmit={handleLogin} className="space-y-4">                
                 <div className="space-y-2">
                   <Label htmlFor="username">Username</Label>
                   <Input
@@ -123,26 +175,14 @@ export function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalProps) {
                   />
                 </div>
                 
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? "Signing in..." : "Sign In"}
+                <Button type="submit" className="w-full" disabled={loginMutation.isPending}>
+                  {loginMutation.isPending ? "Signing in..." : "Sign In"}
                 </Button>
-                
-                <div className="text-sm text-muted-foreground mt-4 p-3 bg-muted rounded-lg">
-                  <strong>Demo Account:</strong><br />
-                  Username: demo<br />
-                  Password: demo123
-                </div>
               </form>
             </TabsContent>
             
             <TabsContent value="register">
               <form onSubmit={handleRegister} className="space-y-4">
-                {error && (
-                  <Alert variant="destructive">
-                    <AlertDescription>{error}</AlertDescription>
-                  </Alert>
-                )}
-                
                 <div className="space-y-2">
                   <Label htmlFor="reg-username">Username</Label>
                   <Input
@@ -161,38 +201,38 @@ export function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalProps) {
                     type="password"
                     value={registerData.password}
                     onChange={(e) => setRegisterData({ ...registerData, password: e.target.value })}
-                    placeholder="Choose a password"
+                    placeholder="Create a password (min 6 chars)"
                     required
                   />
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="reg-email">Email (optional)</Label>
+                  <Label htmlFor="confirm-password">Confirm Password</Label>
                   <Input
-                    id="reg-email"
-                    type="email"
-                    value={registerData.email}
-                    onChange={(e) => setRegisterData({ ...registerData, email: e.target.value })}
-                    placeholder="your@email.com"
+                    id="confirm-password"
+                    type="password"
+                    value={registerData.confirmPassword}
+                    onChange={(e) => setRegisterData({ ...registerData, confirmPassword: e.target.value })}
+                    placeholder="Confirm your password"
+                    required
                   />
                 </div>
                 
-                <div className="space-y-2">
-                  <Label htmlFor="reg-display-name">Display Name (optional)</Label>
-                  <Input
-                    id="reg-display-name"
-                    value={registerData.displayName}
-                    onChange={(e) => setRegisterData({ ...registerData, displayName: e.target.value })}
-                    placeholder="Your display name"
-                  />
-                </div>
-                
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? "Creating account..." : "Create Account"}
+                <Button type="submit" className="w-full" disabled={registerMutation.isPending}>
+                  {registerMutation.isPending ? "Creating account..." : "Create Account"}
                 </Button>
               </form>
             </TabsContent>
           </Tabs>
+          
+          <div className="mt-6 text-center">
+            <p className="text-sm text-gray-600 mb-2">
+              Or continue without an account
+            </p>
+            <Button variant="outline" onClick={onClose} className="w-full">
+              Continue as Guest
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </div>

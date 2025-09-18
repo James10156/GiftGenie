@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Friend, GiftRecommendation, SavedGift } from "@shared/schema";
 import { FriendForm } from "../components/FriendForm";
 import { GiftWrappingAnimation } from "../components/gift-wrapping-animation";
+import { AuthModal } from "../components/auth-modal";
 
 function Home() {
   const [activeTab, setActiveTab] = useState("friends");
@@ -15,7 +16,37 @@ function Home() {
   const [recommendationsForFriend, setRecommendationsForFriend] = useState<Friend | null>(null); // Track who recommendations are for
   const [dropdownOpen, setDropdownOpen] = useState<{[key: string]: boolean}>({});
   const [hoveredImageIndex, setHoveredImageIndex] = useState<number | null>(null);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const queryClient = useQueryClient();
+
+  // Check current user on load
+  useEffect(() => {
+    const checkUser = async () => {
+      try {
+        const response = await fetch("/api/auth/me");
+        if (response.ok) {
+          const user = await response.json();
+          setCurrentUser(user);
+        }
+      } catch (error) {
+        // User not logged in, no problem
+      }
+    };
+    checkUser();
+  }, []);
+
+  // Logout function
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+      setCurrentUser(null);
+      queryClient.invalidateQueries({ queryKey: ["friends"] });
+      queryClient.invalidateQueries({ queryKey: ["savedGifts"] });
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
+  };
 
   // Helper function to toggle dropdown
   const toggleDropdown = (giftIndex: number, section: string = 'generated') => {
@@ -178,6 +209,38 @@ function Home() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Header with authentication */}
+      <div className="bg-white border-b border-gray-200">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex justify-between items-center">
+            <div className="text-sm text-gray-600">
+              {currentUser ? (
+                <span>Welcome back, <strong>{currentUser.username}</strong>!</span>
+              ) : (
+                <span>You're browsing as a guest</span>
+              )}
+            </div>
+            <div className="flex items-center gap-3">
+              {currentUser ? (
+                <button
+                  onClick={handleLogout}
+                  className="text-sm text-red-600 hover:text-red-800 font-medium"
+                >
+                  Sign Out
+                </button>
+              ) : (
+                <button
+                  onClick={() => setShowAuthModal(true)}
+                  className="text-sm bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 font-medium"
+                >
+                  Sign In
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-6xl mx-auto">
           <h1 className="text-4xl font-bold text-center mb-8">
@@ -747,6 +810,13 @@ function Home() {
           )}
         </div>
       </div>
+
+      {/* Authentication Modal */}
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        onAuthSuccess={(user) => setCurrentUser(user)}
+      />
     </div>
   );
 }

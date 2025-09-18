@@ -1,10 +1,15 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
+import { storageAdapter } from "./storage-adapter";
 import { insertFriendSchema, insertSavedGiftSchema } from "@shared/schema";
 import { generateGiftRecommendations } from "./services/openai";
+import { setupAuth, setupAuthRoutes, requireAuth, type AuthenticatedRequest } from "./auth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  
+  // Setup authentication
+  setupAuth(app);
+  setupAuthRoutes(app);
   
   // Health check endpoint
   app.get("/api/health", (req, res) => {
@@ -16,18 +21,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Friends endpoints
-  app.get("/api/friends", async (req, res) => {
+  app.get("/api/friends", async (req: AuthenticatedRequest, res) => {
     try {
-      const friends = await storage.getAllFriends();
+      const friends = await storageAdapter.getAllFriends(req.user?.id);
       res.json(friends);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch friends" });
     }
   });
 
-  app.get("/api/friends/:id", async (req, res) => {
+  app.get("/api/friends/:id", async (req: AuthenticatedRequest, res) => {
     try {
-      const friend = await storage.getFriend(req.params.id);
+      const friend = await storageAdapter.getFriend(req.params.id, req.user?.id);
       if (!friend) {
         return res.status(404).json({ message: "Friend not found" });
       }
@@ -37,7 +42,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/friends", async (req, res) => {
+  app.post("/api/friends", async (req: AuthenticatedRequest, res) => {
     try {
       const result = insertFriendSchema.safeParse(req.body);
       if (!result.success) {
@@ -47,14 +52,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const friend = await storage.createFriend(result.data);
+      const friend = await storageAdapter.createFriend(result.data, req.user?.id);
       res.status(201).json(friend);
     } catch (error) {
       res.status(500).json({ message: "Failed to create friend" });
     }
   });
 
-  app.put("/api/friends/:id", async (req, res) => {
+  app.put("/api/friends/:id", async (req: AuthenticatedRequest, res) => {
     try {
       const result = insertFriendSchema.partial().safeParse(req.body);
       if (!result.success) {
@@ -64,7 +69,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const friend = await storage.updateFriend(req.params.id, result.data);
+      const friend = await storageAdapter.updateFriend(req.params.id, result.data, req.user?.id);
       if (!friend) {
         return res.status(404).json({ message: "Friend not found" });
       }
@@ -74,9 +79,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/friends/:id", async (req, res) => {
+  app.delete("/api/friends/:id", async (req: AuthenticatedRequest, res) => {
     try {
-      const deleted = await storage.deleteFriend(req.params.id);
+      const deleted = await storageAdapter.deleteFriend(req.params.id, req.user?.id);
       if (!deleted) {
         return res.status(404).json({ message: "Friend not found" });
       }
@@ -87,7 +92,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Gift recommendations endpoint
-  app.post("/api/gift-recommendations", async (req, res) => {
+  app.post("/api/gift-recommendations", async (req: AuthenticatedRequest, res) => {
     try {
       const { friendId, budget } = req.body;
       
@@ -97,7 +102,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const friend = await storage.getFriend(friendId);
+      const friend = await storageAdapter.getFriend(friendId, req.user?.id);
       if (!friend) {
         return res.status(404).json({ message: "Friend not found" });
       }
@@ -122,25 +127,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Saved gifts endpoints
-  app.get("/api/saved-gifts", async (req, res) => {
+  app.get("/api/saved-gifts", async (req: AuthenticatedRequest, res) => {
     try {
-      const savedGifts = await storage.getAllSavedGifts();
+      const savedGifts = await storageAdapter.getAllSavedGifts(req.user?.id);
       res.json(savedGifts);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch saved gifts" });
     }
   });
 
-  app.get("/api/saved-gifts/friend/:friendId", async (req, res) => {
+  app.get("/api/saved-gifts/friend/:friendId", async (req: AuthenticatedRequest, res) => {
     try {
-      const savedGifts = await storage.getSavedGiftsByFriend(req.params.friendId);
+      const savedGifts = await storageAdapter.getSavedGiftsByFriend(req.params.friendId, req.user?.id);
       res.json(savedGifts);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch saved gifts" });
     }
   });
 
-  app.post("/api/saved-gifts", async (req, res) => {
+  app.post("/api/saved-gifts", async (req: AuthenticatedRequest, res) => {
     try {
       const result = insertSavedGiftSchema.safeParse(req.body);
       if (!result.success) {
@@ -150,16 +155,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const savedGift = await storage.createSavedGift(result.data);
+      const savedGift = await storageAdapter.createSavedGift(result.data, req.user?.id);
       res.status(201).json(savedGift);
     } catch (error) {
       res.status(500).json({ message: "Failed to save gift" });
     }
   });
 
-  app.delete("/api/saved-gifts/:id", async (req, res) => {
+  app.delete("/api/saved-gifts/:id", async (req: AuthenticatedRequest, res) => {
     try {
-      const deleted = await storage.deleteSavedGift(req.params.id);
+      const deleted = await storageAdapter.deleteSavedGift(req.params.id, req.user?.id);
       if (!deleted) {
         return res.status(404).json({ message: "Saved gift not found" });
       }

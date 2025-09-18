@@ -11,6 +11,7 @@ export const users = pgTable("users", {
 
 export const friends = pgTable("friends", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   personalityTraits: jsonb("personality_traits").$type<string[]>().notNull(),
   interests: jsonb("interests").$type<string[]>().notNull(),
@@ -23,7 +24,8 @@ export const friends = pgTable("friends", {
 
 export const savedGifts = pgTable("saved_gifts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  friendId: varchar("friend_id").notNull(),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }),
+  friendId: varchar("friend_id").notNull().references(() => friends.id, { onDelete: "cascade" }),
   giftData: jsonb("gift_data").$type<{
     name: string;
     description: string;
