@@ -32,6 +32,10 @@ export default defineConfig({
       usePolling: true,
       interval: 1000,
     },
+    allowedHosts: [
+      "fugere.serveo.net",
+      ".serveo.net", // Allow any serveo.net subdomain
+    ],
   },
   test: {
     globals: true,
