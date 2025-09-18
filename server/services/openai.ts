@@ -119,7 +119,9 @@ const genericGifts = [
 function getCurrencySymbol(currency: string): string {
   const symbols: { [key: string]: string } = {
     USD: "$", EUR: "€", GBP: "£", CAD: "C$", AUD: "A$", 
-    JPY: "¥", KRW: "₩", BRL: "R$", MXN: "MX$", INR: "₹"
+    JPY: "¥", KRW: "₩", BRL: "R$", MXN: "$", INR: "₹",
+    CHF: "CHF", CNY: "¥", RUB: "₽", ZAR: "R",
+    SEK: "kr", NOK: "kr", DKK: "kr", PLN: "zł", TRY: "₺", THB: "฿"
   };
   return symbols[currency] || "$";
 }
@@ -292,8 +294,8 @@ async function generateShopsWithRange(basePrice: number, priceRange: string, cur
   let maxPrice = basePrice * 1.2;
   
   try {
-    // Handle different price range formats: "$40 - $60", "$40-$60", "£40 - £60", etc.
-    const cleanRange = priceRange.replace(/[£$€¥₩₹]/g, '').trim();
+    // Handle different price range formats with comprehensive currency symbol removal
+    const cleanRange = priceRange.replace(/[£€¥₩₹₽₺฿zł]|[CARMN]?\$|[CR]?\$|CHF|kr/g, '').trim();
     const priceNumbers = cleanRange.split(/\s*-\s*/).map(p => parseFloat(p.trim())).filter(p => !isNaN(p));
     
     if (priceNumbers.length >= 2) {
@@ -608,13 +610,15 @@ export async function generateGiftRecommendations(
 
 Personality Traits: ${personalityTraits.join(', ')}
 Interests: ${interests.join(', ')}
-Budget: ${symbol}${budget}
+Budget: ${symbol}${budget} (MAXIMUM - do not exceed this amount)
 Currency: ${currency}${additionalContext}
+
+CRITICAL: All gift prices must be within the budget of ${symbol}${budget}. Do not recommend anything that costs more than this amount.
 
 For each gift recommendation, provide:
 1. A creative, SPECIFIC gift name with exact brands/models when possible (e.g. "Nike Elite All-Court Basketball", "Apple AirPods Pro", "Winsor & Newton Cotman Watercolor Set", "Stanley Adventure Quencher Tumbler", "Lululemon Align Leggings")
 2. A detailed description (2-3 sentences) explaining why it's perfect for them
-3. An estimated price range within budget  
+3. An estimated price range WITHIN the ${symbol}${budget} budget (never exceed this amount)
 4. A match percentage (how well it fits their profile)
 5. Which specific traits/interests it matches
 6. A realistic product search term for images
@@ -672,14 +676,33 @@ Respond in JSON format with this structure:
       let priceRange: string;
       
       if (rec.price && rec.price.includes(symbol)) {
-        // Use OpenAI's suggested price
+        // Use OpenAI's suggested price but validate against budget
         priceRange = rec.price;
         // Extract base price from OpenAI's range for shop generation
         const priceNumbers = rec.price.replace(/[^\d\-]/g, '').split('-');
         if (priceNumbers.length >= 2) {
-          basePrice = (parseInt(priceNumbers[0]) + parseInt(priceNumbers[1])) / 2;
+          const minPrice = parseInt(priceNumbers[0]);
+          const maxPrice = parseInt(priceNumbers[1]);
+          
+          // Validate that prices don't exceed budget
+          if (maxPrice > budget) {
+            console.warn(`OpenAI suggested price ${rec.price} exceeds budget ${symbol}${budget}, adjusting...`);
+            const adjustedMax = Math.min(budget, maxPrice);
+            const adjustedMin = Math.min(minPrice, adjustedMax * 0.8);
+            priceRange = `${symbol}${Math.round(adjustedMin)} - ${symbol}${Math.round(adjustedMax)}`;
+            basePrice = (adjustedMin + adjustedMax) / 2;
+          } else {
+            basePrice = (minPrice + maxPrice) / 2;
+          }
         } else {
-          basePrice = parseInt(priceNumbers[0]) || (Math.random() * (budget * 0.8) + (budget * 0.2));
+          const singlePrice = parseInt(priceNumbers[0]) || (Math.random() * (budget * 0.8) + (budget * 0.2));
+          if (singlePrice > budget) {
+            basePrice = budget * 0.8;
+            priceRange = `${symbol}${Math.round(basePrice * 0.9)} - ${symbol}${budget}`;
+          } else {
+            basePrice = singlePrice;
+            priceRange = rec.price;
+          }
         }
       } else {
         // Fallback to generated pricing
@@ -757,9 +780,26 @@ Respond in JSON format with this structure:
 
     console.log(`Generated ${recommendations.length} AI-powered recommendations for ${friendName}`);
     
-    // Log the final recommendations for debugging
+    // Final budget validation - filter out any recommendations that exceed budget
+    const validRecommendations = recommendations.filter(rec => {
+      try {
+        const priceNumbers = rec.price.replace(/[£€¥₩₹₽₺฿zł]|[CARMN]?\$|[CR]?\$|CHF|kr/g, '').split(/\s*-\s*/).map(p => parseFloat(p.trim()));
+        const maxPrice = priceNumbers.length >= 2 ? priceNumbers[1] : priceNumbers[0];
+        
+        if (maxPrice > budget) {
+          console.warn(`Filtering out recommendation "${rec.name}" - price ${rec.price} exceeds budget ${symbol}${budget}`);
+          return false;
+        }
+        return true;
+      } catch (error) {
+        console.warn(`Could not validate price for "${rec.name}": ${rec.price}`);
+        return true; // Keep it if we can't parse the price
+      }
+    });
     
-    return recommendations;
+    console.log(`${validRecommendations.length} recommendations within budget after filtering`);
+    
+    return validRecommendations;
 
   } catch (error) {
     console.error('OpenAI API error:', error);
@@ -794,7 +834,11 @@ async function generateFallbackRecommendations(
           
           const matchPercentage = Math.round(75 + Math.random() * 20);
           const symbol = getCurrencySymbol(currency);
-          const priceRange = `${symbol}${Math.round(gift.basePrice * 0.8)} - ${symbol}${Math.round(gift.basePrice * 1.2)}`;
+          
+          // Ensure price range doesn't exceed budget
+          const maxAllowedPrice = Math.min(budget, gift.basePrice * 1.2);
+          const minPrice = Math.round(gift.basePrice * 0.8);
+          const priceRange = `${symbol}${minPrice} - ${symbol}${Math.round(maxAllowedPrice)}`;
           
           let enhancedDescription = gift.description;
           if (notes) {
@@ -830,7 +874,12 @@ async function generateFallbackRecommendations(
     
     const matchPercentage = Math.round(60 + Math.random() * 25);
     const symbol = getCurrencySymbol(currency);
-    const priceRange = `${symbol}${Math.round(randomGift.basePrice * 0.8)} - ${symbol}${Math.round(randomGift.basePrice * 1.2)}`;
+    
+    // Ensure price range doesn't exceed budget
+    const maxAllowedPrice = Math.min(budget, randomGift.basePrice * 1.2);
+    const minPrice = Math.round(randomGift.basePrice * 0.8);
+    const priceRange = `${symbol}${minPrice} - ${symbol}${Math.round(maxAllowedPrice)}`;
+    
     const randomGiftShops = await generateShopsWithRange(randomGift.basePrice, priceRange, currency, randomGift.name, country);
     
     recommendations.push({
@@ -844,5 +893,24 @@ async function generateFallbackRecommendations(
     });
   }
 
-  return recommendations;
+  // Final budget validation for fallback recommendations
+  const validRecommendations = recommendations.filter(rec => {
+    try {
+      const priceNumbers = rec.price.replace(/[£€¥₩₹₽₺฿zł]|[CARMN]?\$|[CR]?\$|CHF|kr/g, '').split(/\s*-\s*/).map(p => parseFloat(p.trim()));
+      const maxPrice = priceNumbers.length >= 2 ? priceNumbers[1] : priceNumbers[0];
+      
+      if (maxPrice > budget) {
+        console.warn(`Filtering out fallback recommendation "${rec.name}" - price ${rec.price} exceeds budget ${getCurrencySymbol(currency)}${budget}`);
+        return false;
+      }
+      return true;
+    } catch (error) {
+      console.warn(`Could not validate fallback price for "${rec.name}": ${rec.price}`);
+      return true; // Keep it if we can't parse the price
+    }
+  });
+  
+  console.log(`${validRecommendations.length} fallback recommendations within budget after filtering`);
+  
+  return validRecommendations;
 }

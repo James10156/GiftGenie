@@ -94,11 +94,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Gift recommendations endpoint
   app.post("/api/gift-recommendations", async (req: AuthenticatedRequest, res) => {
     try {
-      const { friendId, budget } = req.body;
+      const { friendId, budget: budgetStr } = req.body;
       
-      if (!friendId || !budget) {
+      if (!friendId || !budgetStr) {
         return res.status(400).json({ 
           message: "Friend ID and budget are required" 
+        });
+      }
+
+      // Parse budget from string format (e.g., "£50" -> 50)
+      const budget = parseFloat(budgetStr.replace(/[^\d\.]/g, '')) || 0;
+      
+      if (budget <= 0) {
+        return res.status(400).json({ 
+          message: "Budget must be a positive number" 
         });
       }
 
