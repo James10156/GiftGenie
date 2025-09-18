@@ -283,6 +283,54 @@ function getReliableImage(productDescription: string): string {
 }
 
 // Enhanced product categorization for better shopping targeting
+// Enhanced shopping platform detection and URL generation with price range alignment
+async function generateShopsWithRange(basePrice: number, priceRange: string, currency: string, productName: string = "gift", country: string = "United States") {
+  const symbol = getCurrencySymbol(currency);
+  
+  // Extract min and max from price range
+  let minPrice = basePrice * 0.8;
+  let maxPrice = basePrice * 1.2;
+  
+  try {
+    // Handle different price range formats: "$40 - $60", "$40-$60", "£40 - £60", etc.
+    const cleanRange = priceRange.replace(/[£$€¥₩₹]/g, '').trim();
+    const priceNumbers = cleanRange.split(/\s*-\s*/).map(p => parseFloat(p.trim())).filter(p => !isNaN(p));
+    
+    if (priceNumbers.length >= 2) {
+      minPrice = priceNumbers[0];
+      maxPrice = priceNumbers[1];
+    } else if (priceNumbers.length === 1) {
+      // Single price, create a small range around it
+      const singlePrice = priceNumbers[0];
+      minPrice = singlePrice * 0.9;
+      maxPrice = singlePrice * 1.1;
+    }
+  } catch (error) {
+    console.warn('Could not parse price range:', priceRange, error);
+  }
+  
+  // Use the existing shop generation but override prices to fit range
+  const shops = await generateShops(basePrice, maxPrice * 1.5, currency, productName, country);
+  
+  // Adjust shop prices to fit within the displayed price range
+  return shops.map((shop, index) => {
+    // Generate prices that span the range with realistic variation
+    // Some shops cheaper, some more expensive, but all within reasonable bounds
+    const priceSpread = maxPrice - minPrice;
+    const baseTargetPrice = minPrice + (priceSpread * Math.random());
+    
+    // Add some shop-specific variation (±10% of the price spread)
+    const variation = (priceSpread * 0.1) * (Math.random() - 0.5) * 2;
+    const finalPrice = Math.max(minPrice * 0.95, Math.min(maxPrice * 1.05, baseTargetPrice + variation));
+    
+    return {
+      ...shop,
+      price: `${symbol}${Math.round(finalPrice)}`
+    };
+  });
+}
+
+// Enhanced product categorization for better shopping targeting
 // Enhanced shopping platform detection and URL generation (HotUKDeals style)
 async function generateShops(basePrice: number, budget: number, currency: string, productName: string = "gift", country: string = "United States") {
   const isUK = country.toLowerCase().includes('kingdom') || country.toLowerCase().includes('uk');
@@ -619,8 +667,25 @@ Respond in JSON format with this structure:
     const recommendations: GiftRecommendation[] = [];
 
     for (const rec of aiResponse.recommendations || []) {
-      // Generate realistic shop pricing
-      const basePrice = Math.random() * (budget * 0.8) + (budget * 0.2);
+      // Use OpenAI's price if provided, otherwise generate realistic shop pricing
+      let basePrice: number;
+      let priceRange: string;
+      
+      if (rec.price && rec.price.includes(symbol)) {
+        // Use OpenAI's suggested price
+        priceRange = rec.price;
+        // Extract base price from OpenAI's range for shop generation
+        const priceNumbers = rec.price.replace(/[^\d\-]/g, '').split('-');
+        if (priceNumbers.length >= 2) {
+          basePrice = (parseInt(priceNumbers[0]) + parseInt(priceNumbers[1])) / 2;
+        } else {
+          basePrice = parseInt(priceNumbers[0]) || (Math.random() * (budget * 0.8) + (budget * 0.2));
+        }
+      } else {
+        // Fallback to generated pricing
+        basePrice = Math.random() * (budget * 0.8) + (budget * 0.2);
+        priceRange = `${symbol}${Math.round(basePrice * 0.8)} - ${symbol}${Math.round(basePrice * 1.2)}`;
+      }
       
       // Use specific search term if provided, otherwise fall back to product name
       const searchTerm = rec.shopSearchTerm || rec.name || "gift";
@@ -628,21 +693,19 @@ Respond in JSON format with this structure:
       // Generate reliable image URL using new priority system
       const imageKeywords = rec.imageSearchTerm || rec.name || 'gift';
       let imageUrl: string = ""; // Initialize with empty string
-      let priceRange: string = `${symbol}${Math.round(basePrice * 0.8)} - ${symbol}${Math.round(basePrice * 1.2)}`; // Initialize with calculated range
 
-      // Generate shops first (needed for image extraction)
-      const shops = await generateShops(basePrice, budget, currency, rec.name || 'gift', country);
+      // Generate shops with aligned pricing
+      const shops = await generateShopsWithRange(basePrice, priceRange, currency, rec.name || 'gift', country);
 
       // Check for database match first (simplified for dev environment)
       const productKey = findBestProductMatch(rec.name || '');
       
       if (productKey && PRODUCT_DATABASE[productKey]) {
-        // Database match found - skip validation for performance in dev
+        // Database match found - use database price range
         const product = PRODUCT_DATABASE[productKey];
-        
-        // Use database price range but skip image validation
         priceRange = `${symbol}${product.price_range[0]} - ${symbol}${product.price_range[1]}`;
-        // Note: Database image skipped to improve performance - will use priority system
+        // Update basePrice to align with database pricing for shop generation
+        basePrice = (product.price_range[0] + product.price_range[1]) / 2;
       }
 
       // If we don't have a valid imageUrl yet (either no database match or database validation failed), use simplified priority system
@@ -677,8 +740,7 @@ Respond in JSON format with this structure:
           }
         }
         
-        // Set price range for non-database products
-        priceRange = rec.price || `${symbol}${Math.round(basePrice * 0.8)} - ${symbol}${Math.round(basePrice * 1.2)}`;
+        // Price range is already set above based on OpenAI response or database match
       }
 
     recommendations.push({
@@ -739,7 +801,7 @@ async function generateFallbackRecommendations(
             enhancedDescription += ` This would be especially meaningful for ${friendName} who ${notes.toLowerCase()}.`;
           }
 
-          const giftShops = await generateShops(gift.basePrice, budget, currency, gift.name, country);
+          const giftShops = await generateShopsWithRange(gift.basePrice, priceRange, currency, gift.name, country);
 
           recommendations.push({
             name: gift.name,
@@ -769,7 +831,7 @@ async function generateFallbackRecommendations(
     const matchPercentage = Math.round(60 + Math.random() * 25);
     const symbol = getCurrencySymbol(currency);
     const priceRange = `${symbol}${Math.round(randomGift.basePrice * 0.8)} - ${symbol}${Math.round(randomGift.basePrice * 1.2)}`;
-    const randomGiftShops = await generateShops(randomGift.basePrice, budget, currency, randomGift.name, country);
+    const randomGiftShops = await generateShopsWithRange(randomGift.basePrice, priceRange, currency, randomGift.name, country);
     
     recommendations.push({
       name: randomGift.name,
