@@ -686,9 +686,7 @@ Respond in JSON format with this structure:
       description: rec.description || "A thoughtful gift recommendation.",
       price: priceRange,
       matchPercentage: Math.min(95, Math.max(60, rec.matchPercentage || 75)),
-      matchingTraits: (rec.matchingTraits || []).filter((trait: string) => 
-        personalityTraits.includes(trait) || interests.includes(trait)
-      ),
+      matchingTraits: rec.matchingTraits || [],
       image: imageUrl,
       shops: shops
     });
@@ -748,7 +746,7 @@ async function generateFallbackRecommendations(
             description: enhancedDescription,
             price: priceRange,
             matchPercentage,
-            matchingTraits: gift.matchingTraits.filter(t => personalityTraits.includes(t)),
+            matchingTraits: gift.matchingTraits,
             image: gift.image,
             shops: giftShops
           });
@@ -778,7 +776,7 @@ async function generateFallbackRecommendations(
       description: randomGift.description,
       price: priceRange,
       matchPercentage,
-      matchingTraits: randomGift.matchingTraits.filter(t => personalityTraits.includes(t)),
+      matchingTraits: randomGift.matchingTraits,
       image: randomGift.image,
       shops: randomGiftShops
     });
