@@ -1,5 +1,6 @@
 import type { User, InsertUser, Friend, InsertFriend, SavedGift, InsertSavedGift } from "@shared/schema";
 import { MemStorage } from "./storage";
+import { DatabaseStorage } from "./db";
 
 export interface IStorageAdapter {
   // User operations
@@ -24,12 +25,23 @@ export interface IStorageAdapter {
 
 export class StorageAdapter implements IStorageAdapter {
   private memStorage: MemStorage;
-  private databaseStorage: any; // Will be DatabaseStorage when available
+  private databaseStorage: DatabaseStorage | null;
 
   constructor() {
     this.memStorage = new MemStorage();
-    // For now, we'll use MemStorage until database is set up
-    this.databaseStorage = null;
+    // Initialize database storage if DATABASE_URL is available
+    try {
+      if (process.env.DATABASE_URL) {
+        this.databaseStorage = new DatabaseStorage();
+        console.log("✅ Database storage initialized (Neon PostgreSQL)");
+      } else {
+        this.databaseStorage = null;
+        console.log("⚠️  Using memory storage - DATABASE_URL not configured");
+      }
+    } catch (error) {
+      console.error("❌ Failed to initialize database storage:", error);
+      this.databaseStorage = null;
+    }
   }
 
   // User operations
@@ -56,72 +68,112 @@ export class StorageAdapter implements IStorageAdapter {
 
   // Friend operations with user context
   async getFriend(id: string, userId?: string): Promise<Friend | undefined> {
-    if (this.databaseStorage && userId) {
-      return this.databaseStorage.getFriendForUser(id, userId);
+    if (this.databaseStorage) {
+      if (userId) {
+        return this.databaseStorage.getFriendForUser(id, userId);
+      } else {
+        return this.databaseStorage.getFriend(id);
+      }
     }
     return this.memStorage.getFriend(id);
   }
 
   async getAllFriends(userId?: string): Promise<Friend[]> {
-    if (this.databaseStorage && userId) {
-      return this.databaseStorage.getAllFriendsForUser(userId);
+    if (this.databaseStorage) {
+      if (userId) {
+        return this.databaseStorage.getAllFriendsForUser(userId);
+      } else {
+        return this.databaseStorage.getAllFriends();
+      }
     }
     return this.memStorage.getAllFriends();
   }
 
   async createFriend(friend: InsertFriend, userId?: string): Promise<Friend> {
-    if (this.databaseStorage && userId) {
-      return this.databaseStorage.createFriendForUser(friend, userId);
+    if (this.databaseStorage) {
+      if (userId) {
+        return this.databaseStorage.createFriendForUser(friend, userId);
+      } else {
+        return this.databaseStorage.createFriend(friend);
+      }
     }
     return this.memStorage.createFriend(friend);
   }
 
   async updateFriend(id: string, friend: Partial<InsertFriend>, userId?: string): Promise<Friend | undefined> {
-    if (this.databaseStorage && userId) {
-      return this.databaseStorage.updateFriendForUser(id, friend, userId);
+    if (this.databaseStorage) {
+      if (userId) {
+        return this.databaseStorage.updateFriendForUser(id, friend, userId);
+      } else {
+        return this.databaseStorage.updateFriend(id, friend);
+      }
     }
     return this.memStorage.updateFriend(id, friend);
   }
 
   async deleteFriend(id: string, userId?: string): Promise<boolean> {
-    if (this.databaseStorage && userId) {
-      return this.databaseStorage.deleteFriendForUser(id, userId);
+    if (this.databaseStorage) {
+      if (userId) {
+        return this.databaseStorage.deleteFriendForUser(id, userId);
+      } else {
+        return this.databaseStorage.deleteFriend(id);
+      }
     }
     return this.memStorage.deleteFriend(id);
   }
 
   // Saved gift operations with user context
   async getSavedGift(id: string, userId?: string): Promise<SavedGift | undefined> {
-    if (this.databaseStorage && userId) {
-      return this.databaseStorage.getSavedGiftForUser(id, userId);
+    if (this.databaseStorage) {
+      if (userId) {
+        return this.databaseStorage.getSavedGiftForUser(id, userId);
+      } else {
+        return this.databaseStorage.getSavedGift(id);
+      }
     }
     return this.memStorage.getSavedGift(id);
   }
 
   async getSavedGiftsByFriend(friendId: string, userId?: string): Promise<SavedGift[]> {
-    if (this.databaseStorage && userId) {
-      return this.databaseStorage.getSavedGiftsByFriendForUser(friendId, userId);
+    if (this.databaseStorage) {
+      if (userId) {
+        return this.databaseStorage.getSavedGiftsByFriendForUser(friendId, userId);
+      } else {
+        return this.databaseStorage.getSavedGiftsByFriend(friendId);
+      }
     }
     return this.memStorage.getSavedGiftsByFriend(friendId);
   }
 
   async getAllSavedGifts(userId?: string): Promise<SavedGift[]> {
-    if (this.databaseStorage && userId) {
-      return this.databaseStorage.getAllSavedGiftsForUser(userId);
+    if (this.databaseStorage) {
+      if (userId) {
+        return this.databaseStorage.getAllSavedGiftsForUser(userId);
+      } else {
+        return this.databaseStorage.getAllSavedGifts();
+      }
     }
     return this.memStorage.getAllSavedGifts();
   }
 
   async createSavedGift(savedGift: InsertSavedGift, userId?: string): Promise<SavedGift> {
-    if (this.databaseStorage && userId) {
-      return this.databaseStorage.createSavedGiftForUser(savedGift, userId);
+    if (this.databaseStorage) {
+      if (userId) {
+        return this.databaseStorage.createSavedGiftForUser(savedGift, userId);
+      } else {
+        return this.databaseStorage.createSavedGift(savedGift);
+      }
     }
     return this.memStorage.createSavedGift(savedGift);
   }
 
   async deleteSavedGift(id: string, userId?: string): Promise<boolean> {
-    if (this.databaseStorage && userId) {
-      return this.databaseStorage.deleteSavedGiftForUser(id, userId);
+    if (this.databaseStorage) {
+      if (userId) {
+        return this.databaseStorage.deleteSavedGiftForUser(id, userId);
+      } else {
+        return this.databaseStorage.deleteSavedGift(id);
+      }
     }
     return this.memStorage.deleteSavedGift(id);
   }
