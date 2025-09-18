@@ -9,8 +9,7 @@ function Home() {
   const [activeTab, setActiveTab] = useState("friends");
   const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null);
   const [recommendations, setRecommendations] = useState<GiftRecommendation[]>([]);
-  const [budget, setBudget] = useState("£50");
-  const [budgetValue, setBudgetValue] = useState(50); // Numeric value for slider
+  const [budget, setBudget] = useState("50"); // Store just the numeric part
   const [showFriendForm, setShowFriendForm] = useState(false);
   const [editingFriend, setEditingFriend] = useState<Friend | null>(null);
   const [recommendationsForFriend, setRecommendationsForFriend] = useState<Friend | null>(null); // Track who recommendations are for
@@ -67,6 +66,30 @@ function Home() {
     return () => document.removeEventListener('click', handleClickOutside);
   }, []);
 
+  // Helper function to extract numeric value from budget string
+  const extractBudgetValue = (budgetString: string): number => {
+    // Remove currency symbols and extract first number
+    const numericPart = budgetString.replace(/[^\d]/g, '');
+    const value = parseInt(numericPart) || 50; // Default to 50 if no valid number
+    const clampedValue = Math.min(Math.max(value, 10), 500); // Clamp between 10 and 500
+    return clampedValue;
+  };
+
+  // Get the current numeric budget value for the slider
+  const currentBudgetValue = extractBudgetValue(budget);
+
+  // Helper function to update budget value
+  const updateBudget = (value: number) => {
+    const clampedValue = Math.min(Math.max(value, 10), 500);
+    setBudget(clampedValue.toString());
+  };
+
+  // Get formatted budget string with currency symbol
+  const getFormattedBudget = () => {
+    const formatted = `${currencySymbol}${currentBudgetValue}`;
+    return formatted;
+  };
+
   // Helper function to get currency symbol
   const getCurrencySymbol = (currency: string) => {
     const symbols: Record<string, string> = {
@@ -98,16 +121,8 @@ function Home() {
   const currentCurrency = selectedFriend?.currency || 'USD';
   const currencySymbol = getCurrencySymbol(currentCurrency);
 
-  // Update budget format when friend/currency changes
-  useEffect(() => {
-    if (selectedFriend && budget) {
-      // Update budget to use correct currency symbol if it contains a currency symbol
-      const numericPart = budget.replace(/[^\d]/g, '');
-      if (numericPart) {
-        setBudget(`${currencySymbol}${numericPart}`);
-      }
-    }
-  }, [selectedFriend?.currency, currencySymbol]);
+  // No need for complex effects - budget state is now just the numeric value
+  // The formatted budget is computed on the fly
 
   // Keyboard handler for image focus modal
   useEffect(() => {
@@ -222,9 +237,10 @@ function Home() {
 
   const handleGenerateRecommendations = () => {
     if (selectedFriend && budget) {
+      const formattedBudget = getFormattedBudget();
       generateRecommendationsMutation.mutate({
         friendId: selectedFriend.id,
-        budget,
+        budget: formattedBudget,
       });
     }
   };
@@ -532,7 +548,7 @@ function Home() {
 
                 <div>
                   <label className="block text-sm font-medium mb-2">
-                    Budget: {currencySymbol}{budgetValue} {currentCurrency !== 'USD' ? `(${currentCurrency})` : ''}
+                    Budget: {getFormattedBudget()} {currentCurrency !== 'USD' ? `(${currentCurrency})` : ''}
                   </label>
                   
                   {/* Budget slider */}
@@ -542,22 +558,23 @@ function Home() {
                     </div>
                     <input
                       type="range"
-                      min="10"
-                      max="500"
-                      step="10"
-                      value={budgetValue}
+                      min={0}
+                      max={500}
+                      step={10}
+                      value={currentBudgetValue}
                       onChange={(e) => {
-                        const value = parseInt(e.target.value);
-                        setBudgetValue(value);
-                        setBudget(`${currencySymbol}${value}`);
+                        const value = Math.max(10, parseInt(e.target.value)); // Ensure minimum of 10
+                        updateBudget(value);
                       }}
                       className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+                      style={{
+                        background: `linear-gradient(to right, #10B981 0%, #10B981 ${(currentBudgetValue / 500) * 100}%, #E5E7EB ${(currentBudgetValue / 500) * 100}%, #E5E7EB 100%)`
+                      }}
                     />
-                    <div className="flex justify-between text-xs text-gray-500 mt-2">
-                      <span>{currencySymbol}10</span>
-                      <span>{currencySymbol}100</span>
-                      <span>{currencySymbol}250</span>
-                      <span>{currencySymbol}500</span>
+                    <div className="flex justify-between text-xs text-gray-500 mt-2 relative">
+                      <span className="absolute left-0 transform -translate-x-1/2">{currencySymbol}0</span>
+                      <span className="absolute left-1/2 transform -translate-x-1/2">{currencySymbol}250</span>
+                      <span className="absolute right-0 transform translate-x-1/2">{currencySymbol}500</span>
                     </div>
                   </div>
 
@@ -568,11 +585,10 @@ function Home() {
                         key={amount}
                         type="button"
                         onClick={() => {
-                          setBudgetValue(amount);
-                          setBudget(`${currencySymbol}${amount}`);
+                          updateBudget(amount);
                         }}
                         className={`px-3 py-2 rounded-md text-sm ${
-                          budgetValue === amount
+                          currentBudgetValue === amount
                             ? "bg-green-600 text-white"
                             : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                         }`}
@@ -587,8 +603,18 @@ function Home() {
                     <label className="block text-xs text-gray-500 mb-1">Or enter custom budget:</label>
                     <input
                       type="text"
-                      value={budget}
-                      onChange={(e) => setBudget(e.target.value)}
+                      value={getFormattedBudget()}
+                      onChange={(e) => {
+                        const newBudget = e.target.value;
+                        // Extract just the numeric part and update
+                        const numericValue = extractBudgetValue(newBudget);
+                        updateBudget(numericValue);
+                      }}
+                      onBlur={(e) => {
+                        // Clean up the budget format on blur and ensure sync
+                        const numericValue = extractBudgetValue(e.target.value);
+                        updateBudget(numericValue);
+                      }}
                       placeholder={`e.g., ${currencySymbol}50, ${currencySymbol}100-200, under ${currencySymbol}30`}
                       className="w-full p-2 border rounded-md text-sm"
                     />
