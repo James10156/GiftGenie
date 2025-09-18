@@ -802,84 +802,133 @@ function Home() {
                   {savedGifts.map((savedGift, index) => {
                     const friend = friends.find(f => f.id === savedGift.friendId);
                     return (
-                      <div key={savedGift.id} className="border rounded-lg p-4">
-                        <div className="flex justify-between items-start mb-2">
-                          <h3 className="font-semibold">{savedGift.giftData.name}</h3>
-                          <div className="flex gap-1">
-                            <span className="text-sm text-gray-500">
-                              For {friend?.name || "Unknown"}
-                            </span>
-                            <button
-                              onClick={() => {
-                                if (confirm("Are you sure you want to remove this saved gift?")) {
-                                  deleteSavedGiftMutation.mutate(savedGift.id);
-                                }
+                      <div key={savedGift.id} className="border rounded-lg p-4 bg-white shadow-sm">
+                        {/* Gift Image */}
+                        {savedGift.giftData.image && (
+                          <div className="mb-3">
+                            <img 
+                              src={savedGift.giftData.image} 
+                              alt={savedGift.giftData.name}
+                              className="w-full h-32 object-cover rounded-md"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.style.display = 'none';
                               }}
-                              className="text-red-600 hover:text-red-800 ml-2"
-                              title="Remove saved gift"
-                            >
-                              🗑️
-                            </button>
+                            />
                           </div>
+                        )}
+                        
+                        <div className="flex justify-between items-start mb-3">
+                          <h3 className="font-semibold text-lg">{savedGift.giftData.name}</h3>
+                          <button
+                            onClick={() => {
+                              if (confirm("Are you sure you want to remove this saved gift?")) {
+                                deleteSavedGiftMutation.mutate(savedGift.id);
+                              }
+                            }}
+                            className="text-red-600 hover:text-red-800 ml-2 text-lg"
+                            title="Remove saved gift"
+                          >
+                            🗑️
+                          </button>
                         </div>
-                        <p className="text-gray-600 text-sm mb-2">{savedGift.giftData.description}</p>
-                        <p className="font-semibold text-blue-600 mb-2">{savedGift.giftData.price}</p>
-                        <div className="flex gap-2">
-                          <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">
-                            {savedGift.giftData.matchPercentage}% match
-                          </span>
-                          {savedGift.giftData.shops.length > 0 && (
-                            <div className="relative">
-                              {savedGift.giftData.shops.length === 1 ? (
-                                <button
-                                  onClick={() => window.open(savedGift.giftData.shops[0].url, "_blank")}
-                                  className="bg-blue-600 text-white text-xs px-3 py-1 rounded hover:bg-blue-700"
-                                >
-                                  Shop at {savedGift.giftData.shops[0].name}
-                                </button>
-                              ) : (
-                                <>
-                                  <button 
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      toggleDropdown(index, 'saved');
-                                    }}
-                                    className="bg-blue-600 text-white text-xs px-3 py-1 rounded hover:bg-blue-700"
-                                  >
-                                    Shop ({savedGift.giftData.shops.length}) ▼
-                                  </button>
-                                  {dropdownOpen[`saved-${index}`] && (
-                                    <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-md shadow-2xl z-50 min-w-48 max-h-60 overflow-y-auto">
-                                      {savedGift.giftData.shops.map((shop, shopIndex) => (
-                                        <button
-                                          key={shopIndex}
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            window.open(shop.url, "_blank");
-                                            setDropdownOpen(prev => ({...prev, [`saved-${index}`]: false}));
-                                          }}
-                                          className="w-full text-left px-3 py-2 text-gray-700 hover:bg-gray-50 flex items-center justify-between text-xs border-b border-gray-100 last:border-b-0"
-                                        >
-                                          <span className="font-medium">{shop.name}</span>
-                                          <span className="text-green-600 font-semibold">{shop.price}</span>
-                                        </button>
-                                      ))}
-                                    </div>
-                                  )}
-                                </>
-                              )}
+                        
+                        {/* Friend Info with Profile Picture */}
+                        <div className="flex items-center gap-2 mb-3 p-2 bg-gray-50 rounded-md">
+                          {friend?.profilePicture ? (
+                            <img 
+                              src={friend.profilePicture} 
+                              alt={friend.name}
+                              className="w-6 h-6 rounded-full object-cover"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(friend.name)}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`;
+                              }}
+                            />
+                          ) : friend ? (
+                            <img 
+                              src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(friend.name)}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`}
+                              alt={friend.name}
+                              className="w-6 h-6 rounded-full"
+                            />
+                          ) : (
+                            <div className="w-6 h-6 rounded-full bg-gray-300 flex items-center justify-center">
+                              <span className="text-xs text-gray-600">?</span>
                             </div>
                           )}
+                          <span className="text-sm font-medium text-gray-700">
+                            For {friend?.name || "Deleted Friend"}
+                          </span>
+                          {friend ? (
+                            <span className="text-xs text-gray-500">
+                              ({friend.country})
+                            </span>
+                          ) : (
+                            <span className="text-xs text-orange-500 font-medium">
+                              (Friend no longer exists)
+                            </span>
+                          )}
                         </div>
+
+                        <p className="text-gray-600 text-sm mb-3">{savedGift.giftData.description}</p>
+                        <p className="font-bold text-lg text-blue-600 mb-3">{savedGift.giftData.price}</p>
+                        
+                        <div className="flex gap-2 mb-3">
+                          <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded font-medium">
+                            {savedGift.giftData.matchPercentage}% match
+                          </span>
+                        </div>
+                        
+                        {/* Shop buttons */}
+                        {savedGift.giftData.shops.length > 0 && (
+                          <div className="flex gap-2">
+                            {savedGift.giftData.shops.length === 1 ? (
+                              <button
+                                onClick={() => window.open(savedGift.giftData.shops[0].url, "_blank")}
+                                className="flex-1 bg-blue-600 text-white text-sm px-3 py-2 rounded-md hover:bg-blue-700 transition-colors"
+                              >
+                                🛒 Shop at {savedGift.giftData.shops[0].name}
+                              </button>
+                            ) : (
+                              <div className="flex-1 relative">
+                                <button 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleDropdown(index, 'saved');
+                                  }}
+                                  className="w-full bg-blue-600 text-white text-sm px-3 py-2 rounded-md hover:bg-blue-700 transition-colors"
+                                >
+                                  🛒 Shop ({savedGift.giftData.shops.length}) ▼
+                                </button>
+                                {dropdownOpen[`saved-${index}`] && (
+                                  <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-md shadow-2xl z-50 min-w-48 max-h-60 overflow-y-auto">
+                                    {savedGift.giftData.shops.map((shop, shopIndex) => (
+                                      <button
+                                        key={shopIndex}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          window.open(shop.url, "_blank");
+                                          setDropdownOpen(prev => ({...prev, [`saved-${index}`]: false}));
+                                        }}
+                                        className="w-full text-left px-3 py-2 text-gray-700 hover:bg-gray-50 flex items-center justify-between text-xs border-b border-gray-100 last:border-b-0"
+                                      >
+                                        <span className="font-medium">{shop.name}</span>
+                                        <span className="text-green-600 font-semibold">{shop.price}</span>
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     );
                   })}
                 </div>
               )}
             </div>
-          )}
-
-          {/* Friend Form Modal */}
+          )}          {/* Friend Form Modal */}
           {showFriendForm && (
             <FriendForm
               friend={editingFriend || undefined}
