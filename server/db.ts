@@ -1,8 +1,8 @@
 import { drizzle } from "drizzle-orm/neon-http";
 import { neon } from "@neondatabase/serverless";
 import { eq, and, isNull } from "drizzle-orm";
-import { users, friends, savedGifts, userAnalytics, recommendationFeedback, performanceMetrics } from "@shared/schema";
-import type { User, InsertUser, Friend, InsertFriend, SavedGift, InsertSavedGift, UserAnalytics, InsertUserAnalytics, RecommendationFeedback, InsertRecommendationFeedback, PerformanceMetrics, InsertPerformanceMetrics } from "@shared/schema";
+import { users, friends, savedGifts, userAnalytics, recommendationFeedback, performanceMetrics, blogPosts } from "@shared/schema";
+import type { User, InsertUser, Friend, InsertFriend, SavedGift, InsertSavedGift, UserAnalytics, InsertUserAnalytics, RecommendationFeedback, InsertRecommendationFeedback, PerformanceMetrics, InsertPerformanceMetrics, BlogPost, InsertBlogPost } from "@shared/schema";
 import { IStorage } from "./storage";
 
 if (!process.env.DATABASE_URL) {
@@ -282,6 +282,59 @@ export class DatabaseStorage implements IStorage {
         .limit(limit);
       return result;
     }
+  }
+
+  // Blog operations
+  async getBlogPost(id: string): Promise<BlogPost | undefined> {
+    const result = await db.select().from(blogPosts).where(eq(blogPosts.id, id)).limit(1);
+    return result[0];
+  }
+
+  async getAllBlogPosts(): Promise<BlogPost[]> {
+    const result = await db.select()
+      .from(blogPosts)
+      .leftJoin(users, eq(blogPosts.authorId, users.id))
+      .where(eq(blogPosts.published, true))
+      .orderBy(blogPosts.createdAt);
+    
+    return result.map(row => ({
+      ...row.blog_posts,
+      author: row.users?.username || 'Unknown'
+    })) as BlogPost[];
+  }
+
+  async createBlogPost(blogPost: InsertBlogPost & { authorId: string }): Promise<BlogPost> {
+    const result = await db.insert(blogPosts).values(blogPost).returning();
+    const post = result[0];
+    
+    // Get author name
+    const author = await this.getUser(post.authorId);
+    return {
+      ...post,
+      author: author?.username || 'Unknown'
+    } as BlogPost;
+  }
+
+  async updateBlogPost(id: string, blogPost: Partial<InsertBlogPost> & { updatedAt?: string }): Promise<BlogPost | undefined> {
+    const result = await db.update(blogPosts)
+      .set(blogPost)
+      .where(eq(blogPosts.id, id))
+      .returning();
+    
+    if (result[0]) {
+      const post = result[0];
+      const author = await this.getUser(post.authorId);
+      return {
+        ...post,
+        author: author?.username || 'Unknown'
+      } as BlogPost;
+    }
+    return undefined;
+  }
+
+  async deleteBlogPost(id: string): Promise<boolean> {
+    const result = await db.delete(blogPosts).where(eq(blogPosts.id, id)).returning();
+    return result.length > 0;
   }
 }
 

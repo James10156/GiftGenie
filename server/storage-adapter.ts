@@ -1,4 +1,4 @@
-import type { User, InsertUser, Friend, InsertFriend, SavedGift, InsertSavedGift, UserAnalytics, InsertUserAnalytics, RecommendationFeedback, InsertRecommendationFeedback, PerformanceMetrics, InsertPerformanceMetrics } from "@shared/schema";
+import type { User, InsertUser, Friend, InsertFriend, SavedGift, InsertSavedGift, UserAnalytics, InsertUserAnalytics, RecommendationFeedback, InsertRecommendationFeedback, PerformanceMetrics, InsertPerformanceMetrics, BlogPost, InsertBlogPost } from "@shared/schema";
 import { MemStorage } from "./storage";
 import { DatabaseStorage } from "./db";
 
@@ -31,6 +31,13 @@ export interface IStorageAdapter {
   getRecommendationFeedback(userId: string, limit?: number): Promise<RecommendationFeedback[]>;
   createPerformanceMetrics(metrics: InsertPerformanceMetrics, userId?: string): Promise<PerformanceMetrics>;
   getPerformanceMetrics(operation?: string, limit?: number): Promise<PerformanceMetrics[]>;
+
+  // Blog operations
+  getBlogPost(id: string): Promise<BlogPost | undefined>;
+  getAllBlogPosts(): Promise<BlogPost[]>;
+  createBlogPost(blogPost: InsertBlogPost & { authorId: string }): Promise<BlogPost>;
+  updateBlogPost(id: string, blogPost: Partial<InsertBlogPost> & { updatedAt?: string }): Promise<BlogPost | undefined>;
+  deleteBlogPost(id: string): Promise<boolean>;
 }
 
 export class StorageAdapter implements IStorageAdapter {
@@ -375,6 +382,47 @@ export class StorageAdapter implements IStorageAdapter {
       return this.databaseStorage.getPerformanceMetrics(operation, limit);
     }
     return this.memStorage.getPerformanceMetrics(operation, limit);
+  }
+
+  // Blog operations
+  async getBlogPost(id: string): Promise<BlogPost | undefined> {
+    if (this.databaseStorage) {
+      return this.databaseStorage.getBlogPost(id);
+    }
+    // For memory storage, blog posts are not supported
+    return undefined;
+  }
+
+  async getAllBlogPosts(): Promise<BlogPost[]> {
+    if (this.databaseStorage) {
+      return this.databaseStorage.getAllBlogPosts();
+    }
+    // For memory storage, return empty array
+    return [];
+  }
+
+  async createBlogPost(blogPost: InsertBlogPost & { authorId: string }): Promise<BlogPost> {
+    if (this.databaseStorage) {
+      return this.databaseStorage.createBlogPost(blogPost);
+    }
+    // For memory storage, blog posts are not supported
+    throw new Error("Blog posts require database storage");
+  }
+
+  async updateBlogPost(id: string, blogPost: Partial<InsertBlogPost> & { updatedAt?: string }): Promise<BlogPost | undefined> {
+    if (this.databaseStorage) {
+      return this.databaseStorage.updateBlogPost(id, blogPost);
+    }
+    // For memory storage, blog posts are not supported
+    return undefined;
+  }
+
+  async deleteBlogPost(id: string): Promise<boolean> {
+    if (this.databaseStorage) {
+      return this.databaseStorage.deleteBlogPost(id);
+    }
+    // For memory storage, blog posts are not supported
+    return false;
   }
 
   // Convenience method for logging performance metrics

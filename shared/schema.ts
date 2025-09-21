@@ -89,6 +89,17 @@ export const performanceMetrics = pgTable("performance_metrics", {
   timestamp: text("timestamp").default(sql`CURRENT_TIMESTAMP`),
 });
 
+export const blogPosts = pgTable("blog_posts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  content: text("content").notNull(),
+  excerpt: text("excerpt"),
+  authorId: varchar("author_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  published: boolean("published").notNull().default(true),
+  createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at").default(sql`CURRENT_TIMESTAMP`),
+});
+
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
@@ -142,6 +153,13 @@ export const insertPerformanceMetricsSchema = createInsertSchema(performanceMetr
   metadata: true,
 });
 
+export const insertBlogPostSchema = createInsertSchema(blogPosts).pick({
+  title: true,
+  content: true,
+  excerpt: true,
+  published: true,
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type RegisterUser = z.infer<typeof registerUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -155,6 +173,8 @@ export type InsertRecommendationFeedback = z.infer<typeof insertRecommendationFe
 export type RecommendationFeedback = typeof recommendationFeedback.$inferSelect;
 export type InsertPerformanceMetrics = z.infer<typeof insertPerformanceMetricsSchema>;
 export type PerformanceMetrics = typeof performanceMetrics.$inferSelect;
+export type InsertBlogPost = z.infer<typeof insertBlogPostSchema>;
+export type BlogPost = typeof blogPosts.$inferSelect;
 
 export interface GiftRecommendation {
   name: string;

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Link } from "wouter";
 import type { Friend, GiftRecommendation, SavedGift } from "@shared/schema";
 import { FriendForm } from "../components/FriendForm";
 import { GiftWrappingAnimation } from "../components/gift-wrapping-animation";
@@ -423,12 +424,19 @@ function Home() {
       <div className="bg-white border-b border-gray-200">
         <div className="container mx-auto px-4 py-4">
           <div className="flex justify-between items-center">
-            <div className="text-sm text-gray-600">
-              {currentUser && currentUser.username !== 'Guest' ? (
-                <span>Welcome back, <strong>{currentUser.username}</strong>!</span>
-              ) : (
-                <span>You're browsing as a guest</span>
-              )}
+            <div className="flex items-center gap-4">
+              <Link href="/blog">
+                <a className="text-sm text-blue-600 hover:text-blue-800 font-medium">
+                  About us
+                </a>
+              </Link>
+              <div className="text-sm text-gray-600">
+                {currentUser && currentUser.username !== 'Guest' ? (
+                  <span>Welcome back, <strong>{currentUser.username}</strong>!</span>
+                ) : (
+                  <span>You're browsing as a guest</span>
+                )}
+              </div>
             </div>
             <div className="flex items-center gap-3">
               {currentUser && currentUser.username !== 'Guest' ? (
