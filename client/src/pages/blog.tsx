@@ -1,6 +1,21 @@
 import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { marked } from 'marked';
+
+// Configure marked options
+marked.setOptions({
+  breaks: true,
+  gfm: true,
+});
+
+// Custom renderer for images
+const renderer = new marked.Renderer();
+renderer.image = function({ href, title, text }: { href: string; title: string | null; text: string }) {
+  return `<img src="${href}" alt="${text}" title="${title || ''}" style="max-width: 100%; height: auto; border-radius: 8px; margin: 20px 0; box-shadow: 0 4px 8px rgba(0,0,0,0.1);" />`;
+};
+
+marked.use({ renderer });
 
 interface BlogPost {
   id: string;
@@ -167,7 +182,7 @@ function Blog() {
                   <div className="prose max-w-none">
                     <div
                       dangerouslySetInnerHTML={{
-                        __html: post.content.replace(/\n/g, "<br />"),
+                        __html: marked(post.content),
                       }}
                     />
                   </div>
@@ -209,6 +224,62 @@ function BlogEditor({ post, onClose, onSave }: BlogEditorProps) {
   const [content, setContent] = useState(post?.content || "");
   const [published, setPublished] = useState(post?.published ?? true);
   const [saving, setSaving] = useState(false);
+  const [uploadedImages, setUploadedImages] = useState<string[]>([]);
+  const [uploading, setUploading] = useState(false);
+
+  const handleImageUpload = async (file: File) => {
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+
+      const response = await fetch('/api/blog/upload-image', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to upload image');
+      }
+
+      const result = await response.json();
+      const newImageUrl = result.imageUrl;
+      
+      setUploadedImages(prev => [...prev, newImageUrl]);
+      
+      // Insert image markdown into content at cursor position
+      const imageMarkdown = `\n![Image](${newImageUrl})\n`;
+      setContent(prev => prev + imageMarkdown);
+      
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      alert('Failed to upload image. Please try again.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const files = Array.from(e.dataTransfer.files);
+    const imageFile = files.find(file => file.type.startsWith('image/'));
+    if (imageFile) {
+      handleImageUpload(imageFile);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      handleImageUpload(file);
+    }
+  };
 
   const handleSave = async () => {
     if (!title.trim() || !content.trim()) {
@@ -276,9 +347,68 @@ function BlogEditor({ post, onClose, onSave }: BlogEditorProps) {
                 placeholder="Enter post title..."
               />
             </div>
+
+            {/* Image Upload Section */}
+            <div>
+              <label className="block text-sm font-medium mb-2">Images</label>
+              <div
+                onDrop={handleDrop}
+                onDragOver={handleDragOver}
+                className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors"
+              >
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                  id="image-upload"
+                />
+                <label
+                  htmlFor="image-upload"
+                  className="cursor-pointer text-blue-600 hover:text-blue-800"
+                >
+                  {uploading ? (
+                    <div className="text-gray-500">Uploading...</div>
+                  ) : (
+                    <div>
+                      <div className="text-lg mb-2">📷</div>
+                      <div>Click to upload or drag and drop an image</div>
+                      <div className="text-sm text-gray-500 mt-1">PNG, JPG up to 5MB</div>
+                    </div>
+                  )}
+                </label>
+              </div>
+              
+              {/* Show uploaded images */}
+              {uploadedImages.length > 0 && (
+                <div className="mt-4">
+                  <div className="text-sm font-medium mb-2">Uploaded Images:</div>
+                  <div className="grid grid-cols-2 gap-4">
+                    {uploadedImages.map((imageUrl, index) => (
+                      <div key={index} className="relative">
+                        <img
+                          src={imageUrl}
+                          alt={`Uploaded ${index + 1}`}
+                          className="w-full h-24 object-cover rounded-lg border"
+                        />
+                        <button
+                          onClick={() => setUploadedImages(prev => prev.filter((_, i) => i !== index))}
+                          className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 text-sm hover:bg-red-600"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
             
             <div>
               <label className="block text-sm font-medium mb-2">Content</label>
+              <div className="text-sm text-gray-500 mb-2">
+                Images are automatically inserted as markdown. You can also write regular text content.
+              </div>
               <textarea
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
