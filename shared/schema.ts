@@ -7,6 +7,7 @@ export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
+  isAdmin: boolean("is_admin").default(false),
 });
 
 export const friends = pgTable("friends", {
@@ -42,7 +43,59 @@ export const savedGifts = pgTable("saved_gifts", {
   createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
 });
 
+// Analytics Tables
+export const userAnalytics = pgTable("user_analytics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }),
+  sessionId: text("session_id").notNull(),
+  eventType: text("event_type").notNull(), // 'page_view', 'click', 'search', 'generate_gifts', etc.
+  eventData: jsonb("event_data").$type<Record<string, any>>(), // Flexible data for different event types
+  timestamp: text("timestamp").default(sql`CURRENT_TIMESTAMP`),
+  userAgent: text("user_agent"),
+  ipAddress: text("ip_address"),
+});
+
+export const recommendationFeedback = pgTable("recommendation_feedback", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }),
+  friendId: varchar("friend_id").references(() => friends.id, { onDelete: "cascade" }),
+  recommendationData: jsonb("recommendation_data").$type<{
+    giftName: string;
+    price: string;
+    matchPercentage: number;
+    generationParams: {
+      budget: number;
+      currency: string;
+      personalityTraits: string[];
+      interests: string[];
+    };
+  }>().notNull(),
+  rating: integer("rating").notNull(), // 1-5 star rating or -1 for thumbs down, 1 for thumbs up
+  feedback: text("feedback"), // Optional detailed feedback
+  helpful: boolean("helpful"), // Whether user found the recommendation helpful
+  purchased: boolean("purchased").default(false), // Whether they actually bought this gift
+  createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const performanceMetrics = pgTable("performance_metrics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }),
+  operation: text("operation").notNull(), // 'ai_recommendation', 'image_search', 'shop_search', etc.
+  responseTime: integer("response_time_ms").notNull(),
+  success: boolean("success").notNull(),
+  errorMessage: text("error_message"),
+  metadata: jsonb("metadata").$type<Record<string, any>>(), // Additional context like model used, API version, etc.
+  timestamp: text("timestamp").default(sql`CURRENT_TIMESTAMP`),
+});
+
 export const insertUserSchema = createInsertSchema(users).pick({
+  username: true,
+  password: true,
+  isAdmin: true,
+}).partial({ isAdmin: true }); // Make isAdmin optional
+
+// For registration, only require username and password
+export const registerUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
 });
@@ -62,12 +115,44 @@ export const insertSavedGiftSchema = createInsertSchema(savedGifts).pick({
   giftData: true,
 });
 
+export const insertUserAnalyticsSchema = createInsertSchema(userAnalytics).pick({
+  sessionId: true,
+  eventType: true,
+  eventData: true,
+  userAgent: true,
+  ipAddress: true,
+});
+
+export const insertRecommendationFeedbackSchema = createInsertSchema(recommendationFeedback).pick({
+  friendId: true,
+  recommendationData: true,
+  rating: true,
+  feedback: true,
+  helpful: true,
+  purchased: true,
+});
+
+export const insertPerformanceMetricsSchema = createInsertSchema(performanceMetrics).pick({
+  operation: true,
+  responseTime: true,
+  success: true,
+  errorMessage: true,
+  metadata: true,
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
+export type RegisterUser = z.infer<typeof registerUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertFriend = z.infer<typeof insertFriendSchema>;
 export type Friend = typeof friends.$inferSelect;
 export type InsertSavedGift = z.infer<typeof insertSavedGiftSchema>;
 export type SavedGift = typeof savedGifts.$inferSelect;
+export type InsertUserAnalytics = z.infer<typeof insertUserAnalyticsSchema>;
+export type UserAnalytics = typeof userAnalytics.$inferSelect;
+export type InsertRecommendationFeedback = z.infer<typeof insertRecommendationFeedbackSchema>;
+export type RecommendationFeedback = typeof recommendationFeedback.$inferSelect;
+export type InsertPerformanceMetrics = z.infer<typeof insertPerformanceMetricsSchema>;
+export type PerformanceMetrics = typeof performanceMetrics.$inferSelect;
 
 export interface GiftRecommendation {
   name: string;

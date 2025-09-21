@@ -1,10 +1,11 @@
-import { type User, type InsertUser, type Friend, type InsertFriend, type SavedGift, type InsertSavedGift } from "@shared/schema";
+import { type User, type InsertUser, type Friend, type InsertFriend, type SavedGift, type InsertSavedGift, type UserAnalytics, type InsertUserAnalytics, type RecommendationFeedback, type InsertRecommendationFeedback, type PerformanceMetrics, type InsertPerformanceMetrics } from "@shared/schema";
 import { randomUUID } from "crypto";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  updateUserAdminStatus(id: string, isAdmin: boolean): Promise<User | undefined>;
   
   getFriend(id: string): Promise<Friend | undefined>;
   getAllFriends(): Promise<Friend[]>;
@@ -17,17 +18,31 @@ export interface IStorage {
   getAllSavedGifts(): Promise<SavedGift[]>;
   createSavedGift(savedGift: InsertSavedGift): Promise<SavedGift>;
   deleteSavedGift(id: string): Promise<boolean>;
+
+  // Analytics methods
+  createUserAnalytics(analytics: InsertUserAnalytics, userId?: string): Promise<UserAnalytics>;
+  getUserAnalytics(userId: string, limit?: number): Promise<UserAnalytics[]>;
+  createRecommendationFeedback(feedback: InsertRecommendationFeedback, userId?: string): Promise<RecommendationFeedback>;
+  getRecommendationFeedback(userId: string, limit?: number): Promise<RecommendationFeedback[]>;
+  createPerformanceMetrics(metrics: InsertPerformanceMetrics, userId?: string): Promise<PerformanceMetrics>;
+  getPerformanceMetrics(operation?: string, limit?: number): Promise<PerformanceMetrics[]>;
 }
 
 export class MemStorage implements IStorage {
   private users: Map<string, User>;
   private friends: Map<string, Friend>;
   private savedGifts: Map<string, SavedGift>;
+  private userAnalytics: Map<string, UserAnalytics>;
+  private recommendationFeedback: Map<string, RecommendationFeedback>;
+  private performanceMetrics: Map<string, PerformanceMetrics>;
 
   constructor() {
     this.users = new Map();
     this.friends = new Map();
     this.savedGifts = new Map();
+    this.userAnalytics = new Map();
+    this.recommendationFeedback = new Map();
+    this.performanceMetrics = new Map();
     
     // Add some initial demo friends
     this.initializeDemoData();
@@ -37,6 +52,7 @@ export class MemStorage implements IStorage {
     const demoFriends: Friend[] = [
       {
         id: randomUUID(),
+        userId: null, // Guest mode - no user ID
         name: "Alex Johnson",
         personalityTraits: ["Creative", "Outdoorsy", "Thoughtful"],
         interests: ["Art", "Hiking", "Photography"],
@@ -48,6 +64,7 @@ export class MemStorage implements IStorage {
       },
       {
         id: randomUUID(),
+        userId: null, // Guest mode - no user ID
         name: "Sarah Chen",
         personalityTraits: ["Artistic", "Tech-savvy", "Innovative"],
         interests: ["Digital Art", "Gadgets", "Gaming"],
@@ -59,6 +76,7 @@ export class MemStorage implements IStorage {
       },
       {
         id: randomUUID(),
+        userId: null, // Guest mode - no user ID
         name: "Mike Torres",
         personalityTraits: ["Sporty", "Social", "Energetic"],
         interests: ["Basketball", "Fitness", "Music"],
@@ -70,6 +88,7 @@ export class MemStorage implements IStorage {
       },
       {
         id: randomUUID(),
+        userId: null, // Guest mode - no user ID
         name: "Mariel Cabrera",
         personalityTraits: ["Empathetic", "Kind", "Thoughtful"],
         interests: ["Fashion", "Gaming", "Food"],
@@ -81,6 +100,7 @@ export class MemStorage implements IStorage {
       },
       {
         id: randomUUID(),
+        userId: null, // Guest mode - no user ID
         name: "Danielle Quintana",
         personalityTraits: ["Quiet", "Thoughtful", "Reliable"],
         interests: ["Running", "Tennis", "Cooking"],
@@ -92,6 +112,7 @@ export class MemStorage implements IStorage {
       },
       {
         id: randomUUID(),
+        userId: null, // Guest mode - no user ID
         name: "Gian de Belen",
         personalityTraits: ["Curious", "Analytical", "Romantic"],
         interests: ["Gaming", "Anime", "Badminton"],
@@ -120,9 +141,18 @@ export class MemStorage implements IStorage {
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = randomUUID();
-    const user: User = { ...insertUser, id };
+    const user: User = { ...insertUser, id, isAdmin: insertUser.isAdmin || false };
     this.users.set(id, user);
     return user;
+  }
+
+  async updateUserAdminStatus(id: string, isAdmin: boolean): Promise<User | undefined> {
+    const user = this.users.get(id);
+    if (!user) return undefined;
+    
+    const updatedUser: User = { ...user, isAdmin };
+    this.users.set(id, updatedUser);
+    return updatedUser;
   }
 
   async getFriend(id: string): Promise<Friend | undefined> {
@@ -138,8 +168,15 @@ export class MemStorage implements IStorage {
   async createFriend(insertFriend: InsertFriend): Promise<Friend> {
     const id = randomUUID();
     const friend: Friend = { 
-      ...insertFriend, 
       id,
+      userId: null, // Guest mode
+      name: insertFriend.name,
+      personalityTraits: insertFriend.personalityTraits as string[],
+      interests: insertFriend.interests as string[],
+      notes: insertFriend.notes ?? null,
+      country: insertFriend.country || '',
+      currency: insertFriend.currency || 'USD',
+      profilePicture: insertFriend.profilePicture ?? null,
       createdAt: new Date().toISOString()
     };
     this.friends.set(id, friend);
@@ -150,7 +187,17 @@ export class MemStorage implements IStorage {
     const existingFriend = this.friends.get(id);
     if (!existingFriend) return undefined;
     
-    const updatedFriend: Friend = { ...existingFriend, ...updateData };
+    const updatedFriend: Friend = { 
+      ...existingFriend, 
+      ...updateData,
+      // Ensure proper types for optional fields
+      notes: updateData.notes !== undefined ? updateData.notes ?? null : existingFriend.notes,
+      country: updateData.country !== undefined ? updateData.country || '' : existingFriend.country,
+      currency: updateData.currency !== undefined ? updateData.currency || 'USD' : existingFriend.currency,
+      profilePicture: updateData.profilePicture !== undefined ? updateData.profilePicture ?? null : existingFriend.profilePicture,
+      personalityTraits: updateData.personalityTraits ? updateData.personalityTraits as string[] : existingFriend.personalityTraits,
+      interests: updateData.interests ? updateData.interests as string[] : existingFriend.interests
+    };
     this.friends.set(id, updatedFriend);
     return updatedFriend;
   }
@@ -176,8 +223,10 @@ export class MemStorage implements IStorage {
   async createSavedGift(insertSavedGift: InsertSavedGift): Promise<SavedGift> {
     const id = randomUUID();
     const savedGift: SavedGift = { 
-      ...insertSavedGift, 
       id,
+      userId: null, // Guest mode
+      friendId: insertSavedGift.friendId,
+      giftData: insertSavedGift.giftData as SavedGift['giftData'],
       createdAt: new Date().toISOString()
     };
     this.savedGifts.set(id, savedGift);
@@ -186,6 +235,82 @@ export class MemStorage implements IStorage {
 
   async deleteSavedGift(id: string): Promise<boolean> {
     return this.savedGifts.delete(id);
+  }
+
+  // Analytics methods
+  async createUserAnalytics(analytics: InsertUserAnalytics, userId?: string): Promise<UserAnalytics> {
+    const id = randomUUID();
+    const userAnalytics: UserAnalytics = {
+      id,
+      userId: userId || null,
+      sessionId: analytics.sessionId,
+      eventType: analytics.eventType,
+      eventData: analytics.eventData || null,
+      timestamp: new Date().toISOString(),
+      userAgent: analytics.userAgent || null,
+      ipAddress: analytics.ipAddress || null,
+    };
+    this.userAnalytics.set(id, userAnalytics);
+    return userAnalytics;
+  }
+
+  async getUserAnalytics(userId: string, limit: number = 100): Promise<UserAnalytics[]> {
+    return Array.from(this.userAnalytics.values())
+      .filter(analytics => analytics.userId === userId)
+      .sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime())
+      .slice(0, limit);
+  }
+
+  async createRecommendationFeedback(feedback: InsertRecommendationFeedback, userId?: string): Promise<RecommendationFeedback> {
+    const id = randomUUID();
+    const recommendationFeedback: RecommendationFeedback = {
+      id,
+      userId: userId || null,
+      friendId: feedback.friendId || null,
+      recommendationData: feedback.recommendationData as RecommendationFeedback['recommendationData'],
+      rating: feedback.rating,
+      feedback: feedback.feedback || null,
+      helpful: feedback.helpful || null,
+      purchased: feedback.purchased || false,
+      createdAt: new Date().toISOString(),
+    };
+    this.recommendationFeedback.set(id, recommendationFeedback);
+    return recommendationFeedback;
+  }
+
+  async getRecommendationFeedback(userId: string, limit: number = 100): Promise<RecommendationFeedback[]> {
+    return Array.from(this.recommendationFeedback.values())
+      .filter(feedback => feedback.userId === userId)
+      .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+      .slice(0, limit);
+  }
+
+  async createPerformanceMetrics(metrics: InsertPerformanceMetrics, userId?: string): Promise<PerformanceMetrics> {
+    const id = randomUUID();
+    const performanceMetrics: PerformanceMetrics = {
+      id,
+      userId: userId || null,
+      operation: metrics.operation,
+      responseTime: metrics.responseTime,
+      success: metrics.success,
+      errorMessage: metrics.errorMessage || null,
+      metadata: metrics.metadata || null,
+      timestamp: new Date().toISOString(),
+    };
+    this.performanceMetrics.set(id, performanceMetrics);
+    return performanceMetrics;
+  }
+
+  async getPerformanceMetrics(operation?: string, limit: number = 100): Promise<PerformanceMetrics[]> {
+    let metrics = Array.from(this.performanceMetrics.values());
+    
+    if (operation) {
+      metrics = metrics.filter(metric => metric.operation === operation);
+    }
+    
+    return metrics
+      .sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime())
+      .slice(0, limit);
   }
 }
 

@@ -1,9 +1,9 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storageAdapter } from "./storage-adapter";
-import { insertFriendSchema, insertSavedGiftSchema } from "@shared/schema";
+import { insertFriendSchema, insertSavedGiftSchema, insertUserAnalyticsSchema, insertRecommendationFeedbackSchema, insertPerformanceMetricsSchema } from "@shared/schema";
 import { generateGiftRecommendations } from "./services/openai";
-import { setupAuth, setupAuthRoutes, requireAuth, type AuthenticatedRequest } from "./auth";
+import { setupAuth, setupAuthRoutes, requireAuth, requireAdmin, type AuthenticatedRequest } from "./auth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
@@ -93,12 +93,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Gift recommendations endpoint
   app.post("/api/gift-recommendations", async (req: AuthenticatedRequest, res) => {
+    const startTime = Date.now();
+    let success = false;
+    let errorMessage: string | null = null;
+    let recommendations: any = null;
+    
     try {
       const { friendId, budget: budgetStr } = req.body;
       
       if (!friendId || !budgetStr) {
+        errorMessage = "Friend ID and budget are required";
         return res.status(400).json({ 
-          message: "Friend ID and budget are required" 
+          message: errorMessage
         });
       }
 
@@ -106,17 +112,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const budget = parseFloat(budgetStr.replace(/[^\d\.]/g, '')) || 0;
       
       if (budget <= 0) {
+        errorMessage = "Budget must be a positive number";
         return res.status(400).json({ 
-          message: "Budget must be a positive number" 
+          message: errorMessage
         });
       }
 
       const friend = await storageAdapter.getFriend(friendId, req.user?.id);
       if (!friend) {
-        return res.status(404).json({ message: "Friend not found" });
+        errorMessage = "Friend not found";
+        return res.status(404).json({ message: errorMessage });
       }
 
-      const recommendations = await generateGiftRecommendations(
+      // Track AI recommendation performance
+      const aiStartTime = Date.now();
+      recommendations = await generateGiftRecommendations(
         friend.personalityTraits,
         friend.interests,
         budget,
@@ -125,12 +135,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
         friend.country || "United States",
         friend.notes || undefined
       );
+      const aiResponseTime = Date.now() - aiStartTime;
+
+      success = true;
+
+      // Log AI recommendation performance
+      await storageAdapter.logPerformanceMetric({
+        userId: req.user?.id,
+        operation: "ai_recommendation",
+        responseTime: aiResponseTime,
+        success: true,
+        metadata: {
+          friendId,
+          budget,
+          currency: friend.currency || "USD",
+          country: friend.country || "United States",
+          recommendationsCount: recommendations?.length || 0,
+          personalityTraits: friend.personalityTraits,
+          interests: friend.interests
+        }
+      });
 
       res.json(recommendations);
     } catch (error) {
+      success = false;
+      errorMessage = error instanceof Error ? error.message : "Failed to generate gift recommendations";
       console.error("Gift recommendation error:", error);
+      
+      // Log failed AI recommendation performance
+      if (req.user?.id) {
+        try {
+          await storageAdapter.logPerformanceMetric({
+            userId: req.user.id,
+            operation: "ai_recommendation",
+            responseTime: Date.now() - startTime,
+            success: false,
+            errorMessage,
+            metadata: {
+              friendId: req.body.friendId,
+              budget: req.body.budget,
+              error: errorMessage
+            }
+          });
+        } catch (logError) {
+          console.error("Failed to log performance metric:", logError);
+        }
+      }
+      
       res.status(500).json({ 
-        message: error instanceof Error ? error.message : "Failed to generate gift recommendations" 
+        message: errorMessage
       });
     }
   });
@@ -180,6 +233,96 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ message: "Failed to delete saved gift" });
+    }
+  });
+
+  // Analytics endpoints
+  app.post("/api/analytics/events", async (req: AuthenticatedRequest, res) => {
+    try {
+      const result = insertUserAnalyticsSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ 
+          message: "Invalid analytics data",
+          errors: result.error.issues 
+        });
+      }
+
+      const analytics = await storageAdapter.createUserAnalytics(result.data, req.user?.id);
+      res.status(201).json(analytics);
+    } catch (error) {
+      console.error("Failed to create analytics event:", error);
+      res.status(500).json({ message: "Failed to record analytics event" });
+    }
+  });
+
+  app.get("/api/analytics/events", requireAuth, requireAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+
+      const limit = parseInt(req.query.limit as string) || 100;
+      const analytics = await storageAdapter.getUserAnalytics(req.user!.id, limit);
+      res.json(analytics);
+    } catch (error) {
+      console.error("Failed to fetch analytics:", error);
+      res.status(500).json({ message: "Failed to fetch analytics data" });
+    }
+  });
+
+  app.post("/api/analytics/feedback", async (req: AuthenticatedRequest, res) => {
+    try {
+      const result = insertRecommendationFeedbackSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ 
+          message: "Invalid feedback data",
+          errors: result.error.issues 
+        });
+      }
+
+      const feedback = await storageAdapter.createRecommendationFeedback(result.data, req.user?.id);
+      res.status(201).json(feedback);
+    } catch (error) {
+      console.error("Failed to create feedback:", error);
+      res.status(500).json({ message: "Failed to record feedback" });
+    }
+  });
+
+  app.get("/api/analytics/feedback", requireAuth, requireAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 100;
+      const feedback = await storageAdapter.getRecommendationFeedback(req.user!.id, limit);
+      res.json(feedback);
+    } catch (error) {
+      console.error("Failed to fetch feedback:", error);
+      res.status(500).json({ message: "Failed to fetch feedback data" });
+    }
+  });
+
+  app.post("/api/analytics/performance", async (req: AuthenticatedRequest, res) => {
+    try {
+      const result = insertPerformanceMetricsSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ 
+          message: "Invalid performance metrics data",
+          errors: result.error.issues 
+        });
+      }
+
+      const metrics = await storageAdapter.createPerformanceMetrics(result.data, req.user?.id);
+      res.status(201).json(metrics);
+    } catch (error) {
+      console.error("Failed to create performance metrics:", error);
+      res.status(500).json({ message: "Failed to record performance metrics" });
+    }
+  });
+
+  app.get("/api/analytics/performance", requireAuth, requireAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const operation = req.query.operation as string;
+      const limit = parseInt(req.query.limit as string) || 100;
+      const metrics = await storageAdapter.getPerformanceMetrics(operation, limit);
+      res.json(metrics);
+    } catch (error) {
+      console.error("Failed to fetch performance metrics:", error);
+      res.status(500).json({ message: "Failed to fetch performance metrics" });
     }
   });
 

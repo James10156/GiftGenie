@@ -1,4 +1,4 @@
-import type { User, InsertUser, Friend, InsertFriend, SavedGift, InsertSavedGift } from "@shared/schema";
+import type { User, InsertUser, Friend, InsertFriend, SavedGift, InsertSavedGift, UserAnalytics, InsertUserAnalytics, RecommendationFeedback, InsertRecommendationFeedback, PerformanceMetrics, InsertPerformanceMetrics } from "@shared/schema";
 import { MemStorage } from "./storage";
 import { DatabaseStorage } from "./db";
 
@@ -7,6 +7,7 @@ export interface IStorageAdapter {
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  updateUserAdminStatus(id: string, isAdmin: boolean): Promise<User | undefined>;
   
   // Friend operations - with user context
   getFriend(id: string, userId?: string): Promise<Friend | undefined>;
@@ -21,6 +22,14 @@ export interface IStorageAdapter {
   getAllSavedGifts(userId?: string): Promise<SavedGift[]>;
   createSavedGift(savedGift: InsertSavedGift, userId?: string): Promise<SavedGift>;
   deleteSavedGift(id: string, userId?: string): Promise<boolean>;
+
+  // Analytics operations
+  createUserAnalytics(analytics: InsertUserAnalytics, userId?: string): Promise<UserAnalytics>;
+  getUserAnalytics(userId: string, limit?: number): Promise<UserAnalytics[]>;
+  createRecommendationFeedback(feedback: InsertRecommendationFeedback, userId?: string): Promise<RecommendationFeedback>;
+  getRecommendationFeedback(userId: string, limit?: number): Promise<RecommendationFeedback[]>;
+  createPerformanceMetrics(metrics: InsertPerformanceMetrics, userId?: string): Promise<PerformanceMetrics>;
+  getPerformanceMetrics(operation?: string, limit?: number): Promise<PerformanceMetrics[]>;
 }
 
 export class StorageAdapter implements IStorageAdapter {
@@ -64,6 +73,13 @@ export class StorageAdapter implements IStorageAdapter {
       return this.databaseStorage.createUser(user);
     }
     return this.memStorage.createUser(user);
+  }
+
+  async updateUserAdminStatus(id: string, isAdmin: boolean): Promise<User | undefined> {
+    if (this.databaseStorage) {
+      return this.databaseStorage.updateUserAdminStatus(id, isAdmin);
+    }
+    return this.memStorage.updateUserAdminStatus(id, isAdmin);
   }
 
   // Friend operations with user context
@@ -176,6 +192,54 @@ export class StorageAdapter implements IStorageAdapter {
       }
     }
     return this.memStorage.deleteSavedGift(id);
+  }
+
+  // Analytics operations
+  async createUserAnalytics(analytics: InsertUserAnalytics, userId?: string): Promise<UserAnalytics> {
+    if (this.databaseStorage) {
+      return this.databaseStorage.createUserAnalytics(analytics, userId);
+    }
+    return this.memStorage.createUserAnalytics(analytics, userId);
+  }
+
+  async getUserAnalytics(userId: string, limit?: number): Promise<UserAnalytics[]> {
+    if (this.databaseStorage) {
+      return this.databaseStorage.getUserAnalytics(userId, limit);
+    }
+    return this.memStorage.getUserAnalytics(userId, limit);
+  }
+
+  async createRecommendationFeedback(feedback: InsertRecommendationFeedback, userId?: string): Promise<RecommendationFeedback> {
+    if (this.databaseStorage) {
+      return this.databaseStorage.createRecommendationFeedback(feedback, userId);
+    }
+    return this.memStorage.createRecommendationFeedback(feedback, userId);
+  }
+
+  async getRecommendationFeedback(userId: string, limit?: number): Promise<RecommendationFeedback[]> {
+    if (this.databaseStorage) {
+      return this.databaseStorage.getRecommendationFeedback(userId, limit);
+    }
+    return this.memStorage.getRecommendationFeedback(userId, limit);
+  }
+
+  async createPerformanceMetrics(metrics: InsertPerformanceMetrics, userId?: string): Promise<PerformanceMetrics> {
+    if (this.databaseStorage) {
+      return this.databaseStorage.createPerformanceMetrics(metrics, userId);
+    }
+    return this.memStorage.createPerformanceMetrics(metrics, userId);
+  }
+
+  async getPerformanceMetrics(operation?: string, limit?: number): Promise<PerformanceMetrics[]> {
+    if (this.databaseStorage) {
+      return this.databaseStorage.getPerformanceMetrics(operation, limit);
+    }
+    return this.memStorage.getPerformanceMetrics(operation, limit);
+  }
+
+  // Convenience method for logging performance metrics
+  async logPerformanceMetric(metrics: InsertPerformanceMetrics & { userId?: string }): Promise<PerformanceMetrics> {
+    return this.createPerformanceMetrics(metrics, metrics.userId);
   }
 
   // Method to switch to database storage when available

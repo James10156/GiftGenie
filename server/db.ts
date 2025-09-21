@@ -1,8 +1,8 @@
 import { drizzle } from "drizzle-orm/neon-http";
 import { neon } from "@neondatabase/serverless";
 import { eq, and, isNull } from "drizzle-orm";
-import { users, friends, savedGifts } from "@shared/schema";
-import type { User, InsertUser, Friend, InsertFriend, SavedGift, InsertSavedGift } from "@shared/schema";
+import { users, friends, savedGifts, userAnalytics, recommendationFeedback, performanceMetrics } from "@shared/schema";
+import type { User, InsertUser, Friend, InsertFriend, SavedGift, InsertSavedGift, UserAnalytics, InsertUserAnalytics, RecommendationFeedback, InsertRecommendationFeedback, PerformanceMetrics, InsertPerformanceMetrics } from "@shared/schema";
 import { IStorage } from "./storage";
 
 if (!process.env.DATABASE_URL) {
@@ -25,6 +25,14 @@ export class DatabaseStorage implements IStorage {
 
   async createUser(user: InsertUser): Promise<User> {
     const result = await db.insert(users).values(user).returning();
+    return result[0];
+  }
+
+  async updateUserAdminStatus(id: string, isAdmin: boolean): Promise<User | undefined> {
+    const result = await db.update(users)
+      .set({ isAdmin })
+      .where(eq(users.id, id))
+      .returning();
     return result[0];
   }
 
@@ -186,6 +194,75 @@ export class DatabaseStorage implements IStorage {
       .where(and(eq(savedGifts.id, id), eq(savedGifts.userId, userId)))
       .returning();
     return result.length > 0;
+  }
+
+  // Analytics methods
+  async createUserAnalytics(analytics: InsertUserAnalytics, userId?: string): Promise<UserAnalytics> {
+    const result = await db.insert(userAnalytics).values({
+      userId: userId || null,
+      sessionId: analytics.sessionId,
+      eventType: analytics.eventType,
+      eventData: analytics.eventData as any,
+      userAgent: analytics.userAgent,
+      ipAddress: analytics.ipAddress,
+    }).returning();
+    return result[0];
+  }
+
+  async getUserAnalytics(userId: string, limit: number = 100): Promise<UserAnalytics[]> {
+    const result = await db.select().from(userAnalytics)
+      .where(eq(userAnalytics.userId, userId))
+      .orderBy(userAnalytics.timestamp)
+      .limit(limit);
+    return result;
+  }
+
+  async createRecommendationFeedback(feedback: InsertRecommendationFeedback, userId?: string): Promise<RecommendationFeedback> {
+    const result = await db.insert(recommendationFeedback).values({
+      userId: userId || null,
+      friendId: feedback.friendId,
+      recommendationData: feedback.recommendationData as any,
+      rating: feedback.rating,
+      feedback: feedback.feedback,
+      helpful: feedback.helpful,
+      purchased: feedback.purchased,
+    }).returning();
+    return result[0];
+  }
+
+  async getRecommendationFeedback(userId: string, limit: number = 100): Promise<RecommendationFeedback[]> {
+    const result = await db.select().from(recommendationFeedback)
+      .where(eq(recommendationFeedback.userId, userId))
+      .orderBy(recommendationFeedback.createdAt)
+      .limit(limit);
+    return result;
+  }
+
+  async createPerformanceMetrics(metrics: InsertPerformanceMetrics, userId?: string): Promise<PerformanceMetrics> {
+    const result = await db.insert(performanceMetrics).values({
+      userId: userId || null,
+      operation: metrics.operation,
+      responseTime: metrics.responseTime,
+      success: metrics.success,
+      errorMessage: metrics.errorMessage,
+      metadata: metrics.metadata as any,
+    }).returning();
+    return result[0];
+  }
+
+  async getPerformanceMetrics(operation?: string, limit: number = 100): Promise<PerformanceMetrics[]> {
+    if (operation) {
+      const result = await db.select().from(performanceMetrics)
+        .where(eq(performanceMetrics.operation, operation))
+        .orderBy(performanceMetrics.timestamp)
+        .limit(limit);
+      return result;
+    } else {
+      const result = await db.select().from(performanceMetrics)
+        .orderBy(performanceMetrics.timestamp)
+        .limit(limit);
+      return result;
+    }
   }
 }
 

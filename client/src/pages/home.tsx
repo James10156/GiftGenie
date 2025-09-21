@@ -4,6 +4,8 @@ import type { Friend, GiftRecommendation, SavedGift } from "@shared/schema";
 import { FriendForm } from "../components/FriendForm";
 import { GiftWrappingAnimation } from "../components/gift-wrapping-animation";
 import { AuthModal } from "../components/auth-modal";
+import { AnalyticsDashboard } from "../components/analytics-dashboard";
+import { useAnalytics, usePageTracking, usePerformanceTracking, useEngagementTracking } from "../hooks/use-analytics";
 
 function Home() {
   const [activeTab, setActiveTab] = useState("friends");
@@ -18,7 +20,111 @@ function Home() {
   const [focusedImage, setFocusedImage] = useState<{src: string, alt: string} | null>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [giftFeedback, setGiftFeedback] = useState<{[key: string]: { rating: number | null, feedback: string, showFeedback: boolean }}>({});
   const queryClient = useQueryClient();
+
+  // Analytics hooks
+  const { trackClick, trackGiftGeneration, trackGiftSave, submitFeedback } = useAnalytics();
+  const { trackOperation } = usePerformanceTracking();
+  const { trackBudgetChange, trackTabSwitch, trackFriendSelect, trackFeatureUsage } = useEngagementTracking();
+  
+  // Track page view
+  usePageTracking("home");
+
+  // Helper function for tab switching with analytics
+  const switchTab = (newTab: string) => {
+    trackTabSwitch(activeTab, newTab);
+    setActiveTab(newTab);
+  };
+
+  // Helper function for friend selection with analytics
+  const selectFriend = (friend: Friend | null) => {
+    if (friend) {
+      trackFriendSelect(friend.id, friend.name);
+    }
+    setSelectedFriend(friend);
+  };
+
+  // Helper functions for gift feedback
+  const getGiftId = (gift: GiftRecommendation, index: number) => `${gift.name}-${index}`;
+
+  const handleGiftRating = (gift: GiftRecommendation, index: number, rating: number) => {
+    const giftId = getGiftId(gift, index);
+    setGiftFeedback(prev => ({
+      ...prev,
+      [giftId]: {
+        ...prev[giftId],
+        rating,
+        showFeedback: rating === -1, // Show feedback form for thumbs down
+      }
+    }));
+
+    // Submit basic rating immediately
+    if (recommendationsForFriend) {
+      submitFeedback({
+        friendId: recommendationsForFriend.id,
+        recommendationData: {
+          giftName: gift.name,
+          price: gift.price,
+          matchPercentage: gift.matchPercentage,
+          generationParams: {
+            budget: parseInt(budget),
+            currency: recommendationsForFriend.currency,
+            personalityTraits: recommendationsForFriend.personalityTraits,
+            interests: recommendationsForFriend.interests,
+          },
+        },
+        rating,
+        helpful: rating === 1,
+      });
+    }
+
+    trackClick('gift_rating', { 
+      giftName: gift.name, 
+      rating: rating === 1 ? 'thumbs_up' : 'thumbs_down',
+      friendId: recommendationsForFriend?.id 
+    });
+  };
+
+  const handleDetailedFeedback = (gift: GiftRecommendation, index: number, feedback: string) => {
+    const giftId = getGiftId(gift, index);
+    const currentRating = giftFeedback[giftId]?.rating || -1;
+    
+    if (recommendationsForFriend) {
+      submitFeedback({
+        friendId: recommendationsForFriend.id,
+        recommendationData: {
+          giftName: gift.name,
+          price: gift.price,
+          matchPercentage: gift.matchPercentage,
+          generationParams: {
+            budget: parseInt(budget),
+            currency: recommendationsForFriend.currency,
+            personalityTraits: recommendationsForFriend.personalityTraits,
+            interests: recommendationsForFriend.interests,
+          },
+        },
+        rating: currentRating,
+        feedback,
+        helpful: false,
+      });
+    }
+
+    // Hide feedback form after submission
+    setGiftFeedback(prev => ({
+      ...prev,
+      [giftId]: {
+        ...prev[giftId],
+        showFeedback: false,
+      }
+    }));
+
+    trackClick('detailed_feedback_submit', { 
+      giftName: gift.name, 
+      feedbackLength: feedback.length,
+      friendId: recommendationsForFriend?.id 
+    });
+  };
 
   // Check current user on load
   useEffect(() => {
@@ -80,8 +186,14 @@ function Home() {
 
   // Helper function to update budget value
   const updateBudget = (value: number) => {
+    const oldValue = currentBudgetValue;
     const clampedValue = Math.min(Math.max(value, 10), 500);
     setBudget(clampedValue.toString());
+    
+    // Track budget changes for analytics
+    if (oldValue !== clampedValue) {
+      trackBudgetChange(oldValue, clampedValue, currentCurrency);
+    }
   };
 
   // Get formatted budget string with currency symbol
@@ -177,18 +289,31 @@ function Home() {
   // Generate gift recommendations
   const generateRecommendationsMutation = useMutation({
     mutationFn: async ({ friendId, budget }: { friendId: string; budget: string }) => {
-      const response = await fetch("/api/gift-recommendations", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ friendId, budget }),
+      return trackOperation('ai_recommendation', async () => {
+        const response = await fetch("/api/gift-recommendations", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ friendId, budget }),
+        });
+        if (!response.ok) throw new Error("Failed to generate recommendations");
+        return response.json();
+      }, {
+        friendId,
+        budget,
+        personalityTraits: selectedFriend?.personalityTraits,
+        interests: selectedFriend?.interests,
       });
-      if (!response.ok) throw new Error("Failed to generate recommendations");
-      return response.json();
     },
     onSuccess: (data) => {
       setRecommendations(data);
       setRecommendationsForFriend(selectedFriend);
-      setActiveTab("recommendations");
+      
+      // Track successful gift generation
+      if (selectedFriend) {
+        trackGiftGeneration(selectedFriend, parseInt(budget), selectedFriend.currency);
+      }
+      
+      switchTab("recommendations");
     },
   });
 
@@ -203,8 +328,15 @@ function Home() {
       if (!response.ok) throw new Error("Failed to save gift");
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["savedGifts"] });
+      
+      // Track gift save for analytics
+      trackGiftSave(variables.giftData, variables.friendId);
+      trackFeatureUsage('save_gift', {
+        giftName: variables.giftData.name,
+        giftPrice: variables.giftData.price,
+      });
     },
   });
 
@@ -300,10 +432,10 @@ function Home() {
           {/* Tab Navigation */}
           <div className="flex justify-center mb-8">
             <div className="bg-white rounded-lg p-1 shadow-sm border">
-              {["friends", "generate", "recommendations", "saved"].map((tab) => (
+              {["friends", "generate", "recommendations", "saved", ...(currentUser?.isAdmin ? ["analytics"] : [])].map((tab) => (
                 <button
                   key={tab}
-                  onClick={() => setActiveTab(tab)}
+                  onClick={() => switchTab(tab)}
                   className={`px-4 py-2 rounded-md capitalize transition-colors ${
                     activeTab === tab
                       ? "bg-blue-600 text-white"
@@ -422,8 +554,8 @@ function Home() {
                       </div>
                       <button
                         onClick={() => {
-                          setSelectedFriend(friend);
-                          setActiveTab("generate");
+                          selectFriend(friend);
+                          switchTab("generate");
                         }}
                         className="w-full bg-green-600 text-white py-2 rounded-md hover:bg-green-700 text-sm"
                       >
@@ -448,7 +580,7 @@ function Home() {
                     value={selectedFriend?.id || ""}
                     onChange={(e) => {
                       const friend = friends.find(f => f.id === e.target.value);
-                      setSelectedFriend(friend || null);
+                      selectFriend(friend || null);
                     }}
                     className="w-full p-3 border rounded-md"
                   >
@@ -780,6 +912,79 @@ function Home() {
                           </div>
                         </div>
 
+                        {/* Gift Feedback System */}
+                        <div className="mb-4 p-3 bg-gray-50 rounded-lg border">
+                          <p className="text-sm font-medium text-gray-700 mb-2">How is this recommendation?</p>
+                          <div className="flex items-center gap-3 mb-2">
+                            <button
+                              onClick={() => handleGiftRating(gift, index, 1)}
+                              className={`flex items-center gap-1 px-3 py-1 rounded-full text-sm transition-colors ${
+                                giftFeedback[getGiftId(gift, index)]?.rating === 1
+                                  ? 'bg-green-100 text-green-700 border border-green-300'
+                                  : 'bg-white text-gray-600 border border-gray-300 hover:bg-green-50'
+                              }`}
+                            >
+                              👍 Good match
+                            </button>
+                            <button
+                              onClick={() => handleGiftRating(gift, index, -1)}
+                              className={`flex items-center gap-1 px-3 py-1 rounded-full text-sm transition-colors ${
+                                giftFeedback[getGiftId(gift, index)]?.rating === -1
+                                  ? 'bg-red-100 text-red-700 border border-red-300'
+                                  : 'bg-white text-gray-600 border border-gray-300 hover:bg-red-50'
+                              }`}
+                            >
+                              👎 Poor match
+                            </button>
+                          </div>
+                          
+                          {/* Detailed feedback form for negative ratings */}
+                          {giftFeedback[getGiftId(gift, index)]?.showFeedback && (
+                            <div className="mt-3 space-y-2">
+                              <p className="text-xs text-gray-600">Help us improve - what made this a poor match?</p>
+                              <textarea
+                                placeholder="e.g., Too expensive, not their style, already have one..."
+                                className="w-full p-2 border border-gray-300 rounded text-sm resize-none"
+                                rows={2}
+                                value={giftFeedback[getGiftId(gift, index)]?.feedback || ''}
+                                onChange={(e) => {
+                                  const giftId = getGiftId(gift, index);
+                                  setGiftFeedback(prev => ({
+                                    ...prev,
+                                    [giftId]: {
+                                      ...prev[giftId],
+                                      feedback: e.target.value,
+                                    }
+                                  }));
+                                }}
+                              />
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => handleDetailedFeedback(gift, index, giftFeedback[getGiftId(gift, index)]?.feedback || '')}
+                                  className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
+                                >
+                                  Submit feedback
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    const giftId = getGiftId(gift, index);
+                                    setGiftFeedback(prev => ({
+                                      ...prev,
+                                      [giftId]: {
+                                        ...prev[giftId],
+                                        showFeedback: false,
+                                      }
+                                    }));
+                                  }}
+                                  className="px-3 py-1 bg-gray-300 text-gray-700 text-xs rounded hover:bg-gray-400"
+                                >
+                                  Skip
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
                         <div className="flex gap-2 mt-auto">
                           <button
                             onClick={() => handleSaveGift(gift)}
@@ -993,7 +1198,14 @@ function Home() {
                 </div>
               )}
             </div>
-          )}          {/* Friend Form Modal */}
+          )}
+
+          {/* Analytics Tab */}
+          {activeTab === "analytics" && currentUser?.isAdmin && (
+            <AnalyticsDashboard currentUser={currentUser} />
+          )}
+          
+          {/* Friend Form Modal */}
           {showFriendForm && (
             <FriendForm
               friend={editingFriend || undefined}

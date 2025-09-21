@@ -1222,14 +1222,23 @@ Respond in JSON format with this structure:
         
         // PRIORITY 1: Google Images scraper (primary method in dev)
         try {
+          const imageStartTime = Date.now();
           const googleImage = await getProductImageFromGoogle(rec.name || '', rec.description);
+          const imageResponseTime = Date.now() - imageStartTime;
+          
           if (googleImage) {
             imageUrl = googleImage;
+            // Track successful image search performance
+            console.log(`Image search succeeded in ${imageResponseTime}ms for "${rec.name}"`);
           } else {
+            console.log(`Google image search returned null in ${imageResponseTime}ms for "${rec.name}"`);
             
             // PRIORITY 2: Generic fallback images (ultimate fallback)
             try {
+              const fallbackStartTime = Date.now();
               imageUrl = await getProductImage(imageKeywords, rec.description);
+              const fallbackResponseTime = Date.now() - fallbackStartTime;
+              console.log(`Fallback image search completed in ${fallbackResponseTime}ms for "${rec.name}"`);
             } catch (error) {
               console.error(`Generic image service failed:`, error);
               // Ultimate fallback to a reliable generic image
@@ -1241,7 +1250,10 @@ Respond in JSON format with this structure:
           
           // PRIORITY 2: Generic fallback images (ultimate fallback)
           try {
+            const fallbackStartTime = Date.now();
             imageUrl = await getProductImage(imageKeywords, rec.description);
+            const fallbackResponseTime = Date.now() - fallbackStartTime;
+            console.log(`Fallback image search completed in ${fallbackResponseTime}ms for "${rec.name}"`);
           } catch (error) {
             console.error(`Generic image service failed:`, error);
             // Ultimate fallback to a reliable generic image
