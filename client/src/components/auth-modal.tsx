@@ -21,6 +21,8 @@ export function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalProps) {
     password: "",
     confirmPassword: ""
   });
+  const [loginError, setLoginError] = useState("");
+  const [registerError, setRegisterError] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -38,6 +40,7 @@ export function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalProps) {
       return response.json();
     },
     onSuccess: (user) => {
+      setLoginError(""); // Clear any previous errors
       toast({ title: "Welcome back!", description: `Logged in as ${user.username}` });
       queryClient.invalidateQueries({ queryKey: ["friends"] });
       queryClient.invalidateQueries({ queryKey: ["savedGifts"] });
@@ -45,6 +48,7 @@ export function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalProps) {
       onClose();
     },
     onError: (error: Error) => {
+      setLoginError(error.message);
       toast({
         title: "Login failed",
         description: error.message,
@@ -67,6 +71,7 @@ export function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalProps) {
       return response.json();
     },
     onSuccess: (user) => {
+      setRegisterError(""); // Clear any previous errors
       toast({ title: "Welcome to GiftGenie!", description: `Account created for ${user.username}` });
       queryClient.invalidateQueries({ queryKey: ["friends"] });
       queryClient.invalidateQueries({ queryKey: ["savedGifts"] });
@@ -74,6 +79,7 @@ export function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalProps) {
       onClose();
     },
     onError: (error: Error) => {
+      setRegisterError(error.message);
       toast({
         title: "Registration failed",
         description: error.message,
@@ -84,10 +90,13 @@ export function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalProps) {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
+    setLoginError(""); // Clear previous errors
     if (!loginData.username || !loginData.password) {
+      const errorMsg = "Please enter both username and password";
+      setLoginError(errorMsg);
       toast({
         title: "Missing information",
-        description: "Please enter both username and password",
+        description: errorMsg,
         variant: "destructive",
       });
       return;
@@ -97,26 +106,33 @@ export function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalProps) {
 
   const handleRegister = (e: React.FormEvent) => {
     e.preventDefault();
+    setRegisterError(""); // Clear previous errors
     if (!registerData.username || !registerData.password || !registerData.confirmPassword) {
+      const errorMsg = "Please fill in all fields";
+      setRegisterError(errorMsg);
       toast({
         title: "Missing information",
-        description: "Please fill in all fields",
+        description: errorMsg,
         variant: "destructive",
       });
       return;
     }
     if (registerData.password !== registerData.confirmPassword) {
+      const errorMsg = "Passwords do not match";
+      setRegisterError(errorMsg);
       toast({
         title: "Password mismatch",
-        description: "Passwords do not match",
+        description: errorMsg,
         variant: "destructive",
       });
       return;
     }
     if (registerData.password.length < 6) {
+      const errorMsg = "Password must be at least 6 characters";
+      setRegisterError(errorMsg);
       toast({
         title: "Password too short",
-        description: "Password must be at least 6 characters",
+        description: errorMsg,
         variant: "destructive",
       });
       return;
@@ -151,13 +167,22 @@ export function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalProps) {
             </TabsList>
             
             <TabsContent value="login">
-              <form onSubmit={handleLogin} className="space-y-4">                
+              <form onSubmit={handleLogin} className="space-y-4">
+                {loginError && (
+                  <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
+                    {loginError}
+                  </div>
+                )}
+                
                 <div className="space-y-2">
                   <Label htmlFor="username">Username</Label>
                   <Input
                     id="username"
                     value={loginData.username}
-                    onChange={(e) => setLoginData({ ...loginData, username: e.target.value })}
+                    onChange={(e) => {
+                      setLoginData({ ...loginData, username: e.target.value });
+                      if (loginError) setLoginError(""); // Clear error on input change
+                    }}
                     placeholder="Enter your username"
                     required
                   />
@@ -169,7 +194,10 @@ export function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalProps) {
                     id="password"
                     type="password"
                     value={loginData.password}
-                    onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
+                    onChange={(e) => {
+                      setLoginData({ ...loginData, password: e.target.value });
+                      if (loginError) setLoginError(""); // Clear error on input change
+                    }}
                     placeholder="Enter your password"
                     required
                   />
@@ -183,12 +211,21 @@ export function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalProps) {
             
             <TabsContent value="register">
               <form onSubmit={handleRegister} className="space-y-4">
+                {registerError && (
+                  <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
+                    {registerError}
+                  </div>
+                )}
+                
                 <div className="space-y-2">
                   <Label htmlFor="reg-username">Username</Label>
                   <Input
                     id="reg-username"
                     value={registerData.username}
-                    onChange={(e) => setRegisterData({ ...registerData, username: e.target.value })}
+                    onChange={(e) => {
+                      setRegisterData({ ...registerData, username: e.target.value });
+                      if (registerError) setRegisterError(""); // Clear error on input change
+                    }}
                     placeholder="Choose a username"
                     required
                   />
@@ -200,7 +237,10 @@ export function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalProps) {
                     id="reg-password"
                     type="password"
                     value={registerData.password}
-                    onChange={(e) => setRegisterData({ ...registerData, password: e.target.value })}
+                    onChange={(e) => {
+                      setRegisterData({ ...registerData, password: e.target.value });
+                      if (registerError) setRegisterError(""); // Clear error on input change
+                    }}
                     placeholder="Create a password (min 6 chars)"
                     required
                   />
@@ -212,7 +252,10 @@ export function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalProps) {
                     id="confirm-password"
                     type="password"
                     value={registerData.confirmPassword}
-                    onChange={(e) => setRegisterData({ ...registerData, confirmPassword: e.target.value })}
+                    onChange={(e) => {
+                      setRegisterData({ ...registerData, confirmPassword: e.target.value });
+                      if (registerError) setRegisterError(""); // Clear error on input change
+                    }}
                     placeholder="Confirm your password"
                     required
                   />
