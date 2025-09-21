@@ -393,14 +393,14 @@ function Home() {
         <div className="container mx-auto px-4 py-4">
           <div className="flex justify-between items-center">
             <div className="text-sm text-gray-600">
-              {currentUser ? (
+              {currentUser && currentUser.username !== 'Guest' ? (
                 <span>Welcome back, <strong>{currentUser.username}</strong>!</span>
               ) : (
                 <span>You're browsing as a guest</span>
               )}
             </div>
             <div className="flex items-center gap-3">
-              {currentUser ? (
+              {currentUser && currentUser.username !== 'Guest' ? (
                 <button
                   onClick={handleLogout}
                   className="text-sm text-red-600 hover:text-red-800 font-medium"
