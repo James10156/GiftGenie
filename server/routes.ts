@@ -30,6 +30,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get unique categories for suggestions (must come before /api/friends/:id)
+  app.get("/api/friends/categories", async (req: AuthenticatedRequest, res) => {
+    try {
+      const categories = await storageAdapter.getUniqueCategories(req.user?.id);
+      res.json(categories);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch categories" });
+    }
+  });
+
   app.get("/api/friends/:id", async (req: AuthenticatedRequest, res) => {
     try {
       const friend = await storageAdapter.getFriend(req.params.id, req.user?.id);

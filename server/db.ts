@@ -66,6 +66,7 @@ export class DatabaseStorage implements IStorage {
       name: friend.name,
       personalityTraits: friend.personalityTraits as string[],
       interests: friend.interests as string[],
+      category: friend.category || "friend",
       notes: friend.notes,
       country: friend.country,
       currency: friend.currency,
@@ -80,6 +81,7 @@ export class DatabaseStorage implements IStorage {
       name: friend.name,
       personalityTraits: friend.personalityTraits as string[],
       interests: friend.interests as string[],
+      category: friend.category || "friend",
       notes: friend.notes,
       country: friend.country,
       currency: friend.currency,
@@ -93,6 +95,7 @@ export class DatabaseStorage implements IStorage {
     if (friend.name !== undefined) updateData.name = friend.name;
     if (friend.personalityTraits !== undefined) updateData.personalityTraits = friend.personalityTraits as string[];
     if (friend.interests !== undefined) updateData.interests = friend.interests as string[];
+    if (friend.category !== undefined) updateData.category = friend.category;
     if (friend.notes !== undefined) updateData.notes = friend.notes;
     if (friend.country !== undefined) updateData.country = friend.country;
     if (friend.currency !== undefined) updateData.currency = friend.currency;
@@ -110,6 +113,7 @@ export class DatabaseStorage implements IStorage {
     if (friend.name !== undefined) updateData.name = friend.name;
     if (friend.personalityTraits !== undefined) updateData.personalityTraits = friend.personalityTraits as string[];
     if (friend.interests !== undefined) updateData.interests = friend.interests as string[];
+    if (friend.category !== undefined) updateData.category = friend.category;
     if (friend.notes !== undefined) updateData.notes = friend.notes;
     if (friend.country !== undefined) updateData.country = friend.country;
     if (friend.currency !== undefined) updateData.currency = friend.currency;
@@ -132,6 +136,21 @@ export class DatabaseStorage implements IStorage {
       .where(and(eq(friends.id, id), eq(friends.userId, userId)))
       .returning();
     return result.length > 0;
+  }
+
+  async getUniqueCategories(): Promise<string[]> {
+    // For guest mode - get categories from friends where userId is null
+    const result = await db.selectDistinct({ category: friends.category })
+      .from(friends)
+      .where(isNull(friends.userId));
+    return result.map(r => r.category);
+  }
+
+  async getUniqueCategoriesForUser(userId: string): Promise<string[]> {
+    const result = await db.selectDistinct({ category: friends.category })
+      .from(friends)
+      .where(eq(friends.userId, userId));
+    return result.map(r => r.category);
   }
 
   async getSavedGift(id: string): Promise<SavedGift | undefined> {

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { InsertFriend, Friend } from "@shared/schema";
 
 interface FriendFormProps {
@@ -37,11 +37,20 @@ const COMMON_INTERESTS = [
   "Knitting", "Painting", "Podcasts", "Running", "Shopping", "Swimming"
 ];
 
+// Common category suggestions
+const COMMON_CATEGORIES = [
+  "Friend", "Family","Boyfriend","Girlfriend","Best Friend","Husband","Wife", "Work Colleagues", "Neighbors", "School Friends", 
+  "Online Friends", "Hobby Groups", "Sports Teammates", "Travel Buddies",
+  "Book Club", "Gym Friends", "Gaming Friends", "College Friends",
+  "Childhood Friends", "Business Associates", "Mentors", "Students"
+];
+
 export function FriendForm({ friend, onClose }: FriendFormProps) {
   const [formData, setFormData] = useState<InsertFriend>({
     name: friend?.name || "",
     personalityTraits: friend?.personalityTraits || [],
     interests: friend?.interests || [],
+    category: friend?.category || "Friend",
     notes: friend?.notes || "",
     country: friend?.country || "United Kingdom",
     currency: friend?.currency || "GBP",
@@ -50,8 +59,20 @@ export function FriendForm({ friend, onClose }: FriendFormProps) {
 
   const [newTrait, setNewTrait] = useState("");
   const [newInterest, setNewInterest] = useState("");
+  const [customCategory, setCustomCategory] = useState("");
   const [showTraitOptions, setShowTraitOptions] = useState(false);
   const [showInterestOptions, setShowInterestOptions] = useState(false);
+  const [showCommonCategories, setShowCommonCategories] = useState(false);
+
+  // Fetch existing categories for suggestions
+  const { data: existingCategories = [] } = useQuery({
+    queryKey: ['/api/friends/categories'],
+    queryFn: async () => {
+      const response = await fetch("/api/friends/categories");
+      if (!response.ok) throw new Error("Failed to fetch categories");
+      return response.json() as Promise<string[]>;
+    },
+  });
 
   const queryClient = useQueryClient();
 
@@ -148,6 +169,23 @@ export function FriendForm({ friend, onClose }: FriendFormProps) {
     });
   };
 
+  const handleCategoryChange = (category: string) => {
+    setFormData({
+      ...formData,
+      category: category,
+    });
+  };
+
+  const handleCustomCategoryChange = (value: string) => {
+    setCustomCategory(value);
+    if (value.trim()) {
+      setFormData({
+        ...formData,
+        category: value.trim(),
+      });
+    }
+  };
+
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -221,6 +259,81 @@ export function FriendForm({ friend, onClose }: FriendFormProps) {
                   <option value="AUD">AUD (A$)</option>
                   <option value="JPY">JPY (¥)</option>
                 </select>
+              </div>
+            </div>
+
+            {/* Category Section */}
+            <div>
+              <label className="block text-sm font-medium mb-1">Category</label>
+              <button
+                type="button"
+                onClick={() => setShowCommonCategories(!showCommonCategories)}
+                className="text-pink-600 hover:text-pink-800 text-sm mb-2 block"
+              >
+                {showCommonCategories ? 'Hide Common Categories' : 'Show Common Categories'}
+              </button>
+              <p className="text-sm text-gray-500 mb-3">Choose or create a category for this friend</p>
+              
+              {/* Current Category Input */}
+              <div className="mb-3">
+                <input
+                  type="text"
+                  placeholder="Enter category..."
+                  value={formData.category}
+                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                  className="w-full p-3 border rounded-md"
+                />
+              </div>
+
+              {/* Common Categories */}
+              {showCommonCategories && (
+                <div className="mb-3">
+                  <div className="text-xs text-gray-600 mb-2">Common categories:</div>
+                  <div className="flex flex-wrap gap-2">
+                    {COMMON_CATEGORIES.map((category) => (
+                      <button
+                        key={category}
+                        type="button"
+                        onClick={() => handleCategoryChange(category)}
+                        className={`px-3 py-1 rounded-full text-sm border transition-colors ${
+                          (formData.category || '').toLowerCase() === category.toLowerCase()
+                            ? 'bg-blue-500 text-white border-blue-500'
+                            : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200'
+                        }`}
+                      >
+                        {category}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {/* Existing User Categories */}
+              {existingCategories.length > 0 && (
+                <div className="mb-3">
+                  <div className="text-xs text-gray-600 mb-2">Your existing categories:</div>
+                  <div className="flex flex-wrap gap-2">
+                    {existingCategories.map((category) => (
+                      <button
+                        key={category}
+                        type="button"
+                        onClick={() => handleCategoryChange(category)}
+                        className={`px-3 py-1 rounded-full text-sm border transition-colors ${
+                          (formData.category || '').toLowerCase() === category.toLowerCase()
+                            ? 'bg-green-500 text-white border-green-500'
+                            : 'bg-green-100 text-green-700 border-green-300 hover:bg-green-200'
+                        }`}
+                      >
+                        {category}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Current Category Display */}
+              <div className="mt-2 text-sm text-gray-600">
+                Current category: <span className="font-medium capitalize">{formData.category}</span>
               </div>
             </div>
 

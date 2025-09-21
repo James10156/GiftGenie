@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Upload, X } from "lucide-react";
@@ -51,10 +51,21 @@ const currencies = [
 export function AddFriendModal({ isOpen, onClose }: AddFriendModalProps) {
   const [selectedTraits, setSelectedTraits] = useState<string[]>([]);
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string>("friend");
+  const [customCategory, setCustomCategory] = useState<string>("");
   const [profilePreview, setProfilePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Fetch existing categories for suggestions
+  const { data: existingCategories = [] } = useQuery({
+    queryKey: ['/api/friends/categories'],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/friends/categories");
+      return response.json() as Promise<string[]>;
+    },
+  });
 
   const form = useForm<InsertFriend>({
     resolver: zodResolver(insertFriendSchema),
@@ -62,6 +73,7 @@ export function AddFriendModal({ isOpen, onClose }: AddFriendModalProps) {
       name: "",
       personalityTraits: [],
       interests: [],
+      category: "friend",
       notes: "",
       country: "United States",
       currency: "USD",
@@ -95,6 +107,8 @@ export function AddFriendModal({ isOpen, onClose }: AddFriendModalProps) {
     form.reset();
     setSelectedTraits([]);
     setSelectedInterests([]);
+    setSelectedCategory("friend");
+    setCustomCategory("");
     setProfilePreview(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
@@ -127,6 +141,28 @@ export function AddFriendModal({ isOpen, onClose }: AddFriendModalProps) {
     
     setSelectedInterests(newInterests);
     form.setValue("interests", newInterests);
+  };
+
+  const handleCategoryChange = (category: string, checked: boolean) => {
+    const finalCategory = customCategory || category;
+    if (checked && !selectedCategory) {
+      setSelectedCategory(finalCategory);
+      form.setValue("category", finalCategory);
+    } else if (!checked && selectedCategory === finalCategory) {
+      setSelectedCategory("friend");
+      form.setValue("category", "friend");
+    }
+  };
+
+  const handleCustomCategoryChange = (value: string) => {
+    setCustomCategory(value);
+    if (value.trim()) {
+      setSelectedCategory(value.trim());
+      form.setValue("category", value.trim());
+    } else if (selectedCategory && !existingCategories.includes(selectedCategory)) {
+      setSelectedCategory("friend");
+      form.setValue("category", "friend");
+    }
   };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -306,6 +342,54 @@ export function AddFriendModal({ isOpen, onClose }: AddFriendModalProps) {
                   </FormItem>
                 )}
               />
+            </div>
+
+            {/* Category */}
+            <div>
+              <FormLabel className="text-sm font-medium text-gray-700">Category</FormLabel>
+              <p className="text-sm text-gray-500 mb-4">Choose or create a category for this friend</p>
+              
+              {/* Suggested Categories */}
+              {existingCategories.length > 0 && (
+                <div className="mb-4">
+                  <div className="text-xs text-gray-600 mb-2">Suggested categories:</div>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {existingCategories.map((category) => (
+                      <div key={category} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`category-${category}`}
+                          checked={selectedCategory === category}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setSelectedCategory(category);
+                              setCustomCategory("");
+                              form.setValue("category", category);
+                            }
+                          }}
+                        />
+                        <label htmlFor={`category-${category}`} className="text-sm cursor-pointer capitalize">
+                          {category}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Custom Category Input */}
+              <div className="mt-3">
+                <Input
+                  placeholder="Or create a new category..."
+                  value={customCategory}
+                  onChange={(e) => handleCustomCategoryChange(e.target.value)}
+                  className="w-full"
+                />
+              </div>
+              
+              {/* Selected Category Display */}
+              <div className="mt-2 text-sm text-gray-600">
+                Current category: <span className="font-medium capitalize">{selectedCategory}</span>
+              </div>
             </div>
 
             {/* Personality Traits */}

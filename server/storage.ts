@@ -173,6 +173,7 @@ export class MemStorage implements IStorage {
       name: insertFriend.name,
       personalityTraits: insertFriend.personalityTraits as string[],
       interests: insertFriend.interests as string[],
+      category: insertFriend.category || "friend",
       notes: insertFriend.notes ?? null,
       country: insertFriend.country || '',
       currency: insertFriend.currency || 'USD',
@@ -191,6 +192,7 @@ export class MemStorage implements IStorage {
       ...existingFriend, 
       ...updateData,
       // Ensure proper types for optional fields
+      category: updateData.category !== undefined ? updateData.category || "friend" : existingFriend.category,
       notes: updateData.notes !== undefined ? updateData.notes ?? null : existingFriend.notes,
       country: updateData.country !== undefined ? updateData.country || '' : existingFriend.country,
       currency: updateData.currency !== undefined ? updateData.currency || 'USD' : existingFriend.currency,

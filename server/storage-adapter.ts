@@ -15,6 +15,7 @@ export interface IStorageAdapter {
   createFriend(friend: InsertFriend, userId?: string): Promise<Friend>;
   updateFriend(id: string, friend: Partial<InsertFriend>, userId?: string): Promise<Friend | undefined>;
   deleteFriend(id: string, userId?: string): Promise<boolean>;
+  getUniqueCategories(userId?: string): Promise<string[]>;
   
   // Saved gift operations - with user context
   getSavedGift(id: string, userId?: string): Promise<SavedGift | undefined>;
@@ -141,10 +142,11 @@ export class StorageAdapter implements IStorageAdapter {
         name: friend.name,
         personalityTraits: friend.personalityTraits as string[],
         interests: friend.interests as string[],
+        category: friend.category || "friend",
         notes: friend.notes || null,
         country: friend.country || "United States",
         currency: friend.currency || "USD",
-        profilePicture: null,
+        profilePicture: friend.profilePicture || null,
         createdAt: new Date().toISOString()
       };
       guestStorage.friends.push(newFriend);
@@ -170,9 +172,11 @@ export class StorageAdapter implements IStorageAdapter {
         if (friend.name !== undefined) existingFriend.name = friend.name;
         if (friend.personalityTraits !== undefined) existingFriend.personalityTraits = friend.personalityTraits as string[];
         if (friend.interests !== undefined) existingFriend.interests = friend.interests as string[];
+        if (friend.category !== undefined) existingFriend.category = friend.category;
         if (friend.notes !== undefined) existingFriend.notes = friend.notes || null;
         if (friend.country !== undefined) existingFriend.country = friend.country;
         if (friend.currency !== undefined) existingFriend.currency = friend.currency;
+        if (friend.profilePicture !== undefined) existingFriend.profilePicture = friend.profilePicture || null;
         return existingFriend;
       }
       return undefined;
@@ -208,6 +212,27 @@ export class StorageAdapter implements IStorageAdapter {
       }
     }
     return this.memStorage.deleteFriend(id);
+  }
+
+  async getUniqueCategories(userId?: string): Promise<string[]> {
+    if (this.isGuestUser(userId)) {
+      // Guest user - get categories from isolated guest storage
+      const guestStorage = this.getGuestStorage(userId!);
+      const categories = new Set(guestStorage.friends.map(f => f.category));
+      return Array.from(categories);
+    }
+    
+    if (this.databaseStorage) {
+      if (userId) {
+        return this.databaseStorage.getUniqueCategoriesForUser(userId);
+      } else {
+        return this.databaseStorage.getUniqueCategories();
+      }
+    }
+    
+    const friends = await this.memStorage.getAllFriends();
+    const categories = new Set(friends.map(f => f.category));
+    return Array.from(categories);
   }
 
   // Saved gift operations with user context
