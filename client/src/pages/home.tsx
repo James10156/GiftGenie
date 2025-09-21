@@ -12,6 +12,8 @@ function Home() {
   const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null);
   const [recommendations, setRecommendations] = useState<GiftRecommendation[]>([]);
   const [budget, setBudget] = useState("50"); // Store just the numeric part
+  const [customBudget, setCustomBudget] = useState(""); // Custom budget input for values > 500
+  const [useCustomBudget, setUseCustomBudget] = useState(false); // Whether to use custom budget
   const [showFriendForm, setShowFriendForm] = useState(false);
   const [editingFriend, setEditingFriend] = useState<Friend | null>(null);
   const [recommendationsForFriend, setRecommendationsForFriend] = useState<Friend | null>(null); // Track who recommendations are for
@@ -68,7 +70,7 @@ function Home() {
           price: gift.price,
           matchPercentage: gift.matchPercentage,
           generationParams: {
-            budget: parseInt(budget),
+            budget: getEffectiveBudget(),
             currency: recommendationsForFriend.currency,
             personalityTraits: recommendationsForFriend.personalityTraits,
             interests: recommendationsForFriend.interests,
@@ -98,7 +100,7 @@ function Home() {
           price: gift.price,
           matchPercentage: gift.matchPercentage,
           generationParams: {
-            budget: parseInt(budget),
+            budget: getEffectiveBudget(),
             currency: recommendationsForFriend.currency,
             personalityTraits: recommendationsForFriend.personalityTraits,
             interests: recommendationsForFriend.interests,
@@ -177,18 +179,35 @@ function Home() {
     // Remove currency symbols and extract first number
     const numericPart = budgetString.replace(/[^\d]/g, '');
     const value = parseInt(numericPart) || 50; // Default to 50 if no valid number
-    const clampedValue = Math.min(Math.max(value, 10), 500); // Clamp between 10 and 500
+    const clampedValue = Math.min(Math.max(value, 10), 500); // Clamp between 10 and 500 for slider
     return clampedValue;
   };
 
-  // Get the current numeric budget value for the slider
+  // Get the effective budget value (custom budget takes precedence if > 500)
+  const getEffectiveBudget = (): number => {
+    if (useCustomBudget && customBudget) {
+      const customValue = parseInt(customBudget);
+      if (!isNaN(customValue) && customValue > 0) {
+        return customValue;
+      }
+    }
+    return extractBudgetValue(budget);
+  };
+
+  // Get the current numeric budget value for the slider (always clamped to 500)
   const currentBudgetValue = extractBudgetValue(budget);
 
-  // Helper function to update budget value
+  // Helper function to update slider budget value
   const updateBudget = (value: number) => {
     const oldValue = currentBudgetValue;
     const clampedValue = Math.min(Math.max(value, 10), 500);
     setBudget(clampedValue.toString());
+    
+    // Clear custom budget when using slider
+    if (customBudget) {
+      setCustomBudget("");
+      setUseCustomBudget(false);
+    }
     
     // Track budget changes for analytics
     if (oldValue !== clampedValue) {
@@ -196,9 +215,21 @@ function Home() {
     }
   };
 
+  // Helper function to handle custom budget changes
+  const handleCustomBudgetChange = (value: string) => {
+    setCustomBudget(value);
+    const numValue = parseInt(value);
+    if (!isNaN(numValue) && numValue > 500) {
+      setUseCustomBudget(true);
+    } else if (value === "") {
+      setUseCustomBudget(false);
+    }
+  };
+
   // Get formatted budget string with currency symbol
   const getFormattedBudget = () => {
-    const formatted = `${currencySymbol}${currentBudgetValue}`;
+    const effectiveBudget = getEffectiveBudget();
+    const formatted = `${currencySymbol}${effectiveBudget}`;
     return formatted;
   };
 
@@ -686,7 +717,12 @@ function Home() {
                   {/* Budget slider */}
                   <div className="mb-4 p-4 bg-gray-50 rounded-lg border">
                     <div className="mb-2">
-                      <span className="text-sm text-gray-600">Drag to adjust budget</span>
+                      <span className="text-sm text-gray-600">
+                        {useCustomBudget && parseInt(customBudget) > 500 
+                          ? "Slider disabled - using custom amount above $500" 
+                          : "Drag to adjust budget"
+                        }
+                      </span>
                     </div>
                     <input
                       type="range"
@@ -698,7 +734,10 @@ function Home() {
                         const value = Math.max(10, parseInt(e.target.value)); // Ensure minimum of 10
                         updateBudget(value);
                       }}
-                      className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+                      className={`w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider ${
+                        useCustomBudget && parseInt(customBudget) > 500 ? 'opacity-50' : ''
+                      }`}
+                      disabled={useCustomBudget && parseInt(customBudget) > 500}
                       style={{
                         background: `linear-gradient(to right, #10B981 0%, #10B981 ${(currentBudgetValue / 500) * 100}%, #E5E7EB ${(currentBudgetValue / 500) * 100}%, #E5E7EB 100%)`
                       }}
@@ -732,24 +771,50 @@ function Home() {
 
                   {/* Custom budget input */}
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">Or enter custom budget:</label>
+                    <label className="block text-xs text-gray-500 mb-1">
+                      {useCustomBudget && parseInt(customBudget) > 500 
+                        ? `Custom budget (overriding slider): ${currencySymbol}${customBudget}`
+                        : "Or enter custom budget:"
+                      }
+                    </label>
                     <input
                       type="text"
-                      value={getFormattedBudget()}
+                      value={useCustomBudget && customBudget ? customBudget : getFormattedBudget()}
                       onChange={(e) => {
-                        const newBudget = e.target.value;
-                        // Extract just the numeric part and update
-                        const numericValue = extractBudgetValue(newBudget);
-                        updateBudget(numericValue);
+                        const newValue = e.target.value.replace(/[^\d]/g, ''); // Extract just numbers
+                        if (newValue === "") {
+                          handleCustomBudgetChange("");
+                        } else {
+                          const numericValue = parseInt(newValue);
+                          if (numericValue > 500) {
+                            handleCustomBudgetChange(newValue);
+                          } else {
+                            // For values <= 500, update the slider instead
+                            updateBudget(numericValue);
+                          }
+                        }
                       }}
                       onBlur={(e) => {
-                        // Clean up the budget format on blur and ensure sync
-                        const numericValue = extractBudgetValue(e.target.value);
-                        updateBudget(numericValue);
+                        const numericValue = e.target.value.replace(/[^\d]/g, '');
+                        if (numericValue === "") {
+                          handleCustomBudgetChange("");
+                        } else {
+                          const value = parseInt(numericValue);
+                          if (value > 500) {
+                            handleCustomBudgetChange(numericValue);
+                          } else {
+                            updateBudget(value);
+                          }
+                        }
                       }}
-                      placeholder={`e.g., ${currencySymbol}50, ${currencySymbol}100-200, under ${currencySymbol}30`}
+                      placeholder={`e.g., 50, 100, 750 (values over 500 override slider)`}
                       className="w-full p-2 border rounded-md text-sm"
                     />
+                    {useCustomBudget && parseInt(customBudget) > 500 && (
+                      <p className="text-xs text-blue-600 mt-1">
+                        ✓ Using custom budget: {currencySymbol}{customBudget} (slider disabled)
+                      </p>
+                    )}
                   </div>
                 </div>
 

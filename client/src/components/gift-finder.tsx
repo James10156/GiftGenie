@@ -21,8 +21,30 @@ export function GiftFinder({
   onRecommendationsGenerated 
 }: GiftFinderProps) {
   const [budget, setBudget] = useState([75]);
+  const [customBudget, setCustomBudget] = useState("");
+  const [useCustomBudget, setUseCustomBudget] = useState(false);
   const [hoveredProfileIndex, setHoveredProfileIndex] = useState<number | null>(null);
   const { toast } = useToast();
+
+  // Auto-switch to custom budget if value exceeds 500
+  const handleCustomBudgetChange = (value: string) => {
+    setCustomBudget(value);
+    const numValue = parseInt(value);
+    if (numValue > 500) {
+      setUseCustomBudget(true);
+    } else if (value === "") {
+      setUseCustomBudget(false);
+    }
+  };
+
+  // Handle slider changes - clear custom budget when slider is used
+  const handleSliderChange = (value: number[]) => {
+    setBudget(value);
+    if (customBudget) {
+      setCustomBudget("");
+      setUseCustomBudget(false);
+    }
+  };
 
   const getCurrencySymbol = (currency: string): string => {
     const symbols: { [key: string]: string } = {
@@ -66,9 +88,24 @@ export function GiftFinder({
       return;
     }
 
+    const finalBudget = customBudget && parseInt(customBudget) > 0
+      ? parseInt(customBudget) 
+      : budget[0];
+
+    console.log("BUDGET DEBUG:", { customBudget, budget: budget[0], finalBudget });
+
+    if (customBudget && (isNaN(parseInt(customBudget)) || parseInt(customBudget) <= 0)) {
+      toast({
+        title: "Invalid budget",
+        description: "Please enter a valid budget amount.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     generateRecommendationsMutation.mutate({
       friendId: selectedFriend.id,
-      budget: budget[0],
+      budget: finalBudget,
     });
   };
 
@@ -85,7 +122,7 @@ export function GiftFinder({
   return (
     <div className="bg-white rounded-2xl shadow-sm border p-8 mb-12">
       <div className="flex items-center justify-between mb-8">
-        <h3 className="text-2xl font-bold text-gray-900">Find the Perfect Gift</h3>
+        <h3 className="text-2xl font-bold text-gray-900">Find the Perfect Gift 🎁</h3>
         <div className="flex items-center space-x-2">
           <span className="text-sm text-gray-500">AI-Powered</span>
           <div className="w-2 h-2 bg-accent rounded-full animate-pulse"></div>
@@ -156,23 +193,30 @@ export function GiftFinder({
         )}
       </div>
 
-      {/* Budget Selection */}
+      {/* Budget Selection - SIMPLIFIED FOR TESTING */}
       <div className="mb-8">
-        <label className="block text-sm font-medium text-gray-700 mb-3">Budget Range</label>
-        <div className="bg-gray-50 rounded-xl p-6">
-          <div className="flex items-center justify-between mb-4">
-            <span className="text-sm text-gray-600">{getCurrencySymbol(selectedFriend?.currency || "USD")}10</span>
-            <span className="text-lg font-semibold text-primary">{getCurrencySymbol(selectedFriend?.currency || "USD")}{budget[0]}</span>
-            <span className="text-sm text-gray-600">{getCurrencySymbol(selectedFriend?.currency || "USD")}500+</span>
+        <label className="block text-sm font-medium text-gray-700 mb-3">Budget Amount</label>
+        <div className="bg-red-100 rounded-xl p-6 border-4 border-red-500">
+          <h2 className="text-2xl font-bold text-red-600 mb-4">SLIDER REMOVED - TESTING MODE</h2>
+          
+          <div className="space-y-4">
+            <label className="block text-sm font-medium text-gray-700">Enter your budget:</label>
+            <input
+              type="number"
+              value={customBudget || budget[0]}
+              onChange={(e) => setCustomBudget(e.target.value)}
+              placeholder="Enter any budget amount (no limits!)"
+              className="w-full px-4 py-3 border-2 border-red-300 rounded-lg text-xl font-bold bg-yellow-100"
+              min="1"
+            />
+            <p className="text-lg font-bold text-red-600">
+              Current Budget: {getCurrencySymbol(selectedFriend?.currency || "USD")}
+              {customBudget || budget[0]}
+            </p>
+            <p className="text-sm text-red-500">
+              If you can see this red box, hot reload is working!
+            </p>
           </div>
-          <Slider
-            value={budget}
-            onValueChange={setBudget}
-            max={500}
-            min={10}
-            step={5}
-            className="w-full"
-          />
         </div>
       </div>
 
