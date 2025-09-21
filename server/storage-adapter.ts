@@ -35,6 +35,7 @@ export interface IStorageAdapter {
 export class StorageAdapter implements IStorageAdapter {
   private memStorage: MemStorage;
   private databaseStorage: DatabaseStorage | null;
+  private guestData: Map<string, { friends: Friend[], savedGifts: SavedGift[] }> = new Map();
 
   constructor() {
     this.memStorage = new MemStorage();
@@ -51,6 +52,19 @@ export class StorageAdapter implements IStorageAdapter {
       console.error("❌ Failed to initialize database storage:", error);
       this.databaseStorage = null;
     }
+  }
+
+  // Helper method to determine if this is a guest user
+  private isGuestUser(userId?: string): boolean {
+    return userId?.startsWith('guest_') || false;
+  }
+
+  // Helper method to get guest data storage
+  private getGuestStorage(guestId: string) {
+    if (!this.guestData.has(guestId)) {
+      this.guestData.set(guestId, { friends: [], savedGifts: [] });
+    }
+    return this.guestData.get(guestId)!;
   }
 
   // User operations
@@ -84,6 +98,12 @@ export class StorageAdapter implements IStorageAdapter {
 
   // Friend operations with user context
   async getFriend(id: string, userId?: string): Promise<Friend | undefined> {
+    if (this.isGuestUser(userId)) {
+      // Guest user - use in-memory storage isolated by guest ID
+      const guestStorage = this.getGuestStorage(userId!);
+      return guestStorage.friends.find(f => f.id === id);
+    }
+    
     if (this.databaseStorage) {
       if (userId) {
         return this.databaseStorage.getFriendForUser(id, userId);
@@ -95,6 +115,12 @@ export class StorageAdapter implements IStorageAdapter {
   }
 
   async getAllFriends(userId?: string): Promise<Friend[]> {
+    if (this.isGuestUser(userId)) {
+      // Guest user - return their isolated friends
+      const guestStorage = this.getGuestStorage(userId!);
+      return guestStorage.friends;
+    }
+    
     if (this.databaseStorage) {
       if (userId) {
         return this.databaseStorage.getAllFriendsForUser(userId);
@@ -106,6 +132,25 @@ export class StorageAdapter implements IStorageAdapter {
   }
 
   async createFriend(friend: InsertFriend, userId?: string): Promise<Friend> {
+    if (this.isGuestUser(userId)) {
+      // Guest user - store in isolated guest storage
+      const guestStorage = this.getGuestStorage(userId!);
+      const newFriend: Friend = {
+        id: `friend_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+        userId: userId!,
+        name: friend.name,
+        personalityTraits: friend.personalityTraits as string[],
+        interests: friend.interests as string[],
+        notes: friend.notes || null,
+        country: friend.country || "United States",
+        currency: friend.currency || "USD",
+        profilePicture: null,
+        createdAt: new Date().toISOString()
+      };
+      guestStorage.friends.push(newFriend);
+      return newFriend;
+    }
+    
     if (this.databaseStorage) {
       if (userId) {
         return this.databaseStorage.createFriendForUser(friend, userId);
@@ -117,6 +162,22 @@ export class StorageAdapter implements IStorageAdapter {
   }
 
   async updateFriend(id: string, friend: Partial<InsertFriend>, userId?: string): Promise<Friend | undefined> {
+    if (this.isGuestUser(userId)) {
+      // Guest user - update in isolated guest storage
+      const guestStorage = this.getGuestStorage(userId!);
+      const existingFriend = guestStorage.friends.find(f => f.id === id);
+      if (existingFriend) {
+        if (friend.name !== undefined) existingFriend.name = friend.name;
+        if (friend.personalityTraits !== undefined) existingFriend.personalityTraits = friend.personalityTraits as string[];
+        if (friend.interests !== undefined) existingFriend.interests = friend.interests as string[];
+        if (friend.notes !== undefined) existingFriend.notes = friend.notes || null;
+        if (friend.country !== undefined) existingFriend.country = friend.country;
+        if (friend.currency !== undefined) existingFriend.currency = friend.currency;
+        return existingFriend;
+      }
+      return undefined;
+    }
+    
     if (this.databaseStorage) {
       if (userId) {
         return this.databaseStorage.updateFriendForUser(id, friend, userId);
@@ -128,6 +189,17 @@ export class StorageAdapter implements IStorageAdapter {
   }
 
   async deleteFriend(id: string, userId?: string): Promise<boolean> {
+    if (this.isGuestUser(userId)) {
+      // Guest user - delete from isolated guest storage
+      const guestStorage = this.getGuestStorage(userId!);
+      const index = guestStorage.friends.findIndex(f => f.id === id);
+      if (index !== -1) {
+        guestStorage.friends.splice(index, 1);
+        return true;
+      }
+      return false;
+    }
+    
     if (this.databaseStorage) {
       if (userId) {
         return this.databaseStorage.deleteFriendForUser(id, userId);
@@ -140,6 +212,12 @@ export class StorageAdapter implements IStorageAdapter {
 
   // Saved gift operations with user context
   async getSavedGift(id: string, userId?: string): Promise<SavedGift | undefined> {
+    if (this.isGuestUser(userId)) {
+      // Guest user - use in-memory storage isolated by guest ID
+      const guestStorage = this.getGuestStorage(userId!);
+      return guestStorage.savedGifts.find(g => g.id === id);
+    }
+    
     if (this.databaseStorage) {
       if (userId) {
         return this.databaseStorage.getSavedGiftForUser(id, userId);
@@ -151,6 +229,12 @@ export class StorageAdapter implements IStorageAdapter {
   }
 
   async getSavedGiftsByFriend(friendId: string, userId?: string): Promise<SavedGift[]> {
+    if (this.isGuestUser(userId)) {
+      // Guest user - filter their saved gifts by friend ID
+      const guestStorage = this.getGuestStorage(userId!);
+      return guestStorage.savedGifts.filter(g => g.friendId === friendId);
+    }
+    
     if (this.databaseStorage) {
       if (userId) {
         return this.databaseStorage.getSavedGiftsByFriendForUser(friendId, userId);
@@ -162,6 +246,12 @@ export class StorageAdapter implements IStorageAdapter {
   }
 
   async getAllSavedGifts(userId?: string): Promise<SavedGift[]> {
+    if (this.isGuestUser(userId)) {
+      // Guest user - return all their saved gifts
+      const guestStorage = this.getGuestStorage(userId!);
+      return guestStorage.savedGifts;
+    }
+    
     if (this.databaseStorage) {
       if (userId) {
         return this.databaseStorage.getAllSavedGiftsForUser(userId);
@@ -173,6 +263,20 @@ export class StorageAdapter implements IStorageAdapter {
   }
 
   async createSavedGift(savedGift: InsertSavedGift, userId?: string): Promise<SavedGift> {
+    if (this.isGuestUser(userId)) {
+      // Guest user - store in isolated guest storage
+      const guestStorage = this.getGuestStorage(userId!);
+      const newSavedGift: SavedGift = {
+        id: `saved_gift_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+        userId: userId!,
+        friendId: savedGift.friendId,
+        giftData: savedGift.giftData as any,
+        createdAt: new Date().toISOString()
+      };
+      guestStorage.savedGifts.push(newSavedGift);
+      return newSavedGift;
+    }
+    
     if (this.databaseStorage) {
       if (userId) {
         return this.databaseStorage.createSavedGiftForUser(savedGift, userId);
@@ -184,6 +288,17 @@ export class StorageAdapter implements IStorageAdapter {
   }
 
   async deleteSavedGift(id: string, userId?: string): Promise<boolean> {
+    if (this.isGuestUser(userId)) {
+      // Guest user - delete from isolated guest storage
+      const guestStorage = this.getGuestStorage(userId!);
+      const index = guestStorage.savedGifts.findIndex(g => g.id === id);
+      if (index !== -1) {
+        guestStorage.savedGifts.splice(index, 1);
+        return true;
+      }
+      return false;
+    }
+    
     if (this.databaseStorage) {
       if (userId) {
         return this.databaseStorage.deleteSavedGiftForUser(id, userId);

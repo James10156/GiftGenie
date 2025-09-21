@@ -10,6 +10,7 @@ declare module "express-session" {
     userId?: string;
     username?: string;
     isAdmin?: boolean;
+    guestId?: string; // For anonymous guest sessions
   }
 }
 
@@ -37,10 +38,22 @@ export function setupAuth(app: Express) {
   // Authentication middleware
   app.use((req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     if (req.session?.userId) {
+      // Authenticated user
       req.user = {
         id: req.session.userId,
         username: req.session.username!,
         isAdmin: req.session.isAdmin || false
+      };
+    } else {
+      // Guest user - generate unique session ID if not exists
+      if (!req.session.guestId) {
+        req.session.guestId = `guest_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+      }
+      // Set guest user info
+      req.user = {
+        id: req.session.guestId,
+        username: 'Guest',
+        isAdmin: false
       };
     }
     next();
@@ -48,14 +61,14 @@ export function setupAuth(app: Express) {
 }
 
 export function requireAuth(req: AuthenticatedRequest, res: Response, next: NextFunction) {
-  if (!req.user) {
+  if (!req.user || !req.session?.userId) {
     return res.status(401).json({ message: "Authentication required" });
   }
   next();
 }
 
 export function requireAdmin(req: AuthenticatedRequest, res: Response, next: NextFunction) {
-  if (!req.user) {
+  if (!req.user || !req.session?.userId) {
     return res.status(401).json({ message: "Authentication required" });
   }
   if (!req.user.isAdmin) {

@@ -457,4 +457,143 @@ describe('API Routes', () => {
       expect(storage.getAllFriends).toHaveBeenCalledWith('test-user-id');
     });
   });
+
+  describe('Guest User Session Isolation', () => {
+    beforeEach(() => {
+      vi.clearAllMocks();
+    });
+
+    it('should create isolated sessions for different guests', async () => {
+      const mockFriend = {
+        id: 'friend-123',
+        name: 'Test Friend',
+        personalityTraits: ['Creative'],
+        interests: ['Art'],
+        userId: 'guest_123_abc',
+        currency: 'USD',
+        country: 'US',
+        notes: null,
+        profilePicture: null,
+        createdAt: '2024-01-01T00:00:00Z'
+      };
+
+      (storage.createFriend as any).mockResolvedValue(mockFriend);
+
+      // First guest session (no cookie)
+      const response1 = await request(app)
+        .post('/api/friends')
+        .send({
+          name: 'Guest 1 Friend',
+          personalityTraits: ['Creative'],
+          interests: ['Art']
+        })
+        .expect(201);
+
+      // Second guest session (no cookie) 
+      const response2 = await request(app)
+        .post('/api/friends')
+        .send({
+          name: 'Guest 2 Friend',
+          personalityTraits: ['Sporty'],
+          interests: ['Sports']
+        })
+        .expect(201);
+
+      // Verify both sessions got different guest IDs
+      const calls = (storage.createFriend as any).mock.calls;
+      expect(calls).toHaveLength(2);
+      
+      const guest1Id = calls[0][1]; // Second parameter is userId
+      const guest2Id = calls[1][1];
+      
+      expect(guest1Id).toMatch(/^guest_\d+_[a-z0-9]+$/);
+      expect(guest2Id).toMatch(/^guest_\d+_[a-z0-9]+$/);
+      expect(guest1Id).not.toBe(guest2Id);
+    });
+
+    it('should maintain session consistency with cookies', async () => {
+      const mockFriend = {
+        id: 'friend-123',
+        name: 'Test Friend',
+        personalityTraits: ['Creative'],
+        interests: ['Art'],
+        userId: 'guest_123_abc',
+        currency: 'USD',
+        country: 'US',
+        notes: null,
+        profilePicture: null,
+        createdAt: '2024-01-01T00:00:00Z'
+      };
+
+      (storage.createFriend as any).mockResolvedValue(mockFriend);
+      (storage.getAllFriends as any).mockResolvedValue([mockFriend]);
+
+      // Create friend in first request (gets session cookie)
+      const createResponse = await request(app)
+        .post('/api/friends')
+        .send({
+          name: 'Session Friend',
+          personalityTraits: ['Test'],
+          interests: ['Testing']
+        })
+        .expect(201);
+
+      // Extract session cookie
+      const setCookieHeader = createResponse.headers['set-cookie'];
+      const sessionCookie = setCookieHeader?.[0]?.split(';')[0];
+
+      // Use same session cookie for subsequent request
+      await request(app)
+        .get('/api/friends')
+        .set('Cookie', sessionCookie || '')
+        .expect(200);
+
+      // Verify both calls used the same guest ID
+      const createCall = (storage.createFriend as any).mock.calls[0];
+      const getCall = (storage.getAllFriends as any).mock.calls[0];
+      
+      expect(createCall[1]).toBe(getCall[0]); // Same guest ID used
+    });
+
+    it('should prevent cross-session data access', async () => {
+      (storage.getFriend as any).mockResolvedValue(undefined); // Simulate isolation
+
+      // Try to access a friend ID with different session
+      await request(app)
+        .get('/api/friends/friend-from-other-session')
+        .expect(404);
+
+      expect(storage.getFriend).toHaveBeenCalled();
+    });
+
+    it('should handle guest analytics isolation', async () => {
+      const mockAnalytics = {
+        id: 'analytics-123',
+        userId: 'guest_123_abc',
+        sessionId: 'session-123',
+        eventType: 'page_view',
+        eventData: { page: 'home' },
+        timestamp: '2024-01-01T00:00:00Z'
+      };
+
+      (storage.createUserAnalytics as any).mockResolvedValue(mockAnalytics);
+
+      // Guest creates analytics event
+      await request(app)
+        .post('/api/analytics/events')
+        .send({
+          sessionId: 'test-session',
+          eventType: 'page_view',
+          eventData: { page: 'home' }
+        })
+        .expect(201);
+
+      // Verify analytics tied to guest session
+      const calls = (storage.createUserAnalytics as any).mock.calls;
+      expect(calls).toHaveLength(1);
+      
+      const guestId = calls[0][1]; // userId parameter
+      expect(guestId).toMatch(/^guest_\d+_[a-z0-9]+$/);
+    });
+  });
 });
