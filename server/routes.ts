@@ -2,8 +2,8 @@ import type { Express } from "express";
 import express from "express";
 import { createServer, type Server } from "http";
 import multer from "multer";
-import path from "path";
-import fs from "fs";
+import { v2 as cloudinary } from "cloudinary";
+import { CloudinaryStorage } from "multer-storage-cloudinary";
 import { storageAdapter } from "./storage-adapter";
 import { insertFriendSchema, insertSavedGiftSchema, insertUserAnalyticsSchema, insertRecommendationFeedbackSchema, insertPerformanceMetricsSchema, insertBlogPostSchema } from "@shared/schema";
 import { generateGiftRecommendations } from "./services/openai";
@@ -15,22 +15,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   setupAuth(app);
   setupAuthRoutes(app);
 
-  // Configure multer for file uploads
-  const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-      const uploadDir = path.join(process.cwd(), 'public', 'uploads');
-      // Ensure directory exists
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
-      }
-      cb(null, uploadDir);
-    },
-    filename: (req, file, cb) => {
-      // Generate unique filename with timestamp
-      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-      const extension = path.extname(file.originalname);
-      cb(null, file.fieldname + '-' + uniqueSuffix + extension);
-    }
+  // Configure Cloudinary
+  cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+  });
+
+  // Configure multer with Cloudinary storage
+  const storage = new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: {
+      folder: 'gift-genie/profile-pictures', // Folder in Cloudinary
+      allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'webp'],
+      transformation: [
+        { width: 400, height: 400, crop: 'fill' }, // Auto-resize and crop to square
+        { quality: 'auto' }, // Automatic quality optimization
+        { fetch_format: 'auto' } // Automatic format optimization
+      ],
+    } as any,
   });
 
   const upload = multer({
@@ -48,9 +51,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Serve static files from public directory
-  app.use('/uploads', express.static(path.join(process.cwd(), 'public', 'uploads')));
-  
   // Health check endpoint
   app.get("/api/health", (req, res) => {
     res.json({ 
@@ -383,12 +383,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "No image file provided" });
       }
 
-      // Return the URL path for the uploaded image
-      const imageUrl = `/uploads/${req.file.filename}`;
+      // Cloudinary automatically provides the full URL in req.file.path
+      const imageUrl = req.file.path;
+      const publicId = (req.file as any).public_id;
+      
       res.json({ 
         success: true, 
         imageUrl,
-        filename: req.file.filename,
+        publicId, // Useful for future operations like deletion
         originalName: req.file.originalname,
         size: req.file.size
       });
@@ -405,14 +407,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "No profile picture file provided" });
       }
 
-      // Return the URL path for the uploaded image
-      // In development, use full URL to backend server; in production, use relative path
-      const baseUrl = process.env.NODE_ENV === 'development' ? 'http://localhost:5000' : '';
-      const imageUrl = `${baseUrl}/uploads/${req.file.filename}`;
+      // Cloudinary automatically provides the full URL in req.file.path
+      const imageUrl = req.file.path;
+      const publicId = (req.file as any).public_id;
+      
       res.json({ 
         success: true, 
         imageUrl,
-        filename: req.file.filename,
+        publicId, // Useful for future operations like deletion
         originalName: req.file.originalname,
         size: req.file.size
       });
