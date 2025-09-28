@@ -623,12 +623,13 @@ function Home() {
                   {friends.map((friend, index) => (
                     <div
                       key={friend.id}
-                      className="border rounded-lg p-4 hover:shadow-md transition-shadow"
+                      className="relative border rounded-lg p-4 hover:shadow-md transition-shadow"
                     >
-                      <div className="flex items-center mb-3">
+                      {/* Profile Picture - Centered at top */}
+                      <div className="text-center mb-4">
                         {friend.profilePicture ? (
                           <div 
-                            className="w-16 h-16 mr-4 rounded-full transition-all duration-300 hover:scale-125 hover:shadow-lg ring-2 ring-blue-200 hover:ring-blue-400 cursor-pointer"
+                            className="w-20 h-20 mx-auto rounded-full transition-all duration-300 hover:scale-125 hover:shadow-lg ring-2 ring-blue-200 hover:ring-blue-400 cursor-pointer"
                             onClick={() => friend.profilePicture && setFocusedImage({src: friend.profilePicture, alt: `${friend.name}'s profile picture`})}
                             onMouseEnter={() => setHoveredFriend(friend.id)}
                             onMouseLeave={() => setHoveredFriend(null)}
@@ -641,47 +642,51 @@ function Home() {
                           </div>
                         ) : (
                           <div 
-                            className="w-16 h-16 bg-gray-200 rounded-full mr-4 flex items-center justify-center text-xl transition-all duration-300 hover:scale-125 hover:shadow-lg cursor-pointer"
+                            className="w-20 h-20 bg-gray-200 rounded-full mx-auto flex items-center justify-center text-2xl transition-all duration-300 hover:scale-125 hover:shadow-lg cursor-pointer"
                             onMouseEnter={() => setHoveredFriend(friend.id)}
                             onMouseLeave={() => setHoveredFriend(null)}
                           >
                             👤
                           </div>
                         )}
-                        <div className="flex-1">
-                          <h3 className="font-semibold">{friend.name}</h3>
-                          <p className="text-sm text-gray-500">{friend.country}</p>
-                          <p className={`text-xs italic transition-colors duration-200 ${
-                            hoveredFriend === friend.id 
-                              ? 'text-blue-600' 
-                              : 'text-gray-400'
-                          }`}>
-                            {hoveredFriend === friend.id ? 'Showing details...' : 'Hover profile to see details'}
-                          </p>
-                        </div>
-                        <div className="flex gap-1">
-                          <button
-                            onClick={() => {
-                              setEditingFriend(friend);
-                              setShowFriendForm(true);
-                            }}
-                            className="text-blue-600 hover:text-blue-800 p-1"
-                            title="Edit friend"
-                          >
-                            ✏️
-                          </button>
-                          <button
-                            onClick={() => {
-                              if (confirm(`Are you sure you want to delete ${friend.name}?`)) {
-                                deleteFriendMutation.mutate(friend.id);
-                              }
-                            }}
-                            className="text-red-600 hover:text-red-800 p-1"
-                            title="Delete friend"
-                          >
-                            🗑️
-                          </button>
-                        </div>
+                      </div>
+
+                      {/* Name and Info - Centered below picture */}
+                      <div className="text-center mb-3">
+                        <h3 className="font-semibold text-lg">{friend.name}</h3>
+                        <p className="text-sm text-gray-500">{friend.country}</p>
+                        <p className={`text-xs italic transition-colors duration-200 ${
+                          hoveredFriend === friend.id 
+                            ? 'text-blue-600' 
+                            : 'text-gray-400'
+                        }`}>
+                          {hoveredFriend === friend.id ? 'Showing details...' : 'Hover profile to see details'}
+                        </p>
+                      </div>
+
+                      {/* Action Buttons - Moved to top right */}
+                      <div className="absolute top-3 right-3 flex gap-1">
+                        <button
+                          onClick={() => {
+                            setEditingFriend(friend);
+                            setShowFriendForm(true);
+                          }}
+                          className="text-blue-600 hover:text-blue-800 p-1 bg-white rounded-full shadow-sm hover:shadow-md transition-all"
+                          title="Edit friend"
+                        >
+                          ✏️
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (confirm(`Are you sure you want to delete ${friend.name}?`)) {
+                              deleteFriendMutation.mutate(friend.id);
+                            }
+                          }}
+                          className="text-red-600 hover:text-red-800 p-1 bg-white rounded-full shadow-sm hover:shadow-md transition-all"
+                          title="Delete friend"
+                        >
+                          🗑️
+                        </button>
                       </div>
                       
                       {/* Interests and Personality - only show on profile picture hover */}
