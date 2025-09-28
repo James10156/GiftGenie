@@ -530,8 +530,8 @@ function Home() {
                   About us
                 </a>
               </Link>
-              
-
+            </div>
+            <div className="flex items-center gap-3">
               <div className="text-sm text-gray-600">
                 {currentUser && currentUser.username !== 'Guest' ? (
                   <span>Welcome back, <strong>{currentUser.username}</strong>!</span>
@@ -539,8 +539,6 @@ function Home() {
                   <span>You're browsing as a guest</span>
                 )}
               </div>
-            </div>
-            <div className="flex items-center gap-3">
               {currentUser && currentUser.username !== 'Guest' ? (
                 <button
                   onClick={handleLogout}
