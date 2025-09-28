@@ -515,7 +515,10 @@ function Home() {
                     >
                       <div className="flex items-center mb-3">
                         {friend.profilePicture ? (
-                          <div className="w-16 h-16 mr-4 rounded-full transition-all duration-300 hover:scale-125 hover:shadow-lg ring-2 ring-blue-200 hover:ring-blue-400">
+                          <div 
+                            className="w-16 h-16 mr-4 rounded-full transition-all duration-300 hover:scale-125 hover:shadow-lg ring-2 ring-blue-200 hover:ring-blue-400 cursor-pointer"
+                            onClick={() => friend.profilePicture && setFocusedImage({src: friend.profilePicture, alt: `${friend.name}'s profile picture`})}
+                          >
                             <img
                               src={friend.profilePicture}
                               alt={friend.name}
@@ -636,7 +639,10 @@ function Home() {
                     <div className="mt-4 p-6 bg-gradient-to-r from-blue-50 to-green-50 rounded-lg border border-blue-200 shadow-sm">
                       <div className="flex items-start gap-6">
                         {selectedFriend.profilePicture ? (
-                          <div className="w-20 h-20 rounded-full border-3 border-white shadow-lg ring-2 ring-blue-200 flex-shrink-0">
+                          <div 
+                            className="w-20 h-20 rounded-full border-3 border-white shadow-lg ring-2 ring-blue-200 flex-shrink-0 cursor-pointer hover:ring-blue-400 transition-all duration-300"
+                            onClick={() => selectedFriend.profilePicture && setFocusedImage({src: selectedFriend.profilePicture, alt: `${selectedFriend.name}'s profile picture`})}
+                          >
                             <img
                               src={selectedFriend.profilePicture}
                               alt={selectedFriend.name}
@@ -876,7 +882,10 @@ function Home() {
                 <div className="bg-gradient-to-r from-blue-50 to-green-50 p-4 rounded-lg mb-6 border border-blue-200">
                   <div className="flex items-center gap-4">
                     {recommendationsForFriend.profilePicture ? (
-                      <div className="w-20 h-20 rounded-full border-2 border-white shadow-lg transition-all duration-300 hover:scale-125 hover:shadow-xl ring-2 ring-blue-200 hover:ring-blue-400">
+                      <div 
+                        className="w-20 h-20 rounded-full border-2 border-white shadow-lg transition-all duration-300 hover:scale-125 hover:shadow-xl ring-2 ring-blue-200 hover:ring-blue-400 cursor-pointer"
+                        onClick={() => recommendationsForFriend.profilePicture && setFocusedImage({src: recommendationsForFriend.profilePicture, alt: `${recommendationsForFriend.name}'s profile picture`})}
+                      >
                         <img
                           src={recommendationsForFriend.profilePicture}
                           alt={recommendationsForFriend.name}
@@ -1182,7 +1191,8 @@ function Home() {
                             <img 
                               src={friend.profilePicture} 
                               alt={friend.name}
-                              className="w-6 h-6 rounded-full object-cover"
+                              className="w-6 h-6 rounded-full object-cover cursor-pointer hover:ring-2 hover:ring-blue-400 transition-all duration-300"
+                              onClick={() => friend.profilePicture && setFocusedImage({src: friend.profilePicture, alt: `${friend.name}'s profile picture`})}
                               onError={(e) => {
                                 const target = e.target as HTMLImageElement;
                                 target.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(friend.name)}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`;
