@@ -45,14 +45,14 @@ function Home() {
     const distance = touchStart - touchEnd;
     const minSwipeDistance = 50;
     
-    if (distance > minSwipeDistance && carouselIndex < friends.length - 1) {
-      // Swipe left - next friend
-      setCarouselIndex(carouselIndex + 1);
+    if (distance > minSwipeDistance) {
+      // Swipe left - next friend (continuous)
+      setCarouselIndex((carouselIndex + 1) % friends.length);
     }
     
-    if (distance < -minSwipeDistance && carouselIndex > 0) {
-      // Swipe right - previous friend
-      setCarouselIndex(carouselIndex - 1);
+    if (distance < -minSwipeDistance) {
+      // Swipe right - previous friend (continuous)
+      setCarouselIndex((carouselIndex - 1 + friends.length) % friends.length);
     }
   };
   const queryClient = useQueryClient();
@@ -341,7 +341,7 @@ function Home() {
 
   // Reset carousel index when friends change or switching to carousel mode
   useEffect(() => {
-    if (carouselIndex >= friends.length && friends.length > 0) {
+    if (friends.length > 0 && carouselIndex >= friends.length) {
       setCarouselIndex(0);
     }
   }, [friends.length, carouselIndex]);
@@ -721,150 +721,212 @@ function Home() {
                 // Carousel View
                 <div className="relative">
                   {/* Carousel Navigation */}
-                  <div className="flex justify-center items-center mb-4 gap-4">
+                  <div className="flex justify-center items-center mb-6 gap-4">
                     <button
-                      onClick={() => setCarouselIndex(Math.max(0, carouselIndex - 1))}
-                      disabled={carouselIndex === 0}
-                      className={`p-2 rounded-full transition-colors ${
-                        carouselIndex === 0
-                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                          : 'bg-blue-100 text-blue-600 hover:bg-blue-200'
-                      }`}
+                      onClick={() => setCarouselIndex((carouselIndex - 1 + friends.length) % friends.length)}
+                      className="p-3 bg-blue-100 text-blue-600 hover:bg-blue-200 rounded-full transition-colors"
                     >
                       ←
                     </button>
-                    <span className="text-sm text-gray-600">
+                    <span className="text-sm text-gray-600 font-medium">
                       {carouselIndex + 1} of {friends.length}
                     </span>
                     <button
-                      onClick={() => setCarouselIndex(Math.min(friends.length - 1, carouselIndex + 1))}
-                      disabled={carouselIndex === friends.length - 1}
-                      className={`p-2 rounded-full transition-colors ${
-                        carouselIndex === friends.length - 1
-                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                          : 'bg-blue-100 text-blue-600 hover:bg-blue-200'
-                      }`}
+                      onClick={() => setCarouselIndex((carouselIndex + 1) % friends.length)}
+                      className="p-3 bg-blue-100 text-blue-600 hover:bg-blue-200 rounded-full transition-colors"
                     >
                       →
                     </button>
                   </div>
 
-                  {/* Carousel Content */}
+                  {/* Carousel Content - Three Card View */}
                   <div 
-                    className="relative overflow-hidden rounded-lg"
+                    className="relative overflow-hidden"
                     onTouchStart={handleTouchStart}
                     onTouchMove={handleTouchMove}
                     onTouchEnd={handleTouchEnd}
                   >
-                    <div 
-                      className="flex transition-transform duration-300 ease-in-out"
-                      style={{ transform: `translateX(-${carouselIndex * 100}%)` }}
-                    >
-                      {friends.map((friend, index) => (
-                        <div
-                          key={friend.id}
-                          className="w-full flex-shrink-0 px-2"
-                        >
-                          <div className="max-w-md mx-auto bg-white border-2 border-gray-200 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-shadow">
-                            {/* Profile Section */}
-                            <div className="text-center mb-6">
-                              {friend.profilePicture ? (
-                                <div 
-                                  className="w-24 h-24 mx-auto rounded-full transition-all duration-300 hover:scale-110 hover:shadow-lg ring-4 ring-blue-200 hover:ring-blue-400 cursor-pointer mb-4"
-                                  onClick={() => friend.profilePicture && setFocusedImage({src: friend.profilePicture, alt: `${friend.name}'s profile picture`})}
+                    <div className="flex justify-center items-center gap-4 px-4 py-8">
+                      {/* Previous Friend (Preview) */}
+                      <div 
+                        className="flex-shrink-0 w-48 transform scale-75 opacity-60 cursor-pointer transition-all duration-300 hover:scale-80 hover:opacity-80"
+                        onClick={() => setCarouselIndex((carouselIndex - 1 + friends.length) % friends.length)}
+                      >
+                        {(() => {
+                          const prevIndex = (carouselIndex - 1 + friends.length) % friends.length;
+                          const prevFriend = friends[prevIndex];
+                          return (
+                            <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-md">
+                              <div className="text-center">
+                                {prevFriend.profilePicture ? (
+                                  <div className="w-16 h-16 mx-auto rounded-full mb-3 ring-2 ring-gray-200">
+                                    <img
+                                      src={prevFriend.profilePicture}
+                                      alt={prevFriend.name}
+                                      className="w-full h-full object-cover rounded-full"
+                                    />
+                                  </div>
+                                ) : (
+                                  <div className="w-16 h-16 bg-gray-200 rounded-full mx-auto flex items-center justify-center text-2xl mb-3">
+                                    👤
+                                  </div>
+                                )}
+                                <h4 className="font-semibold text-gray-900 mb-1">{prevFriend.name}</h4>
+                                <p className="text-xs text-gray-500">{prevFriend.country}</p>
+                              </div>
+                            </div>
+                          );
+                        })()}
+                      </div>
+
+                      {/* Current Friend (Main) */}
+                      <div className="flex-shrink-0 w-80 transform scale-100 transition-all duration-300">
+                        {(() => {
+                          const friend = friends[carouselIndex];
+                          return (
+                            <div className="bg-white border-2 border-blue-200 rounded-2xl p-6 shadow-xl">
+                              {/* Profile Section */}
+                              <div className="text-center mb-6">
+                                {friend.profilePicture ? (
+                                  <div 
+                                    className="w-24 h-24 mx-auto rounded-full transition-all duration-300 hover:scale-110 hover:shadow-lg ring-4 ring-blue-200 hover:ring-blue-400 cursor-pointer mb-4"
+                                    onClick={() => friend.profilePicture && setFocusedImage({src: friend.profilePicture, alt: `${friend.name}'s profile picture`})}
+                                  >
+                                    <img
+                                      src={friend.profilePicture}
+                                      alt={friend.name}
+                                      className="w-full h-full object-cover rounded-full"
+                                    />
+                                  </div>
+                                ) : (
+                                  <div className="w-24 h-24 bg-gray-200 rounded-full mx-auto flex items-center justify-center text-3xl transition-all duration-300 hover:scale-110 hover:shadow-lg mb-4">
+                                    👤
+                                  </div>
+                                )}
+                                <h3 className="text-2xl font-bold text-gray-900 mb-1">{friend.name}</h3>
+                                <p className="text-gray-600 text-lg">{friend.country}</p>
+                                <p className="text-sm text-blue-600 font-medium">Category: {friend.category}</p>
+                              </div>
+
+                              {/* Interests Section */}
+                              <div className="mb-4">
+                                <h4 className="text-lg font-semibold text-gray-800 mb-2">🎯 Interests</h4>
+                                <div className="flex flex-wrap gap-2">
+                                  {friend.interests.slice(0, 4).map((interest, idx) => (
+                                    <span
+                                      key={idx}
+                                      className="bg-blue-100 text-blue-800 text-sm px-3 py-1 rounded-full"
+                                    >
+                                      {interest}
+                                    </span>
+                                  ))}
+                                  {friend.interests.length > 4 && (
+                                    <span className="text-xs text-gray-500 px-3 py-1">
+                                      +{friend.interests.length - 4} more
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Personality Section */}
+                              <div className="mb-4">
+                                <h4 className="text-lg font-semibold text-gray-800 mb-2">✨ Personality</h4>
+                                <div className="flex flex-wrap gap-2">
+                                  {friend.personalityTraits.slice(0, 3).map((trait, idx) => (
+                                    <span
+                                      key={idx}
+                                      className="bg-green-100 text-green-800 text-sm px-3 py-1 rounded-full"
+                                    >
+                                      {trait}
+                                    </span>
+                                  ))}
+                                  {friend.personalityTraits.length > 3 && (
+                                    <span className="text-xs text-gray-500 px-3 py-1">
+                                      +{friend.personalityTraits.length - 3} more
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Category & Currency */}
+                              <div className="mb-6 flex justify-between text-sm text-gray-600">
+                                <span>Category: <span className="font-medium text-gray-800">{friend.category}</span></span>
+                                <span>Currency: <span className="font-medium text-green-600">{friend.currency}</span></span>
+                              </div>
+
+                              {/* Actions */}
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => {
+                                    selectFriend(friend);
+                                    switchTab("generate");
+                                  }}
+                                  className="flex-1 bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 text-sm font-medium transition-colors"
                                 >
-                                  <img
-                                    src={friend.profilePicture}
-                                    alt={friend.name}
-                                    className="w-full h-full object-cover rounded-full"
-                                  />
-                                </div>
-                              ) : (
-                                <div className="w-24 h-24 bg-gray-200 rounded-full mx-auto flex items-center justify-center text-3xl transition-all duration-300 hover:scale-110 hover:shadow-lg mb-4">
-                                  👤
-                                </div>
-                              )}
-                              <h3 className="text-2xl font-bold text-gray-900 mb-1">{friend.name}</h3>
-                              <p className="text-gray-600 text-lg">{friend.country}</p>
-                              <p className="text-sm text-blue-600 font-medium">Category: {friend.category}</p>
-                            </div>
-
-                            {/* Interests Section */}
-                            <div className="mb-6">
-                              <h4 className="text-lg font-semibold text-gray-800 mb-3">🎯 Interests</h4>
-                              <div className="flex flex-wrap gap-2">
-                                {friend.interests.map((interest, idx) => (
-                                  <span
-                                    key={idx}
-                                    className="bg-blue-100 text-blue-800 text-sm px-3 py-1 rounded-full"
-                                  >
-                                    {interest}
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-
-                            {/* Personality Section */}
-                            <div className="mb-6">
-                              <h4 className="text-lg font-semibold text-gray-800 mb-3">✨ Personality</h4>
-                              <div className="flex flex-wrap gap-2">
-                                {friend.personalityTraits.map((trait, idx) => (
-                                  <span
-                                    key={idx}
-                                    className="bg-green-100 text-green-800 text-sm px-3 py-1 rounded-full"
-                                  >
-                                    {trait}
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-
-                            {/* Category & Currency */}
-                            <div className="mb-6 flex justify-between text-sm text-gray-600">
-                              <span>Category: <span className="font-medium text-gray-800">{friend.category}</span></span>
-                              <span>Currency: <span className="font-medium text-green-600">{friend.currency}</span></span>
-                            </div>
-
-                            {/* Actions */}
-                            <div className="flex gap-2">
-                              <button
-                                onClick={() => {
-                                  selectFriend(friend);
-                                  switchTab("generate");
-                                }}
-                                className="flex-1 bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 text-sm font-medium transition-colors"
-                              >
-                                🎁 Generate Gifts
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setEditingFriend(friend);
-                                  setShowFriendForm(true);
-                                }}
-                                className="p-3 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors"
-                                title="Edit friend"
-                              >
-                                ✏️
-                              </button>
-                              <button
-                                onClick={() => {
-                                  if (confirm(`Are you sure you want to delete ${friend.name}?`)) {
-                                    deleteFriendMutation.mutate(friend.id);
-                                    // Reset carousel index if needed
-                                    if (carouselIndex >= friends.length - 1) {
-                                      setCarouselIndex(Math.max(0, friends.length - 2));
+                                  🎁 Generate Gifts
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setEditingFriend(friend);
+                                    setShowFriendForm(true);
+                                  }}
+                                  className="p-3 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors"
+                                  title="Edit friend"
+                                >
+                                  ✏️
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    if (confirm(`Are you sure you want to delete ${friend.name}?`)) {
+                                      deleteFriendMutation.mutate(friend.id);
+                                      // Reset carousel index if needed
+                                      if (carouselIndex >= friends.length - 1) {
+                                        setCarouselIndex(0);
+                                      }
                                     }
-                                  }
-                                }}
-                                className="p-3 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors"
-                                title="Delete friend"
-                              >
-                                🗑️
-                              </button>
+                                  }}
+                                  className="p-3 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors"
+                                  title="Delete friend"
+                                >
+                                  🗑️
+                                </button>
+                              </div>
                             </div>
-                          </div>
-                        </div>
-                      ))}
+                          );
+                        })()}
+                      </div>
+
+                      {/* Next Friend (Preview) */}
+                      <div 
+                        className="flex-shrink-0 w-48 transform scale-75 opacity-60 cursor-pointer transition-all duration-300 hover:scale-80 hover:opacity-80"
+                        onClick={() => setCarouselIndex((carouselIndex + 1) % friends.length)}
+                      >
+                        {(() => {
+                          const nextIndex = (carouselIndex + 1) % friends.length;
+                          const nextFriend = friends[nextIndex];
+                          return (
+                            <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-md">
+                              <div className="text-center">
+                                {nextFriend.profilePicture ? (
+                                  <div className="w-16 h-16 mx-auto rounded-full mb-3 ring-2 ring-gray-200">
+                                    <img
+                                      src={nextFriend.profilePicture}
+                                      alt={nextFriend.name}
+                                      className="w-full h-full object-cover rounded-full"
+                                    />
+                                  </div>
+                                ) : (
+                                  <div className="w-16 h-16 bg-gray-200 rounded-full mx-auto flex items-center justify-center text-2xl mb-3">
+                                    👤
+                                  </div>
+                                )}
+                                <h4 className="font-semibold text-gray-900 mb-1">{nextFriend.name}</h4>
+                                <p className="text-xs text-gray-500">{nextFriend.country}</p>
+                              </div>
+                            </div>
+                          );
+                        })()}
+                      </div>
                     </div>
                   </div>
 
