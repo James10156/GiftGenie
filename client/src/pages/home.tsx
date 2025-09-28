@@ -29,6 +29,8 @@ function Home() {
   const [hoveredFriend, setHoveredFriend] = useState<string | null>(null);
   const [draggedFriend, setDraggedFriend] = useState<string | null>(null);
   const [dragOverFriend, setDragOverFriend] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchExpanded, setSearchExpanded] = useState(false);
 
   // Touch/swipe support for carousel
   const [touchStart, setTouchStart] = useState(0);
@@ -48,14 +50,16 @@ function Home() {
     const distance = touchStart - touchEnd;
     const minSwipeDistance = 50;
     
-    if (distance > minSwipeDistance) {
-      // Swipe left - next friend (continuous)
-      setCarouselIndex((carouselIndex + 1) % friends.length);
-    }
-    
-    if (distance < -minSwipeDistance) {
-      // Swipe right - previous friend (continuous)
-      setCarouselIndex((carouselIndex - 1 + friends.length) % friends.length);
+    if (filteredFriends.length > 0) {
+      if (distance > minSwipeDistance) {
+        // Swipe left - next friend (continuous)
+        setCarouselIndex((carouselIndex + 1) % filteredFriends.length);
+      }
+      
+      if (distance < -minSwipeDistance) {
+        // Swipe right - previous friend (continuous)
+        setCarouselIndex((carouselIndex - 1 + filteredFriends.length) % filteredFriends.length);
+      }
     }
   };
 
@@ -384,6 +388,21 @@ function Home() {
     },
   });
 
+  // Filter friends based on search query
+  const filteredFriends = friends.filter(friend => {
+    if (!searchQuery.trim()) return true;
+    
+    const query = searchQuery.toLowerCase();
+    return (
+      friend.name.toLowerCase().includes(query) ||
+      friend.country.toLowerCase().includes(query) ||
+      friend.interests.some(interest => interest.toLowerCase().includes(query)) ||
+      friend.personalityTraits.some(trait => trait.toLowerCase().includes(query)) ||
+      (friend.notes && friend.notes.toLowerCase().includes(query)) ||
+      friend.category.toLowerCase().includes(query)
+    );
+  });
+
   // Update selectedFriend when friends data changes (e.g., after editing)
   useEffect(() => {
     if (selectedFriend && friends.length > 0) {
@@ -396,10 +415,12 @@ function Home() {
 
   // Reset carousel index when friends change or switching to carousel mode
   useEffect(() => {
-    if (friends.length > 0 && carouselIndex >= friends.length) {
+    if (filteredFriends.length > 0 && carouselIndex >= filteredFriends.length) {
+      setCarouselIndex(0);
+    } else if (filteredFriends.length === 0) {
       setCarouselIndex(0);
     }
-  }, [friends.length, carouselIndex]);
+  }, [filteredFriends.length, carouselIndex]);
 
   // Reset carousel index when switching to carousel mode
   useEffect(() => {
@@ -407,6 +428,14 @@ function Home() {
       setCarouselIndex(0);
     }
   }, [friendsViewMode]);
+
+  // Reset search when switching away from friends tab
+  useEffect(() => {
+    if (activeTab !== 'friends' && searchQuery) {
+      setSearchQuery('');
+      setSearchExpanded(false);
+    }
+  }, [activeTab]);
 
   // Fetch saved gifts
   const { data: savedGifts = [] } = useQuery({
@@ -593,6 +622,58 @@ function Home() {
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-2xl font-semibold">👥 Your Friends</h2>
                 <div className="flex items-center gap-4">
+                  {/* Search Button - Collapsible */}
+                  {friends.length > 0 && (
+                    <div className={`relative transition-all duration-300 ${searchExpanded ? 'max-w-md' : 'max-w-max'}`}>
+                      {!searchExpanded ? (
+                        // Collapsed state - just the magnifying glass
+                        <button
+                          onClick={() => setSearchExpanded(true)}
+                          className="flex items-center justify-center w-10 h-10 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                          title="Search friends"
+                        >
+                          <svg className="h-5 w-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                          </svg>
+                        </button>
+                      ) : (
+                        // Expanded state - full search bar
+                        <>
+                          <input
+                            type="text"
+                            placeholder="Search friends by name, country, interests, traits, notes, or category..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            onBlur={() => {
+                              // Auto-collapse if no text when focus is lost
+                              if (!searchQuery.trim()) {
+                                setSearchExpanded(false);
+                              }
+                            }}
+                            className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            autoFocus
+                          />
+                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                          </div>
+                          <button
+                            onClick={() => {
+                              setSearchExpanded(false);
+                              setSearchQuery("");
+                            }}
+                            className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                            title="Close search"
+                          >
+                            <svg className="h-5 w-5 text-gray-400 hover:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  )}
                   {friends.length > 0 && (
                     <div className="flex items-center bg-gray-100 rounded-lg p-1">
                       <button
@@ -626,15 +707,28 @@ function Home() {
                 </div>
               </div>
               
+              {/* Search Results Counter */}
+              {searchQuery && searchExpanded && (
+                <div className="mb-4">
+                  <p className="text-sm text-gray-500">
+                    Found {filteredFriends.length} friend{filteredFriends.length !== 1 ? 's' : ''} matching "{searchQuery}"
+                  </p>
+                </div>
+              )}
+              
               {friendsLoading ? (
                 <div className="text-center py-8">Loading friends...</div>
               ) : friends.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
                   No friends added yet. Add your first friend to get started!
                 </div>
+              ) : filteredFriends.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  No friends found matching your search. Try a different search term.
+                </div>
               ) : friendsViewMode === 'grid' ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {friends.map((friend, index) => (
+                  {filteredFriends.map((friend, index) => (
                     <div
                       key={friend.id}
                       className={`group relative border rounded-lg p-4 transition-all duration-200 select-none ${
@@ -784,17 +878,19 @@ function Home() {
                   {/* Carousel Navigation */}
                   <div className="flex justify-center items-center mb-6 gap-4">
                     <button
-                      onClick={() => setCarouselIndex((carouselIndex - 1 + friends.length) % friends.length)}
+                      onClick={() => filteredFriends.length > 0 && setCarouselIndex((carouselIndex - 1 + filteredFriends.length) % filteredFriends.length)}
                       className="p-3 bg-blue-100 text-blue-600 hover:bg-blue-200 rounded-full transition-colors"
+                      disabled={filteredFriends.length === 0}
                     >
                       ←
                     </button>
                     <span className="text-sm text-gray-600 font-medium">
-                      {carouselIndex + 1} of {friends.length}
+                      {filteredFriends.length > 0 ? `${carouselIndex + 1} of ${filteredFriends.length}` : '0 of 0'}
                     </span>
                     <button
-                      onClick={() => setCarouselIndex((carouselIndex + 1) % friends.length)}
+                      onClick={() => filteredFriends.length > 0 && setCarouselIndex((carouselIndex + 1) % filteredFriends.length)}
                       className="p-3 bg-blue-100 text-blue-600 hover:bg-blue-200 rounded-full transition-colors"
+                      disabled={filteredFriends.length === 0}
                     >
                       →
                     </button>
@@ -807,15 +903,20 @@ function Home() {
                     onTouchMove={handleTouchMove}
                     onTouchEnd={handleTouchEnd}
                   >
+                    {filteredFriends.length === 0 ? (
+                      <div className="text-center py-8 text-gray-500">
+                        No friends found matching your search.
+                      </div>
+                    ) : (
                     <div className="flex justify-center items-center gap-4 px-4 py-8">
                       {/* Previous Friend (Preview) */}
                       <div 
                         className="flex-shrink-0 w-48 transform scale-75 opacity-60 cursor-pointer transition-all duration-300 hover:scale-80 hover:opacity-80"
-                        onClick={() => setCarouselIndex((carouselIndex - 1 + friends.length) % friends.length)}
+                        onClick={() => filteredFriends.length > 0 && setCarouselIndex((carouselIndex - 1 + filteredFriends.length) % filteredFriends.length)}
                       >
                         {(() => {
-                          const prevIndex = (carouselIndex - 1 + friends.length) % friends.length;
-                          const prevFriend = friends[prevIndex];
+                          const prevIndex = (carouselIndex - 1 + filteredFriends.length) % filteredFriends.length;
+                          const prevFriend = filteredFriends[prevIndex];
                           return (
                             <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-md">
                               <div className="text-center">
@@ -843,7 +944,7 @@ function Home() {
                       {/* Current Friend (Main) */}
                       <div className="flex-shrink-0 w-80 transform scale-100 transition-all duration-300">
                         {(() => {
-                          const friend = friends[carouselIndex];
+                          const friend = filteredFriends[carouselIndex];
                           return (
                             <div className="bg-white border-2 border-blue-200 rounded-2xl p-6 shadow-xl">
                               {/* Profile Section */}
@@ -947,7 +1048,7 @@ function Home() {
                                     if (confirm(`Are you sure you want to delete ${friend.name}?`)) {
                                       deleteFriendMutation.mutate(friend.id);
                                       // Reset carousel index if needed
-                                      if (carouselIndex >= friends.length - 1) {
+                                      if (carouselIndex >= filteredFriends.length - 1) {
                                         setCarouselIndex(0);
                                       }
                                     }
@@ -966,11 +1067,11 @@ function Home() {
                       {/* Next Friend (Preview) */}
                       <div 
                         className="flex-shrink-0 w-48 transform scale-75 opacity-60 cursor-pointer transition-all duration-300 hover:scale-80 hover:opacity-80"
-                        onClick={() => setCarouselIndex((carouselIndex + 1) % friends.length)}
+                        onClick={() => filteredFriends.length > 0 && setCarouselIndex((carouselIndex + 1) % filteredFriends.length)}
                       >
                         {(() => {
-                          const nextIndex = (carouselIndex + 1) % friends.length;
-                          const nextFriend = friends[nextIndex];
+                          const nextIndex = (carouselIndex + 1) % filteredFriends.length;
+                          const nextFriend = filteredFriends[nextIndex];
                           return (
                             <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-md">
                               <div className="text-center">
@@ -995,11 +1096,12 @@ function Home() {
                         })()}
                       </div>
                     </div>
+                    )}
                   </div>
 
                   {/* Dots Indicator */}
                   <div className="flex justify-center mt-6 gap-2">
-                    {friends.map((_, index) => (
+                    {filteredFriends.map((_, index) => (
                       <button
                         key={index}
                         onClick={() => setCarouselIndex(index)}
