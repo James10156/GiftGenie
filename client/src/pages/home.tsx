@@ -27,6 +27,8 @@ function Home() {
   const [friendsViewMode, setFriendsViewMode] = useState<'grid' | 'carousel'>('grid');
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [hoveredFriend, setHoveredFriend] = useState<string | null>(null);
+  const [draggedFriend, setDraggedFriend] = useState<string | null>(null);
+  const [dragOverFriend, setDragOverFriend] = useState<string | null>(null);
 
   // Touch/swipe support for carousel
   const [touchStart, setTouchStart] = useState(0);
@@ -55,6 +57,58 @@ function Home() {
       // Swipe right - previous friend (continuous)
       setCarouselIndex((carouselIndex - 1 + friends.length) % friends.length);
     }
+  };
+
+  // Drag and drop handlers for reordering friends
+  const handleDragStart = (e: React.DragEvent, friendId: string) => {
+    setDraggedFriend(friendId);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/html', friendId);
+  };
+
+  const handleDragOver = (e: React.DragEvent, friendId: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverFriend(friendId);
+  };
+
+  const handleDragLeave = () => {
+    setDragOverFriend(null);
+  };
+
+  const handleDrop = (e: React.DragEvent, targetFriendId: string) => {
+    e.preventDefault();
+    
+    if (!draggedFriend || draggedFriend === targetFriendId) {
+      setDraggedFriend(null);
+      setDragOverFriend(null);
+      return;
+    }
+
+    // Find the indices of the dragged and target friends
+    const draggedIndex = friends.findIndex(f => f.id === draggedFriend);
+    const targetIndex = friends.findIndex(f => f.id === targetFriendId);
+    
+    if (draggedIndex === -1 || targetIndex === -1) return;
+
+    // Create a new array with reordered friends
+    const newFriends = [...friends];
+    const [draggedItem] = newFriends.splice(draggedIndex, 1);
+    newFriends.splice(targetIndex, 0, draggedItem);
+
+    // Update the query cache with the new order
+    queryClient.setQueryData(["friends"], newFriends);
+
+    // TODO: Persist the new order to the backend
+    // You might want to add an API endpoint to save friend order preferences
+
+    setDraggedFriend(null);
+    setDragOverFriend(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedFriend(null);
+    setDragOverFriend(null);
   };
   const queryClient = useQueryClient();
 
@@ -623,8 +677,27 @@ function Home() {
                   {friends.map((friend, index) => (
                     <div
                       key={friend.id}
-                      className="relative border rounded-lg p-4 hover:shadow-md transition-shadow"
+                      className={`group relative border rounded-lg p-4 transition-all duration-200 select-none ${
+                        draggedFriend === friend.id 
+                          ? 'opacity-50 scale-95 rotate-2 cursor-grabbing shadow-2xl z-10' 
+                          : dragOverFriend === friend.id
+                          ? 'shadow-lg border-blue-400 bg-blue-50 scale-105'
+                          : 'hover:shadow-md cursor-grab'
+                      }`}
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, friend.id)}
+                      onDragOver={(e) => handleDragOver(e, friend.id)}
+                      onDragLeave={handleDragLeave}
+                      onDrop={(e) => handleDrop(e, friend.id)}
+                      onDragEnd={handleDragEnd}
                     >
+                      {/* Drag Handle */}
+                      <div className="absolute top-3 left-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M3 15h18v-2H3v2zm0 4h18v-2H3v2zm0-8h18V9H3v2zm0-6v2h18V5H3z"/>
+                        </svg>
+                      </div>
+
                       {/* Profile Picture - Centered at top */}
                       <div className="text-center mb-4">
                         {friend.profilePicture ? (
