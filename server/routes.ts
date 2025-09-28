@@ -398,6 +398,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Profile picture upload endpoint (allows both guest and authenticated users)
+  app.post("/api/upload/profile-picture", upload.single('profilePicture'), async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No profile picture file provided" });
+      }
+
+      // Return the URL path for the uploaded image
+      // In development, use full URL to backend server; in production, use relative path
+      const baseUrl = process.env.NODE_ENV === 'development' ? 'http://localhost:5000' : '';
+      const imageUrl = `${baseUrl}/uploads/${req.file.filename}`;
+      res.json({ 
+        success: true, 
+        imageUrl,
+        filename: req.file.filename,
+        originalName: req.file.originalname,
+        size: req.file.size
+      });
+    } catch (error) {
+      console.error("Failed to upload profile picture:", error);
+      res.status(500).json({ message: "Failed to upload profile picture" });
+    }
+  });
+
   // Blog endpoints
   app.get("/api/blog/posts", async (req, res) => {
     try {
