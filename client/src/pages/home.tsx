@@ -24,6 +24,37 @@ function Home() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [giftFeedback, setGiftFeedback] = useState<{[key: string]: { rating: number | null, feedback: string, showFeedback: boolean }}>({});
+  const [friendsViewMode, setFriendsViewMode] = useState<'grid' | 'carousel'>('grid');
+  const [carouselIndex, setCarouselIndex] = useState(0);
+
+  // Touch/swipe support for carousel
+  const [touchStart, setTouchStart] = useState(0);
+  const [touchEnd, setTouchEnd] = useState(0);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    
+    const distance = touchStart - touchEnd;
+    const minSwipeDistance = 50;
+    
+    if (distance > minSwipeDistance && carouselIndex < friends.length - 1) {
+      // Swipe left - next friend
+      setCarouselIndex(carouselIndex + 1);
+    }
+    
+    if (distance < -minSwipeDistance && carouselIndex > 0) {
+      // Swipe right - previous friend
+      setCarouselIndex(carouselIndex - 1);
+    }
+  };
   const queryClient = useQueryClient();
 
   // Analytics hooks
@@ -308,6 +339,20 @@ function Home() {
     }
   }, [friends, selectedFriend]);
 
+  // Reset carousel index when friends change or switching to carousel mode
+  useEffect(() => {
+    if (carouselIndex >= friends.length && friends.length > 0) {
+      setCarouselIndex(0);
+    }
+  }, [friends.length, carouselIndex]);
+
+  // Reset carousel index when switching to carousel mode
+  useEffect(() => {
+    if (friendsViewMode === 'carousel') {
+      setCarouselIndex(0);
+    }
+  }, [friendsViewMode]);
+
   // Fetch saved gifts
   const { data: savedGifts = [] } = useQuery({
     queryKey: ["savedGifts"],
@@ -532,12 +577,38 @@ function Home() {
             <div className="bg-white rounded-lg p-6 shadow-sm">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-2xl font-semibold">👥 Your Friends</h2>
-                <button 
-                  onClick={() => setShowFriendForm(true)}
-                  className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
-                >
-                  Add Friend
-                </button>
+                <div className="flex items-center gap-4">
+                  {friends.length > 0 && (
+                    <div className="flex items-center bg-gray-100 rounded-lg p-1">
+                      <button
+                        onClick={() => setFriendsViewMode('grid')}
+                        className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                          friendsViewMode === 'grid'
+                            ? 'bg-white text-gray-900 shadow-sm'
+                            : 'text-gray-600 hover:text-gray-900'
+                        }`}
+                      >
+                        📱 Grid
+                      </button>
+                      <button
+                        onClick={() => setFriendsViewMode('carousel')}
+                        className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                          friendsViewMode === 'carousel'
+                            ? 'bg-white text-gray-900 shadow-sm'
+                            : 'text-gray-600 hover:text-gray-900'
+                        }`}
+                      >
+                        🔄 Carousel
+                      </button>
+                    </div>
+                  )}
+                  <button 
+                    onClick={() => setShowFriendForm(true)}
+                    className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+                  >
+                    Add Friend
+                  </button>
+                </div>
               </div>
               
               {friendsLoading ? (
@@ -546,7 +617,7 @@ function Home() {
                 <div className="text-center py-8 text-gray-500">
                   No friends added yet. Add your first friend to get started!
                 </div>
-              ) : (
+              ) : friendsViewMode === 'grid' ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {friends.map((friend, index) => (
                     <div
@@ -645,6 +716,172 @@ function Home() {
                       </button>
                     </div>
                   ))}
+                </div>
+              ) : (
+                // Carousel View
+                <div className="relative">
+                  {/* Carousel Navigation */}
+                  <div className="flex justify-center items-center mb-4 gap-4">
+                    <button
+                      onClick={() => setCarouselIndex(Math.max(0, carouselIndex - 1))}
+                      disabled={carouselIndex === 0}
+                      className={`p-2 rounded-full transition-colors ${
+                        carouselIndex === 0
+                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                          : 'bg-blue-100 text-blue-600 hover:bg-blue-200'
+                      }`}
+                    >
+                      ←
+                    </button>
+                    <span className="text-sm text-gray-600">
+                      {carouselIndex + 1} of {friends.length}
+                    </span>
+                    <button
+                      onClick={() => setCarouselIndex(Math.min(friends.length - 1, carouselIndex + 1))}
+                      disabled={carouselIndex === friends.length - 1}
+                      className={`p-2 rounded-full transition-colors ${
+                        carouselIndex === friends.length - 1
+                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                          : 'bg-blue-100 text-blue-600 hover:bg-blue-200'
+                      }`}
+                    >
+                      →
+                    </button>
+                  </div>
+
+                  {/* Carousel Content */}
+                  <div 
+                    className="relative overflow-hidden rounded-lg"
+                    onTouchStart={handleTouchStart}
+                    onTouchMove={handleTouchMove}
+                    onTouchEnd={handleTouchEnd}
+                  >
+                    <div 
+                      className="flex transition-transform duration-300 ease-in-out"
+                      style={{ transform: `translateX(-${carouselIndex * 100}%)` }}
+                    >
+                      {friends.map((friend, index) => (
+                        <div
+                          key={friend.id}
+                          className="w-full flex-shrink-0 px-2"
+                        >
+                          <div className="max-w-md mx-auto bg-white border-2 border-gray-200 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-shadow">
+                            {/* Profile Section */}
+                            <div className="text-center mb-6">
+                              {friend.profilePicture ? (
+                                <div 
+                                  className="w-24 h-24 mx-auto rounded-full transition-all duration-300 hover:scale-110 hover:shadow-lg ring-4 ring-blue-200 hover:ring-blue-400 cursor-pointer mb-4"
+                                  onClick={() => friend.profilePicture && setFocusedImage({src: friend.profilePicture, alt: `${friend.name}'s profile picture`})}
+                                >
+                                  <img
+                                    src={friend.profilePicture}
+                                    alt={friend.name}
+                                    className="w-full h-full object-cover rounded-full"
+                                  />
+                                </div>
+                              ) : (
+                                <div className="w-24 h-24 bg-gray-200 rounded-full mx-auto flex items-center justify-center text-3xl transition-all duration-300 hover:scale-110 hover:shadow-lg mb-4">
+                                  👤
+                                </div>
+                              )}
+                              <h3 className="text-2xl font-bold text-gray-900 mb-1">{friend.name}</h3>
+                              <p className="text-gray-600 text-lg">{friend.country}</p>
+                              <p className="text-sm text-blue-600 font-medium">Category: {friend.category}</p>
+                            </div>
+
+                            {/* Interests Section */}
+                            <div className="mb-6">
+                              <h4 className="text-lg font-semibold text-gray-800 mb-3">🎯 Interests</h4>
+                              <div className="flex flex-wrap gap-2">
+                                {friend.interests.map((interest, idx) => (
+                                  <span
+                                    key={idx}
+                                    className="bg-blue-100 text-blue-800 text-sm px-3 py-1 rounded-full"
+                                  >
+                                    {interest}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Personality Section */}
+                            <div className="mb-6">
+                              <h4 className="text-lg font-semibold text-gray-800 mb-3">✨ Personality</h4>
+                              <div className="flex flex-wrap gap-2">
+                                {friend.personalityTraits.map((trait, idx) => (
+                                  <span
+                                    key={idx}
+                                    className="bg-green-100 text-green-800 text-sm px-3 py-1 rounded-full"
+                                  >
+                                    {trait}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Category & Currency */}
+                            <div className="mb-6 flex justify-between text-sm text-gray-600">
+                              <span>Category: <span className="font-medium text-gray-800">{friend.category}</span></span>
+                              <span>Currency: <span className="font-medium text-green-600">{friend.currency}</span></span>
+                            </div>
+
+                            {/* Actions */}
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => {
+                                  selectFriend(friend);
+                                  switchTab("generate");
+                                }}
+                                className="flex-1 bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 text-sm font-medium transition-colors"
+                              >
+                                🎁 Generate Gifts
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setEditingFriend(friend);
+                                  setShowFriendForm(true);
+                                }}
+                                className="p-3 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors"
+                                title="Edit friend"
+                              >
+                                ✏️
+                              </button>
+                              <button
+                                onClick={() => {
+                                  if (confirm(`Are you sure you want to delete ${friend.name}?`)) {
+                                    deleteFriendMutation.mutate(friend.id);
+                                    // Reset carousel index if needed
+                                    if (carouselIndex >= friends.length - 1) {
+                                      setCarouselIndex(Math.max(0, friends.length - 2));
+                                    }
+                                  }
+                                }}
+                                className="p-3 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors"
+                                title="Delete friend"
+                              >
+                                🗑️
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Dots Indicator */}
+                  <div className="flex justify-center mt-6 gap-2">
+                    {friends.map((_, index) => (
+                      <button
+                        key={index}
+                        onClick={() => setCarouselIndex(index)}
+                        className={`w-3 h-3 rounded-full transition-colors ${
+                          index === carouselIndex
+                            ? 'bg-blue-600'
+                            : 'bg-gray-300 hover:bg-gray-400'
+                        }`}
+                      />
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
