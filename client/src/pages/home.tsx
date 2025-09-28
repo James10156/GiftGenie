@@ -26,6 +26,7 @@ function Home() {
   const [giftFeedback, setGiftFeedback] = useState<{[key: string]: { rating: number | null, feedback: string, showFeedback: boolean }}>({});
   const [friendsViewMode, setFriendsViewMode] = useState<'grid' | 'carousel'>('grid');
   const [carouselIndex, setCarouselIndex] = useState(0);
+  const [hoveredFriend, setHoveredFriend] = useState<string | null>(null);
 
   // Touch/swipe support for carousel
   const [touchStart, setTouchStart] = useState(0);
@@ -629,6 +630,8 @@ function Home() {
                           <div 
                             className="w-16 h-16 mr-4 rounded-full transition-all duration-300 hover:scale-125 hover:shadow-lg ring-2 ring-blue-200 hover:ring-blue-400 cursor-pointer"
                             onClick={() => friend.profilePicture && setFocusedImage({src: friend.profilePicture, alt: `${friend.name}'s profile picture`})}
+                            onMouseEnter={() => setHoveredFriend(friend.id)}
+                            onMouseLeave={() => setHoveredFriend(null)}
                           >
                             <img
                               src={friend.profilePicture}
@@ -637,13 +640,24 @@ function Home() {
                             />
                           </div>
                         ) : (
-                          <div className="w-16 h-16 bg-gray-200 rounded-full mr-4 flex items-center justify-center text-xl transition-all duration-300 hover:scale-125 hover:shadow-lg">
+                          <div 
+                            className="w-16 h-16 bg-gray-200 rounded-full mr-4 flex items-center justify-center text-xl transition-all duration-300 hover:scale-125 hover:shadow-lg cursor-pointer"
+                            onMouseEnter={() => setHoveredFriend(friend.id)}
+                            onMouseLeave={() => setHoveredFriend(null)}
+                          >
                             👤
                           </div>
                         )}
                         <div className="flex-1">
                           <h3 className="font-semibold">{friend.name}</h3>
                           <p className="text-sm text-gray-500">{friend.country}</p>
+                          <p className={`text-xs italic transition-colors duration-200 ${
+                            hoveredFriend === friend.id 
+                              ? 'text-blue-600' 
+                              : 'text-gray-400'
+                          }`}>
+                            {hoveredFriend === friend.id ? 'Showing details...' : 'Hover profile to see details'}
+                          </p>
                         </div>
                         <div className="flex gap-1">
                           <button
@@ -669,42 +683,51 @@ function Home() {
                           </button>
                         </div>
                       </div>
-                      <div className="mb-2">
-                        <p className="text-sm text-gray-600">Interests:</p>
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {friend.interests.slice(0, 3).map((interest, index) => (
-                            <span
-                              key={index}
-                              className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded"
-                            >
-                              {interest}
-                            </span>
-                          ))}
-                          {friend.interests.length > 3 && (
-                            <span className="text-xs text-gray-500">
-                              +{friend.interests.length - 3} more
-                            </span>
-                          )}
+                      
+                      {/* Interests and Personality - only show on profile picture hover */}
+                      <div className={`transition-all duration-300 overflow-hidden ${
+                        hoveredFriend === friend.id 
+                          ? 'max-h-40 opacity-100 mb-3' 
+                          : 'max-h-0 opacity-0 mb-0'
+                      }`}>
+                        <div className="mb-2">
+                          <p className="text-sm text-gray-600">Interests:</p>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {friend.interests.slice(0, 3).map((interest, index) => (
+                              <span
+                                key={index}
+                                className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded"
+                              >
+                                {interest}
+                              </span>
+                            ))}
+                            {friend.interests.length > 3 && (
+                              <span className="text-xs text-gray-500">
+                                +{friend.interests.length - 3} more
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="mb-2">
+                          <p className="text-sm text-gray-600">Personality:</p>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {friend.personalityTraits.slice(0, 2).map((trait, index) => (
+                              <span
+                                key={index}
+                                className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded"
+                              >
+                                {trait}
+                              </span>
+                            ))}
+                            {friend.personalityTraits.length > 2 && (
+                              <span className="text-xs text-gray-500">
+                                +{friend.personalityTraits.length - 2} more
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
-                      <div className="mb-3">
-                        <p className="text-sm text-gray-600">Personality:</p>
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {friend.personalityTraits.slice(0, 2).map((trait, index) => (
-                            <span
-                              key={index}
-                              className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded"
-                            >
-                              {trait}
-                            </span>
-                          ))}
-                          {friend.personalityTraits.length > 2 && (
-                            <span className="text-xs text-gray-500">
-                              +{friend.personalityTraits.length - 2} more
-                            </span>
-                          )}
-                        </div>
-                      </div>
+                      
                       <button
                         onClick={() => {
                           selectFriend(friend);
@@ -791,6 +814,8 @@ function Home() {
                                   <div 
                                     className="w-24 h-24 mx-auto rounded-full transition-all duration-300 hover:scale-110 hover:shadow-lg ring-4 ring-blue-200 hover:ring-blue-400 cursor-pointer mb-4"
                                     onClick={() => friend.profilePicture && setFocusedImage({src: friend.profilePicture, alt: `${friend.name}'s profile picture`})}
+                                    onMouseEnter={() => setHoveredFriend(friend.id)}
+                                    onMouseLeave={() => setHoveredFriend(null)}
                                   >
                                     <img
                                       src={friend.profilePicture}
@@ -799,7 +824,11 @@ function Home() {
                                     />
                                   </div>
                                 ) : (
-                                  <div className="w-24 h-24 bg-gray-200 rounded-full mx-auto flex items-center justify-center text-3xl transition-all duration-300 hover:scale-110 hover:shadow-lg mb-4">
+                                  <div 
+                                    className="w-24 h-24 bg-gray-200 rounded-full mx-auto flex items-center justify-center text-3xl transition-all duration-300 hover:scale-110 hover:shadow-lg mb-4 cursor-pointer"
+                                    onMouseEnter={() => setHoveredFriend(friend.id)}
+                                    onMouseLeave={() => setHoveredFriend(null)}
+                                  >
                                     👤
                                   </div>
                                 )}
