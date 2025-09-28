@@ -699,8 +699,8 @@ function Home() {
                         </p>
                       </div>
 
-                      {/* Action Buttons - Moved to top right */}
-                      <div className="absolute top-3 right-3 flex gap-1">
+                      {/* Action Buttons - Only visible on hover */}
+                      <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                         <button
                           onClick={() => {
                             setEditingFriend(friend);
