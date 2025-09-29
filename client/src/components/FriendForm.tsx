@@ -117,6 +117,9 @@ const COMMON_CATEGORIES = [
 
 export function FriendForm({ friend, onClose }: FriendFormProps) {
   const [currentStep, setCurrentStep] = useState(1);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [manualUrl, setManualUrl] = useState(friend?.profilePicture || "");
   const [formData, setFormData] = useState<InsertFriend>({
     name: friend?.name || "",
     personalityTraits: (friend?.personalityTraits as string[]) || [],
@@ -131,7 +134,6 @@ export function FriendForm({ friend, onClose }: FriendFormProps) {
   const [newTrait, setNewTrait] = useState("");
   const [newInterest, setNewInterest] = useState("");
   const [customCategory, setCustomCategory] = useState("");
-  const [uploadingImage, setUploadingImage] = useState(false);
 
   // Fetch existing categories for suggestions
   const { data: existingCategories = [] } = useQuery({
@@ -203,6 +205,7 @@ export function FriendForm({ friend, onClose }: FriendFormProps) {
     }
 
     setUploadingImage(true);
+    setUploadSuccess(false);
     try {
       const formData = new FormData();
       formData.append('profilePicture', file);
@@ -219,6 +222,8 @@ export function FriendForm({ friend, onClose }: FriendFormProps) {
 
       const result = await response.json();
       setFormData(prev => ({ ...prev, profilePicture: result.imageUrl }));
+      setManualUrl(""); // Clear manual URL when uploading
+      setUploadSuccess(true);
     } catch (error) {
       console.error('Upload error:', error);
       alert('Failed to upload image. Please try again.');
@@ -234,6 +239,14 @@ export function FriendForm({ friend, onClose }: FriendFormProps) {
       updateFriendMutation.mutate(formData);
     } else {
       createFriendMutation.mutate(formData);
+    }
+  };
+
+  const handleManualUrlChange = (url: string) => {
+    setManualUrl(url);
+    setFormData(prev => ({ ...prev, profilePicture: url }));
+    if (url) {
+      setUploadSuccess(false); // Clear upload success when manually entering URL
     }
   };
 
@@ -385,26 +398,56 @@ export function FriendForm({ friend, onClose }: FriendFormProps) {
                     </button>
                   </div>
                   <p className="text-xs text-gray-500 mt-1">Max file size: 5MB. Supported formats: JPG, PNG, GIF</p>
+                  
+                  {/* Success message */}
+                  {uploadSuccess && (
+                    <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded-md">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                          <span className="text-xs text-green-700">Image uploaded successfully!</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setUploadSuccess(false);
+                            setFormData(prev => ({ ...prev, profilePicture: "" }));
+                            setManualUrl("");
+                          }}
+                          className="text-xs text-gray-500 hover:text-gray-700 underline"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
-                {/* Divider */}
-                <div className="flex items-center gap-3">
-                  <div className="flex-1 border-t border-gray-300"></div>
-                  <span className="text-xs text-gray-500 bg-white px-2">OR</span>
-                  <div className="flex-1 border-t border-gray-300"></div>
-                </div>
+                {/* Divider and URL Input - Only show if no image uploaded */}
+                {!uploadSuccess && (
+                  <>
+                    {/* Divider */}
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1 border-t border-gray-300"></div>
+                      <span className="text-xs text-gray-500 bg-white px-2">OR</span>
+                      <div className="flex-1 border-t border-gray-300"></div>
+                    </div>
 
-                {/* URL Input */}
-                <div>
-                  <label className="block text-xs text-gray-600 mb-2">Enter image URL</label>
-                  <input
-                    type="url"
-                    placeholder="https://example.com/image.jpg"
-                    value={formData.profilePicture || ""}
-                    onChange={(e) => setFormData({ ...formData, profilePicture: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
+                    {/* URL Input */}
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-2">Enter image URL</label>
+                      <input
+                        type="url"
+                        placeholder="https://example.com/image.jpg"
+                        value={manualUrl}
+                        onChange={(e) => handleManualUrlChange(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 

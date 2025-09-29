@@ -46,10 +46,19 @@ stop_process() {
 echo "🛑 Stopping GiftGenie Web App (Development Mode)..."
 
 # Stop tunnel first
-stop_process "$TUNNEL_PID_FILE" "Serveo tunnel"
+stop_process "$TUNNEL_PID_FILE" "Web tunnel"
 
-# Also kill any SSH processes to serveo
-pkill -f "ssh.*serveo.net" 2>/dev/null && echo "✅ Killed remaining serveo processes" || true
+## Robust tunnel cleanup
+for tunnel in "ssh.*serveo.net" "ssh.*localhost.run" "ngrok" "cloudflared" "bore" "node.*localtunnel"; do
+    pkill -f "$tunnel" 2>/dev/null && echo "✅ Killed $tunnel processes" || true
+done
+# Also kill any lingering tunnel processes by port (3000)
+lsof -ti :3000 | xargs -r kill -9 2>/dev/null && echo "✅ Killed processes on port 3000" || true
+# Kill any tunnel processes by common names
+pkill -f "lt --port" 2>/dev/null && echo "✅ Killed lt (localtunnel) processes" || true
+pkill -f "bore local" 2>/dev/null && echo "✅ Killed bore local processes" || true
+pkill -f "cloudflared tunnel" 2>/dev/null && echo "✅ Killed cloudflared tunnel processes" || true
+echo "✅ Tunnel cleanup complete"
 
 # Stop development servers
 stop_process "$DEV_PID_FILE" "Development servers"

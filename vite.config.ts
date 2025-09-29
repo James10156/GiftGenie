@@ -32,10 +32,9 @@ export default defineConfig({
       usePolling: true,
       interval: 1000,
     },
-    allowedHosts: [
-      "fugere.serveo.net",
-      ".serveo.net", // Allow any serveo.net subdomain
-    ],
+    host: true,
+    strictPort: false,
+  allowedHosts: [".loca.lt", ".ngrok-free.app", ".ngrok-free.dev", ".ngrok.io", ".trycloudflare.com", ".localhost.run", ".bore.pub", ".serveo.net", "localhost", "127.0.0.1"],
   },
   test: {
     globals: true,
