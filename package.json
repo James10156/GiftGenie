@@ -20,8 +20,8 @@
     "test:coverage": "vitest run --coverage",
     "test:server": "vitest run server",
     "test:client": "vitest run client",
-    "test:node": "node run-tests.mjs",
-    "test:comprehensive": "node run-tests.mjs"
+    "test:node": "node tests/run-tests.mjs",
+    "test:comprehensive": "node tests/run-tests.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

@@ -106,3 +106,14 @@ local/
 
 # System files
 *.orig
+
+# User uploads
+public/uploads/
+
+# Documentation, configuration, and testing
+docs/
+config/
+tests/
+archive/
+client/tests/
+server/tests/

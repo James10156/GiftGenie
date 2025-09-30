@@ -6,50 +6,54 @@ import { v2 as cloudinary } from "cloudinary";
 import { CloudinaryStorage } from "multer-storage-cloudinary";
 import { storageAdapter } from "./storage-adapter";
 import { insertFriendSchema, insertSavedGiftSchema, insertUserAnalyticsSchema, insertRecommendationFeedbackSchema, insertPerformanceMetricsSchema, insertBlogPostSchema } from "@shared/schema";
-import { generateGiftRecommendations } from "./services/openai";
 import { setupAuth, setupAuthRoutes, requireAuth, requireAdmin, type AuthenticatedRequest } from "./auth";
+import { generateGiftRecommendations } from "./services/openai";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  
+  console.log("[registerRoutes] Starting route registration...");
   // Setup authentication
-  setupAuth(app);
-  setupAuthRoutes(app);
+  try {
+    setupAuth(app);
+    setupAuthRoutes(app);
+    console.log("[registerRoutes] Auth setup complete.");
+  } catch (err) {
+    console.error("[registerRoutes] Error in auth setup:", err);
+  }
 
   // Configure Cloudinary
-  cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET,
-  });
+  try {
+    cloudinary.config({
+      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+      api_key: process.env.CLOUDINARY_API_KEY,
+      api_secret: process.env.CLOUDINARY_API_SECRET,
+    });
+    console.log("[registerRoutes] Cloudinary config complete.");
+  } catch (err) {
+    console.error("[registerRoutes] Error in Cloudinary config:", err);
+  }
 
   // Configure multer with Cloudinary storage
-  const storage = new CloudinaryStorage({
-    cloudinary: cloudinary,
-    params: {
-      folder: 'gift-genie/profile-pictures', // Folder in Cloudinary
-      allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'webp'],
-      transformation: [
-        { width: 400, height: 400, crop: 'fill' }, // Auto-resize and crop to square
-        { quality: 'auto' }, // Automatic quality optimization
-        { fetch_format: 'auto' } // Automatic format optimization
-      ],
-    } as any,
-  });
-
-  const upload = multer({
-    storage,
-    limits: {
-      fileSize: 5 * 1024 * 1024, // 5MB limit
-    },
-    fileFilter: (req, file, cb) => {
-      // Only allow image files
-      if (file.mimetype.startsWith('image/')) {
-        cb(null, true);
-      } else {
-        cb(new Error('Only image files are allowed!'));
-      }
-    }
-  });
+  let storage;
+  let upload;
+  try {
+    storage = new CloudinaryStorage({
+      cloudinary: cloudinary,
+      params: {
+        folder: 'gift-genie/profile-pictures',
+        allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'webp'],
+        transformation: [
+          { width: 400, height: 400, crop: 'fill' },
+          { quality: 'auto' },
+          { fetch_format: 'auto' }
+        ],
+      } as any,
+    });
+    console.log("[registerRoutes] Multer storage config complete.");
+    upload = multer({ storage });
+    console.log("[registerRoutes] Multer upload config complete.");
+  } catch (err) {
+    console.error("[registerRoutes] Error in Multer storage/upload config:", err);
+  }
 
   // Health check endpoint
   app.get("/api/health", (req, res) => {
@@ -196,14 +200,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         responseTime: aiResponseTime,
         success: true,
         metadata: {
-          friendId,
-          budget,
-          currency: friend.currency || "USD",
-          country: friend.country || "United States",
-          recommendationsCount: recommendations?.length || 0,
-          personalityTraits: friend.personalityTraits,
-          interests: friend.interests
-        }
+          friendId: String(friendId),
+          budget: String(budget),
+          currency: String(friend.currency || "USD"),
+          country: String(friend.country || "United States"),
+          recommendationsCount: String(Array.isArray(recommendations) ? recommendations.length : 0),
+          personalityTraits: JSON.stringify(friend.personalityTraits ?? []),
+          interests: JSON.stringify(friend.interests ?? [])
+        } as any
       });
 
       res.json(recommendations);
@@ -222,10 +226,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             success: false,
             errorMessage,
             metadata: {
-              friendId: req.body.friendId,
-              budget: req.body.budget,
-              error: errorMessage
-            }
+              friendId: String(req.body.friendId),
+              budget: String(req.body.budget),
+              error: String(errorMessage)
+            } as any
           });
         } catch (logError) {
           console.error("Failed to log performance metric:", logError);
@@ -492,6 +496,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  console.log("[registerRoutes] Route registration complete.");
   const httpServer = createServer(app);
   return httpServer;
 }

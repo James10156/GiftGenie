@@ -159,3 +159,21 @@ The `.env` file contains sensitive information like API keys and should remain l
 - Amazon Associates: https://affiliate-program.amazon.com/
 - Cloudinary: https://cloudinary.com
 - Ngrok: https://ngrok.com/download
+
+---
+
+## Repository Structure (Post-Cleanup)
+- `README.md` — Main project info
+- `docs/` — All documentation and markdown files
+- `config/` — All configuration files
+- `tests/` — All root-level test scripts and files
+- `client/tests/` — Client-side tests
+- `server/tests/` — Server-side tests
+- `scripts/` — Only essential scripts for dev and deployment
+- `archive/` — Old or non-essential scripts
+- `public/uploads/` — Not tracked in git (see .gitignore)
+- `docs/scripts/` — Archived or reference scripts
+- `docs/config/` — Archived or reference config files
+- `docs/tests/` — Archived or reference test files
+
+---

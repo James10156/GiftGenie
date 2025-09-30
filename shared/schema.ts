@@ -85,7 +85,7 @@ export const performanceMetrics = pgTable("performance_metrics", {
   responseTime: integer("response_time_ms").notNull(),
   success: boolean("success").notNull(),
   errorMessage: text("error_message"),
-  metadata: jsonb("metadata").$type<Record<string, any>>(), // Additional context like model used, API version, etc.
+  metadata: jsonb("metadata").$type<Record<string, any>>(), // Ensure metadata is a plain object
   timestamp: text("timestamp").default(sql`CURRENT_TIMESTAMP`),
 });
 
@@ -150,7 +150,7 @@ export const insertPerformanceMetricsSchema = createInsertSchema(performanceMetr
   responseTime: true,
   success: true,
   errorMessage: true,
-  metadata: true,
+  metadata: z.record(z.string(), z.any()), // Ensure metadata is a plain object
 });
 
 export const insertBlogPostSchema = createInsertSchema(blogPosts).pick({
