@@ -228,7 +228,7 @@ start_ngrok_tunnel() {
     fi
     
     # Get URL from ngrok API
-    local url=$(curl -s http://localhost:4040/api/tunnels 2>/dev/null | grep -o 'https://[a-zA-Z0-9-]*.ngrok-free.app' | head -1)
+    local url=$(curl -s http://localhost:4040/api/tunnels 2>/dev/null | grep -o 'https://[a-zA-Z0-9.-]*\.ngrok-free\.[a-z]*' | head -1)
     if [ -n "$url" ]; then
         echo "✅ GiftGenie is now available at: $url (via ngrok)"
         echo "URL: $url" > "$LOG_DIR/public_url.txt"
