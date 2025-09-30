@@ -52,7 +52,7 @@ function Blog() {
   const { data: posts = [], isLoading } = useQuery({
     queryKey: ["blog-posts"],
     queryFn: async (): Promise<BlogPost[]> => {
-      const response = await fetch("/api/blog/posts");
+      const response = await fetch("/api/blog-posts");
       if (!response.ok) throw new Error("Failed to fetch posts");
       return await response.json();
     },

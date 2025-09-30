@@ -311,9 +311,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/analytics/events", requireAuth, requireAdmin, async (req: AuthenticatedRequest, res) => {
     try {
-
       const limit = parseInt(req.query.limit as string) || 100;
-      const analytics = await storageAdapter.getUserAnalytics(req.user!.id, limit);
+      let analytics;
+      if (req.user?.isAdmin) {
+        analytics = await storageAdapter.getAllUserAnalytics(limit); // FIX: get all analytics for admin
+      } else {
+        analytics = await storageAdapter.getUserAnalytics(req.user!.id, limit);
+      }
       res.json(analytics);
     } catch (error) {
       console.error("Failed to fetch analytics:", error);
@@ -321,28 +325,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/analytics/feedback", async (req: AuthenticatedRequest, res) => {
-    try {
-      const result = insertRecommendationFeedbackSchema.safeParse(req.body);
-      if (!result.success) {
-        return res.status(400).json({ 
-          message: "Invalid feedback data",
-          errors: result.error.issues 
-        });
-      }
-
-      const feedback = await storageAdapter.createRecommendationFeedback(result.data, req.user?.id);
-      res.status(201).json(feedback);
-    } catch (error) {
-      console.error("Failed to create feedback:", error);
-      res.status(500).json({ message: "Failed to record feedback" });
-    }
-  });
-
   app.get("/api/analytics/feedback", requireAuth, requireAdmin, async (req: AuthenticatedRequest, res) => {
     try {
       const limit = parseInt(req.query.limit as string) || 100;
-      const feedback = await storageAdapter.getRecommendationFeedback(req.user!.id, limit);
+      let feedback;
+      if (req.user?.isAdmin) {
+        feedback = await storageAdapter.getRecommendationFeedback("all", limit);
+      } else {
+        feedback = await storageAdapter.getRecommendationFeedback(req.user!.id, limit);
+      }
+      feedback = Array.isArray(feedback) ? feedback.filter(f => f && typeof f === 'object') : [];
       res.json(feedback);
     } catch (error) {
       console.error("Failed to fetch feedback:", error);
@@ -350,29 +342,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/analytics/performance", async (req: AuthenticatedRequest, res) => {
-    try {
-      const result = insertPerformanceMetricsSchema.safeParse(req.body);
-      if (!result.success) {
-        return res.status(400).json({ 
-          message: "Invalid performance metrics data",
-          errors: result.error.issues 
-        });
-      }
-
-      const metrics = await storageAdapter.createPerformanceMetrics(result.data, req.user?.id);
-      res.status(201).json(metrics);
-    } catch (error) {
-      console.error("Failed to create performance metrics:", error);
-      res.status(500).json({ message: "Failed to record performance metrics" });
-    }
-  });
-
   app.get("/api/analytics/performance", requireAuth, requireAdmin, async (req: AuthenticatedRequest, res) => {
     try {
       const operation = req.query.operation as string;
       const limit = parseInt(req.query.limit as string) || 100;
-      const metrics = await storageAdapter.getPerformanceMetrics(operation, limit);
+      let metrics;
+      if (req.user?.isAdmin) {
+        metrics = await storageAdapter.getPerformanceMetrics(operation, limit); // all users
+      } else {
+        metrics = await storageAdapter.getPerformanceMetrics(operation, limit); // fallback, could filter by user if needed
+      }
       res.json(metrics);
     } catch (error) {
       console.error("Failed to fetch performance metrics:", error);
@@ -380,66 +359,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Image upload endpoint for blog posts
-  app.post("/api/blog/upload-image", requireAuth, requireAdmin, upload.single('image'), async (req: AuthenticatedRequest, res) => {
-    try {
-      if (!req.file) {
-        return res.status(400).json({ message: "No image file provided" });
-      }
-
-      // Cloudinary automatically provides the full URL in req.file.path
-      const imageUrl = req.file.path;
-      const publicId = (req.file as any).public_id;
-      
-      res.json({ 
-        success: true, 
-        imageUrl,
-        publicId, // Useful for future operations like deletion
-        originalName: req.file.originalname,
-        size: req.file.size
-      });
-    } catch (error) {
-      console.error("Failed to upload image:", error);
-      res.status(500).json({ message: "Failed to upload image" });
-    }
-  });
-
-  // Profile picture upload endpoint (allows both guest and authenticated users)
-  app.post("/api/upload/profile-picture", upload.single('profilePicture'), async (req: AuthenticatedRequest, res) => {
-    try {
-      if (!req.file) {
-        return res.status(400).json({ message: "No profile picture file provided" });
-      }
-
-      // Cloudinary automatically provides the full URL in req.file.path
-      const imageUrl = req.file.path;
-      const publicId = (req.file as any).public_id;
-      
-      res.json({ 
-        success: true, 
-        imageUrl,
-        publicId, // Useful for future operations like deletion
-        originalName: req.file.originalname,
-        size: req.file.size
-      });
-    } catch (error) {
-      console.error("Failed to upload profile picture:", error);
-      res.status(500).json({ message: "Failed to upload profile picture" });
-    }
-  });
-
-  // Blog endpoints
-  app.get("/api/blog/posts", async (req, res) => {
+  // Blog posts endpoints
+  app.get("/api/blog-posts", async (req, res) => {
     try {
       const posts = await storageAdapter.getAllBlogPosts();
       res.json(posts);
     } catch (error) {
-      console.error("Failed to fetch blog posts:", error);
       res.status(500).json({ message: "Failed to fetch blog posts" });
     }
   });
 
-  app.get("/api/blog/posts/:id", async (req, res) => {
+  app.get("/api/blog-posts/:id", async (req, res) => {
     try {
       const post = await storageAdapter.getBlogPost(req.params.id);
       if (!post) {
@@ -447,56 +377,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       res.json(post);
     } catch (error) {
-      console.error("Failed to fetch blog post:", error);
       res.status(500).json({ message: "Failed to fetch blog post" });
     }
   });
 
-  app.post("/api/blog/posts", requireAuth, requireAdmin, async (req: AuthenticatedRequest, res) => {
+  app.post("/api/blog-posts", requireAuth, requireAdmin, async (req, res) => {
     try {
-      const validatedData = insertBlogPostSchema.parse(req.body);
-      const post = await storageAdapter.createBlogPost({
-        ...validatedData,
-        authorId: req.user!.id,
-      });
+      const result = insertBlogPostSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ 
+          message: "Invalid blog post data",
+          errors: result.error.issues 
+        });
+      }
+
+      const post = await storageAdapter.createBlogPost({ ...result.data, authorId: req.user?.id });
       res.status(201).json(post);
     } catch (error) {
-      console.error("Failed to create blog post:", error);
       res.status(500).json({ message: "Failed to create blog post" });
     }
   });
 
-  app.put("/api/blog/posts/:id", requireAuth, requireAdmin, async (req: AuthenticatedRequest, res) => {
+  app.put("/api/blog-posts/:id", requireAuth, requireAdmin, async (req, res) => {
     try {
-      const validatedData = insertBlogPostSchema.parse(req.body);
-      const post = await storageAdapter.updateBlogPost(req.params.id, {
-        ...validatedData,
-        updatedAt: new Date().toISOString(),
-      });
+      const result = insertBlogPostSchema.partial().safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ 
+          message: "Invalid blog post data",
+          errors: result.error.issues 
+        });
+      }
+
+      const post = await storageAdapter.updateBlogPost(req.params.id, result.data);
       if (!post) {
         return res.status(404).json({ message: "Blog post not found" });
       }
       res.json(post);
     } catch (error) {
-      console.error("Failed to update blog post:", error);
       res.status(500).json({ message: "Failed to update blog post" });
     }
   });
 
-  app.delete("/api/blog/posts/:id", requireAuth, requireAdmin, async (req: AuthenticatedRequest, res) => {
+  app.delete("/api/blog-posts/:id", requireAuth, requireAdmin, async (req, res) => {
     try {
-      const success = await storageAdapter.deleteBlogPost(req.params.id);
-      if (!success) {
+      const deleted = await storageAdapter.deleteBlogPost(req.params.id);
+      if (!deleted) {
         return res.status(404).json({ message: "Blog post not found" });
       }
       res.status(204).send();
     } catch (error) {
-      console.error("Failed to delete blog post:", error);
       res.status(500).json({ message: "Failed to delete blog post" });
     }
   });
 
-  console.log("[registerRoutes] Route registration complete.");
-  const httpServer = createServer(app);
-  return httpServer;
+  return createServer(app);
 }

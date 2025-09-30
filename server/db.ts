@@ -236,6 +236,13 @@ export class DatabaseStorage implements IStorage {
     return result;
   }
 
+  async getAllUserAnalytics(limit: number = 100): Promise<UserAnalytics[]> {
+    const result = await db.select().from(userAnalytics)
+      .orderBy(userAnalytics.timestamp)
+      .limit(limit);
+    return result;
+  }
+
   async createRecommendationFeedback(feedback: InsertRecommendationFeedback, userId?: string): Promise<RecommendationFeedback> {
     const result = await db.insert(recommendationFeedback).values({
       userId: userId || null,
@@ -257,6 +264,25 @@ export class DatabaseStorage implements IStorage {
     return result;
   }
 
+  async getAllRecommendationFeedback(limit: number = 100): Promise<RecommendationFeedback[]> {
+    const result = await db.select({
+      id: recommendationFeedback.id,
+      userId: recommendationFeedback.userId,
+      friendId: recommendationFeedback.friendId,
+      recommendationData: recommendationFeedback.recommendationData,
+      rating: recommendationFeedback.rating,
+      feedback: recommendationFeedback.feedback,
+      helpful: recommendationFeedback.helpful,
+      purchased: recommendationFeedback.purchased,
+      createdAt: recommendationFeedback.createdAt,
+      // Add other valid columns as needed
+    }).from(recommendationFeedback)
+      .orderBy(recommendationFeedback.createdAt)
+      .limit(limit);
+    // Defensive: filter out any undefined/null rows and ensure all fields exist
+    return result.filter(row => row && typeof row === 'object' && row.id && row.userId !== undefined && row.friendId !== undefined);
+  }
+
   async createPerformanceMetrics(metrics: InsertPerformanceMetrics, userId?: string): Promise<PerformanceMetrics> {
     const result = await db.insert(performanceMetrics).values({
       userId: userId || null,
@@ -271,13 +297,31 @@ export class DatabaseStorage implements IStorage {
 
   async getPerformanceMetrics(operation?: string, limit: number = 100): Promise<PerformanceMetrics[]> {
     if (operation) {
-      const result = await db.select().from(performanceMetrics)
+      const result = await db.select({
+        id: performanceMetrics.id,
+        userId: performanceMetrics.userId,
+        operation: performanceMetrics.operation,
+        responseTime: performanceMetrics.responseTime,
+        success: performanceMetrics.success,
+        errorMessage: performanceMetrics.errorMessage,
+        metadata: performanceMetrics.metadata,
+        timestamp: performanceMetrics.timestamp
+      }).from(performanceMetrics)
         .where(eq(performanceMetrics.operation, operation))
         .orderBy(performanceMetrics.timestamp)
         .limit(limit);
       return result;
     } else {
-      const result = await db.select().from(performanceMetrics)
+      const result = await db.select({
+        id: performanceMetrics.id,
+        userId: performanceMetrics.userId,
+        operation: performanceMetrics.operation,
+        responseTime: performanceMetrics.responseTime,
+        success: performanceMetrics.success,
+        errorMessage: performanceMetrics.errorMessage,
+        metadata: performanceMetrics.metadata,
+        timestamp: performanceMetrics.timestamp
+      }).from(performanceMetrics)
         .orderBy(performanceMetrics.timestamp)
         .limit(limit);
       return result;

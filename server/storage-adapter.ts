@@ -26,9 +26,9 @@ export interface IStorageAdapter {
 
   // Analytics operations
   createUserAnalytics(analytics: InsertUserAnalytics, userId?: string): Promise<UserAnalytics>;
-  getUserAnalytics(userId: string, limit?: number): Promise<UserAnalytics[]>;
+  getUserAnalytics(userId: string | "all", limit?: number): Promise<UserAnalytics[]>;
   createRecommendationFeedback(feedback: InsertRecommendationFeedback, userId?: string): Promise<RecommendationFeedback>;
-  getRecommendationFeedback(userId: string, limit?: number): Promise<RecommendationFeedback[]>;
+  getRecommendationFeedback(userId: string | "all", limit?: number): Promise<RecommendationFeedback[]>;
   createPerformanceMetrics(metrics: InsertPerformanceMetrics, userId?: string): Promise<PerformanceMetrics>;
   getPerformanceMetrics(operation?: string, limit?: number): Promise<PerformanceMetrics[]>;
 
@@ -349,9 +349,15 @@ export class StorageAdapter implements IStorageAdapter {
     return this.memStorage.createUserAnalytics(analytics, userId);
   }
 
-  async getUserAnalytics(userId: string, limit?: number): Promise<UserAnalytics[]> {
+  async getUserAnalytics(userId: string | "all", limit?: number): Promise<UserAnalytics[]> {
     if (this.databaseStorage) {
+      if (userId === "all") {
+        return this.databaseStorage.getAllUserAnalytics(limit);
+      }
       return this.databaseStorage.getUserAnalytics(userId, limit);
+    }
+    if (userId === "all") {
+      return this.memStorage.getAllUserAnalytics(limit);
     }
     return this.memStorage.getUserAnalytics(userId, limit);
   }
@@ -363,9 +369,15 @@ export class StorageAdapter implements IStorageAdapter {
     return this.memStorage.createRecommendationFeedback(feedback, userId);
   }
 
-  async getRecommendationFeedback(userId: string, limit?: number): Promise<RecommendationFeedback[]> {
+  async getRecommendationFeedback(userId: string | "all", limit?: number): Promise<RecommendationFeedback[]> {
     if (this.databaseStorage) {
+      if (userId === "all") {
+        return this.databaseStorage.getAllRecommendationFeedback(limit);
+      }
       return this.databaseStorage.getRecommendationFeedback(userId, limit);
+    }
+    if (userId === "all") {
+      return this.memStorage.getAllRecommendationFeedback(limit);
     }
     return this.memStorage.getRecommendationFeedback(userId, limit);
   }

@@ -15,18 +15,18 @@ export function AnalyticsDashboard({ currentUser }: AnalyticsDashboardProps) {
   const [timeRange, setTimeRange] = useState("7d");
 
   // Fetch analytics data
-  const { data: analytics, isLoading } = useQuery({
+  const { data: analytics, isLoading, error } = useQuery({
     queryKey: ["analytics", timeRange],
     queryFn: async () => {
-      const responses = await Promise.all([
-        fetch(`/api/analytics/events?limit=100`),
-        fetch(`/api/analytics/feedback?limit=50`),
-        fetch(`/api/analytics/performance?limit=100`),
+      const responses = await Promise.allSettled([
+        fetch(`/api/analytics/events?limit=100`, { credentials: "include" }),
+        fetch(`/api/analytics/feedback?limit=50`, { credentials: "include" }),
+        fetch(`/api/analytics/performance?limit=100`, { credentials: "include" }),
       ]);
 
-      const [eventsData, feedbackData, performanceData] = await Promise.all(
-        responses.map(res => res.ok ? res.json() : [])
-      );
+      const eventsData = responses[0].status === "fulfilled" && responses[0].value.ok ? await responses[0].value.json() : [];
+      const feedbackData = responses[1].status === "fulfilled" && responses[1].value.ok ? await responses[1].value.json() : [];
+      const performanceData = responses[2].status === "fulfilled" && responses[2].value.ok ? await responses[2].value.json() : [];
 
       return {
         userAnalytics: eventsData,
@@ -86,6 +86,9 @@ export function AnalyticsDashboard({ currentUser }: AnalyticsDashboardProps) {
     .filter((event: any) => event.eventType === 'budget_change')
     .map((event: any) => event.eventData)
     .slice(-10);
+
+  // Always show performance metrics section, even if other analytics fail
+  const showPerformanceSection = performanceData.length > 0;
 
   return (
     <div className="bg-white rounded-lg p-6 shadow-sm">
@@ -242,37 +245,20 @@ export function AnalyticsDashboard({ currentUser }: AnalyticsDashboardProps) {
       )}
 
       {/* AI Recommendation Performance */}
-      {performanceData.filter((p: any) => p.operation === 'ai_recommendation').length > 0 && (
+      {performanceData.length > 0 && (
         <div className="bg-gradient-to-r from-purple-50 to-blue-50 p-6 rounded-lg border border-purple-200 mb-6">
-          <h3 className="font-semibold mb-4 text-purple-800">🤖 AI Recommendation Performance</h3>
+          <h3 className="font-semibold mb-4 text-purple-800">🤖 Performance Metrics</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {(() => {
-              const aiMetrics = performanceData.filter((p: any) => p.operation === 'ai_recommendation');
-              const successfulAI = aiMetrics.filter((p: any) => p.success);
-              const failedAI = aiMetrics.filter((p: any) => !p.success);
-              
-              const avgAIResponseTime = successfulAI.length > 0
-                ? Math.round(successfulAI.reduce((sum: number, p: any) => sum + p.responseTime, 0) / successfulAI.length)
+              const successful = performanceData.filter((p: any) => p.success);
+              const failed = performanceData.filter((p: any) => !p.success);
+              const avgResponseTime = successful.length > 0
+                ? Math.round(successful.reduce((sum: number, p: any) => sum + p.responseTime, 0) / successful.length)
                 : 0;
-                
-              const aiSuccessRate = aiMetrics.length > 0
-                ? Math.round((successfulAI.length / aiMetrics.length) * 100)
+              const successRate = performanceData.length > 0
+                ? Math.round((successful.length / performanceData.length) * 100)
                 : 0;
-                
-              // Extract metadata insights
-              const budgetRanges = successfulAI
-                .map((p: any) => p.metadata?.budget)
-                .filter(Boolean)
-                .reduce((acc: Record<string, number>, budget: number) => {
-                  const range = budget < 50 ? '< $50' : budget < 100 ? '$50-100' : budget < 200 ? '$100-200' : '$200+';
-                  acc[range] = (acc[range] || 0) + 1;
-                  return acc;
-                }, {} as Record<string, number>);
-                
-              const avgRecommendationCount = successfulAI.length > 0
-                ? Math.round(successfulAI.reduce((sum: number, p: any) => sum + (p.metadata?.recommendationsCount || 0), 0) / successfulAI.length)
-                : 0;
-                
+              const totalRequests = performanceData.length;
               return (
                 <>
                   <div className="bg-white p-4 rounded-lg shadow-sm">
@@ -280,49 +266,23 @@ export function AnalyticsDashboard({ currentUser }: AnalyticsDashboardProps) {
                     <div className="space-y-2">
                       <div className="flex justify-between">
                         <span className="text-xs text-gray-600">Avg Response Time:</span>
-                        <span className="text-sm font-medium">{avgAIResponseTime}ms</span>
+                        <span className="text-sm font-medium">{avgResponseTime}ms</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-xs text-gray-600">Success Rate:</span>
-                        <span className="text-sm font-medium text-green-600">{aiSuccessRate}%</span>
+                        <span className="text-sm font-medium text-green-600">{successRate}%</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-xs text-gray-600">Total Requests:</span>
-                        <span className="text-sm font-medium">{aiMetrics.length}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-xs text-gray-600">Avg Recommendations:</span>
-                        <span className="text-sm font-medium">{avgRecommendationCount} per request</span>
+                        <span className="text-sm font-medium">{totalRequests}</span>
                       </div>
                     </div>
                   </div>
-                  
-                  <div className="bg-white p-4 rounded-lg shadow-sm">
-                    <h4 className="text-sm font-medium text-purple-700 mb-3">💰 Budget Distribution</h4>
-                    <div className="space-y-2">
-                      {Object.entries(budgetRanges).map(([range, count]) => {
-                        const countNum = count as number;
-                        return (
-                          <div key={range} className="flex justify-between items-center">
-                            <span className="text-xs text-gray-600">{range}:</span>
-                            <div className="flex items-center gap-2">
-                              <div 
-                                className="bg-purple-200 h-1.5 rounded-full" 
-                                style={{ width: `${(countNum / Math.max(...Object.values(budgetRanges).map(c => c as number))) * 40}px` }}
-                              ></div>
-                              <span className="text-xs font-medium">{countNum}</span>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                  
                   <div className="bg-white p-4 rounded-lg shadow-sm">
                     <h4 className="text-sm font-medium text-purple-700 mb-3">⚠️ Recent Issues</h4>
                     <div className="space-y-2">
-                      {failedAI.slice(-3).length > 0 ? (
-                        failedAI.slice(-3).map((error: any, index: number) => (
+                      {failed.slice(-3).length > 0 ? (
+                        failed.slice(-3).map((error: any, index: number) => (
                           <div key={index} className="text-xs">
                             <div className="flex justify-between">
                               <span className="text-red-600 font-medium">Error:</span>
