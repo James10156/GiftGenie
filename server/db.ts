@@ -244,9 +244,31 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createRecommendationFeedback(feedback: InsertRecommendationFeedback, userId?: string): Promise<RecommendationFeedback> {
+    // Debug: log incoming feedback payload
+    console.log('createRecommendationFeedback payload:', JSON.stringify(feedback, null, 2));
+    let giftName = null;
+    // Robust extraction: always try to get giftName from recommendationData
+    if (feedback.recommendationData) {
+      let recData = feedback.recommendationData;
+      if (typeof recData === 'string') {
+        try {
+          recData = JSON.parse(recData);
+        } catch (e) {
+          recData = {};
+        }
+      }
+      if (recData && recData.giftName) {
+        giftName = recData.giftName;
+      }
+    }
+    if (!giftName) {
+      console.error('Feedback insert failed: gift_name could not be extracted from recommendationData:', feedback.recommendationData);
+      throw new Error('gift_name is required for feedback');
+    }
     const result = await db.insert(recommendationFeedback).values({
       userId: userId || null,
       friendId: feedback.friendId,
+      gift_name: giftName, // <-- always set from extracted value
       recommendationData: feedback.recommendationData as any,
       rating: feedback.rating,
       feedback: feedback.feedback,

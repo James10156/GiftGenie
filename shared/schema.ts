@@ -60,6 +60,7 @@ export const recommendationFeedback = pgTable("recommendation_feedback", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }),
   friendId: varchar("friend_id").references(() => friends.id, { onDelete: "cascade" }),
+  gift_name: text("gift_name").notNull(), // <-- Add this column to match DB
   recommendationData: jsonb("recommendation_data").$type<{
     giftName: string;
     price: string;
@@ -143,6 +144,7 @@ export const insertRecommendationFeedbackSchema = createInsertSchema(recommendat
   feedback: true,
   helpful: true,
   purchased: true,
+  gift_name: true, // <-- Add this to match schema
 });
 
 export const insertPerformanceMetricsSchema = createInsertSchema(performanceMetrics).pick({

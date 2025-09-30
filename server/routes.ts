@@ -430,5 +430,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/analytics/feedback", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const feedback = await storageAdapter.createRecommendationFeedback(req.body, req.user?.id);
+      res.status(201).json(feedback);
+    } catch (error) {
+      console.error("Failed to create feedback:", error);
+      res.status(500).json({ message: "Failed to create feedback" });
+    }
+  });
+
   return createServer(app);
 }
