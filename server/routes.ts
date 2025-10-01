@@ -64,6 +64,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
+  // Profile picture upload endpoint
+  app.post("/api/upload/profile-picture", upload.single('profilePicture'), (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+      
+      // Return the Cloudinary URL in the format the frontend expects
+      res.json({ 
+        imageUrl: req.file.path,
+        message: "Profile picture uploaded successfully" 
+      });
+    } catch (error) {
+      console.error("Upload error:", error);
+      res.status(500).json({ message: "Failed to upload profile picture" });
+    }
+  });
+
   // Debug endpoint to inspect current user context (used in tests/diagnostics)
   app.get("/api/debug/user", (req: AuthenticatedRequest, res) => {
     res.json({
