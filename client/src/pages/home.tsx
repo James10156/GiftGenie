@@ -1291,89 +1291,139 @@ function Home() {
                     ))}
                   </select>
 
-                  {/* Selected Friend Display */}
+                  {/* Selected Friend Display - Horizontal Compact View */}
                   {selectedFriend && (
-                    <div className="mt-4 p-6 bg-gradient-to-r from-blue-50 to-green-50 rounded-lg border border-blue-200 shadow-sm">
-                      <div className="flex items-start gap-6">
-                        {selectedFriend.profilePicture ? (
-                          <div 
-                            className="w-20 h-20 rounded-full border-3 border-white shadow-lg ring-2 ring-blue-200 flex-shrink-0 cursor-pointer hover:ring-blue-400 transition-all duration-300"
-                            onClick={() => selectedFriend.profilePicture && setFocusedImage({src: selectedFriend.profilePicture, alt: `${selectedFriend.name}'s profile picture`})}
-                          >
-                            <img
-                              src={selectedFriend.profilePicture}
-                              alt={selectedFriend.name}
-                              className="w-full h-full object-cover rounded-full"
-                            />
-                          </div>
-                        ) : (
-                          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-400 to-green-400 flex items-center justify-center text-white text-xl font-bold border-3 border-white shadow-lg flex-shrink-0">
-                            {selectedFriend.name.charAt(0).toUpperCase()}
-                          </div>
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between mb-2">
-                            <h3 className="text-xl font-semibold text-gray-800">
-                              {selectedFriend.name}
-                            </h3>
-                            <button
-                              onClick={() => {
-                                setEditingFriend(selectedFriend);
-                                setShowFriendForm(true);
-                              }}
-                              className="flex items-center gap-2 px-3 py-1.5 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors shadow-sm"
-                              title="Edit friend"
+                    <div className="mt-4">
+                      <div 
+                        className="group relative border rounded-lg p-4 transition-all duration-200 hover:shadow-md bg-gradient-to-r from-blue-50 to-green-50 border-blue-200 w-full"
+                        onMouseEnter={() => setHoveredFriend(selectedFriend.id)}
+                        onMouseLeave={() => setHoveredFriend(null)}
+                      >
+                        <div className="flex items-start gap-4">
+                          {/* Profile Picture */}
+                          {selectedFriend.profilePicture ? (
+                            <div 
+                              className="w-16 h-16 rounded-full transition-all duration-300 hover:scale-110 hover:shadow-lg ring-2 ring-blue-200 hover:ring-blue-400 cursor-pointer flex-shrink-0"
+                              onClick={() => selectedFriend.profilePicture && setFocusedImage({src: selectedFriend.profilePicture, alt: `${selectedFriend.name}'s profile picture`})}
                             >
-                              <span>✏️</span>
-                              Edit
-                            </button>
-                          </div>
-                          
-                          {/* Location & Currency */}
-                          <div className="flex flex-wrap items-center gap-4 mb-3 text-sm text-gray-600">
-                            <span className="flex items-center gap-1">
-                              <span>📍</span>
-                              <strong>{selectedFriend.country}</strong>
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <span>💰</span>
-                              <strong>{selectedFriend.currency}</strong>
-                            </span>
-                          </div>
-
-                          {/* Interests */}
-                          <div className="mb-3">
-                            <h4 className="text-sm font-medium text-gray-700 mb-2">Interests</h4>
-                            <div className="flex flex-wrap gap-2">
-                              {selectedFriend.interests.map((interest, i) => (
-                                <span key={i} className="bg-blue-100 text-blue-700 text-xs px-3 py-1 rounded-full border border-blue-200">
-                                  {interest}
-                                </span>
-                              ))}
+                              <img
+                                src={selectedFriend.profilePicture}
+                                alt={selectedFriend.name}
+                                className="w-full h-full object-cover rounded-full"
+                              />
                             </div>
-                          </div>
-
-                          {/* Personality Traits */}
-                          <div className="mb-3">
-                            <h4 className="text-sm font-medium text-gray-700 mb-2">Personality</h4>
-                            <div className="flex flex-wrap gap-2">
-                              {selectedFriend.personalityTraits.map((trait, i) => (
-                                <span key={i} className="bg-green-100 text-green-700 text-xs px-3 py-1 rounded-full border border-green-200">
-                                  {trait}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-
-                          {/* Notes */}
-                          {selectedFriend.notes && (
-                            <div>
-                              <h4 className="text-sm font-medium text-gray-700 mb-2">Notes</h4>
-                              <p className="text-sm text-gray-600 bg-white p-3 rounded-md border border-gray-200 italic">
-                                "{selectedFriend.notes}"
-                              </p>
+                          ) : (
+                            <div className="w-16 h-16 bg-gradient-to-br from-blue-400 to-green-400 rounded-full flex items-center justify-center text-white text-xl font-bold transition-all duration-300 hover:scale-110 hover:shadow-lg cursor-pointer flex-shrink-0">
+                              {selectedFriend.name.charAt(0).toUpperCase()}
                             </div>
                           )}
+
+                          {/* Basic Info - Always Visible */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between mb-2">
+                              <div>
+                                <h3 className="font-semibold text-lg text-gray-800">{selectedFriend.name}</h3>
+                                <div className="flex items-center gap-4 text-sm text-gray-600">
+                                  <span className="flex items-center gap-1">
+                                    <span>📍</span>
+                                    {selectedFriend.country}
+                                  </span>
+                                  <span className="flex items-center gap-1">
+                                    <span>💰</span>
+                                    {selectedFriend.currency}
+                                  </span>
+                                  {(selectedFriend.gender || selectedFriend.ageRange) && (
+                                    <span className="flex items-center gap-1">
+                                      <span>👤</span>
+                                      {selectedFriend.gender && selectedFriend.ageRange 
+                                        ? `${selectedFriend.gender}, ${selectedFriend.ageRange}`
+                                        : selectedFriend.gender || selectedFriend.ageRange
+                                      }
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              
+                              {/* Edit Button */}
+                              <button
+                                onClick={() => {
+                                  setEditingFriend(selectedFriend);
+                                  setShowFriendForm(true);
+                                }}
+                                className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-blue-600 hover:text-blue-800 p-2 bg-white rounded-full shadow-sm hover:shadow-md"
+                                title="Edit friend"
+                              >
+                                ✏️
+                              </button>
+                            </div>
+
+                            <p className={`text-xs italic transition-colors duration-200 ${
+                              hoveredFriend === selectedFriend.id 
+                                ? 'text-blue-600' 
+                                : 'text-gray-400'
+                            }`}>
+                              {hoveredFriend === selectedFriend.id ? 'Showing details...' : 'Hover profile to see details'}
+                            </p>
+                          </div>
+                        </div>
+                        
+                        {/* Expandable Details on Hover - Horizontal Layout */}
+                        <div className={`transition-all duration-300 overflow-hidden ${
+                          hoveredFriend === selectedFriend.id 
+                            ? 'max-h-32 opacity-100 mt-4' 
+                            : 'max-h-0 opacity-0 mt-0'
+                        }`}>
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {/* Interests */}
+                            <div>
+                              <p className="text-sm font-medium text-gray-700 mb-2">Interests</p>
+                              <div className="flex flex-wrap gap-1">
+                                {selectedFriend.interests.slice(0, 4).map((interest, index) => (
+                                  <span
+                                    key={index}
+                                    className="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded border border-blue-200"
+                                  >
+                                    {interest}
+                                  </span>
+                                ))}
+                                {selectedFriend.interests.length > 4 && (
+                                  <span className="text-xs text-gray-500 px-2 py-1">
+                                    +{selectedFriend.interests.length - 4} more
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Personality */}
+                            <div>
+                              <p className="text-sm font-medium text-gray-700 mb-2">Personality</p>
+                              <div className="flex flex-wrap gap-1">
+                                {selectedFriend.personalityTraits.slice(0, 4).map((trait, index) => (
+                                  <span
+                                    key={index}
+                                    className="bg-green-100 text-green-700 text-xs px-2 py-1 rounded border border-green-200"
+                                  >
+                                    {trait}
+                                  </span>
+                                ))}
+                                {selectedFriend.personalityTraits.length > 4 && (
+                                  <span className="text-xs text-gray-500 px-2 py-1">
+                                    +{selectedFriend.personalityTraits.length - 4} more
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Notes */}
+                            {selectedFriend.notes && (
+                              <div>
+                                <p className="text-sm font-medium text-gray-700 mb-2">Notes</p>
+                                <p className="text-xs text-gray-600 bg-white p-2 rounded border italic">
+                                  "{selectedFriend.notes.length > 80 ? selectedFriend.notes.substring(0, 80) + '...' : selectedFriend.notes}"
+                                </p>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
