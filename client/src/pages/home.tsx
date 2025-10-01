@@ -6,9 +6,30 @@ import { FriendForm } from "../components/FriendForm";
 import { GiftWrappingAnimation } from "../components/gift-wrapping-animation";
 import { AuthModal } from "../components/auth-modal";
 import { AnalyticsDashboard } from "../components/analytics-dashboard";
+import { MobileTabsDropdown } from "../components/mobile-tabs-dropdown";
 import { useAnalytics, usePageTracking, usePerformanceTracking, useEngagementTracking } from "../hooks/use-analytics";
 
 function Home() {
+  // State declarations first
+  const [isMobile, setIsMobile] = useState(false);
+  const [friendsViewMode, setFriendsViewMode] = useState<'grid' | 'carousel'>('grid');
+  
+  // Mobile detection
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      // Set default view mode to carousel on mobile (only on initial load)
+      if (mobile) {
+        setFriendsViewMode('carousel');
+      }
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []); // Remove the dependency to avoid circular reference
+
   const [activeTab, setActiveTab] = useState("friends");
   const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null);
   const [recommendations, setRecommendations] = useState<GiftRecommendation[]>([]);
@@ -24,13 +45,19 @@ function Home() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [giftFeedback, setGiftFeedback] = useState<{[key: string]: { rating: number | null, feedback: string, showFeedback: boolean }}>({});
-  const [friendsViewMode, setFriendsViewMode] = useState<'grid' | 'carousel'>('grid');
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [hoveredFriend, setHoveredFriend] = useState<string | null>(null);
   const [draggedFriend, setDraggedFriend] = useState<string | null>(null);
   const [dragOverFriend, setDragOverFriend] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchExpanded, setSearchExpanded] = useState(false);
+
+  // Set default view mode based on screen size
+  useEffect(() => {
+    if (isMobile && friendsViewMode === 'grid') {
+      setFriendsViewMode('carousel');
+    }
+  }, [isMobile, friendsViewMode]);
 
   // Touch/swipe support for carousel
   const [touchStart, setTouchStart] = useState(0);
@@ -551,34 +578,34 @@ function Home() {
     <div className="min-h-screen bg-gray-50">
       {/* Header with authentication */}
       <div className="bg-white border-b border-gray-200">
-        <div className="container mx-auto px-4 py-4">
+        <div className="container mx-auto px-4 py-2 md:py-4">
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-4">
               <Link href="/blog">
-                <a className="text-sm text-blue-600 hover:text-blue-800 font-medium">
+                <a className="text-xs md:text-sm text-blue-600 hover:text-blue-800 font-medium">
                   About us
                 </a>
               </Link>
             </div>
-            <div className="flex items-center gap-3">
-              <div className="text-sm text-gray-600">
+            <div className="flex items-center gap-2 md:gap-3">
+              <div className="text-xs md:text-sm text-gray-600">
                 {currentUser && currentUser.username !== 'Guest' ? (
-                  <span>Welcome back, <strong>{currentUser.username}</strong>!</span>
+                  <span className="hidden sm:inline">Welcome back, <strong>{currentUser.username}</strong>!</span>
                 ) : (
-                  <span>You're browsing as a guest</span>
+                  <span className="hidden sm:inline">You're browsing as a guest</span>
                 )}
               </div>
               {currentUser && currentUser.username !== 'Guest' ? (
                 <button
                   onClick={handleLogout}
-                  className="text-sm text-red-600 hover:text-red-800 font-medium"
+                  className="text-xs md:text-sm text-red-600 hover:text-red-800 font-medium"
                 >
                   Sign Out
                 </button>
               ) : (
                 <button
                   onClick={() => setShowAuthModal(true)}
-                  className="text-sm bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 font-medium"
+                  className="text-xs md:text-sm bg-blue-600 text-white px-2 md:px-4 py-1 md:py-2 rounded-lg hover:bg-blue-700 font-medium"
                 >
                   Sign In
                 </button>
@@ -588,51 +615,70 @@ function Home() {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-4 md:py-8">
         <div className="max-w-6xl mx-auto">
-          <h1 className="text-4xl font-bold text-center mb-8">
-            🎁 Gift Genie
-          </h1>
-          <p className="text-xl text-center text-gray-600 mb-12">
-            Find the perfect gift for your friends with AI-powered recommendations
-          </p>
+          {/* Compact header on mobile */}
+          <div className="text-center mb-4 md:mb-8">
+            <h1 className="text-2xl md:text-4xl font-bold mb-2 md:mb-8">
+              🎁 Gift Genie
+            </h1>
+            <p className="text-sm md:text-xl text-gray-600 mb-4 md:mb-12 hidden sm:block">
+              Find the perfect gift for your friends with AI-powered recommendations
+            </p>
+          </div>
 
-          {/* Tab Navigation */}
-          <div className="flex justify-center mb-8">
-            <div className="bg-white rounded-lg p-1 shadow-sm border">
-              {["friends", "generate", "recommendations", "saved", ...(currentUser?.isAdmin ? ["analytics"] : [])].map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => switchTab(tab)}
-                  className={`px-4 py-2 rounded-md capitalize transition-colors ${
-                    activeTab === tab
-                      ? "bg-blue-600 text-white"
-                      : "text-gray-600 hover:text-gray-900"
-                  }`}
-                >
-                  {tab === "generate" ? "Generate Gifts" : tab}
-                </button>
-              ))}
-            </div>
+          {/* Tab Navigation - Desktop: Horizontal tabs, Mobile: Dropdown */}
+          <div className="mb-4 md:mb-8">
+            {isMobile ? (
+              <MobileTabsDropdown
+                tabs={[
+                  { id: "friends", label: "Friends" },
+                  { id: "generate", label: "Generate Gifts" },
+                  { id: "recommendations", label: "Recommendations" },
+                  { id: "saved", label: "Saved" },
+                  ...(currentUser?.isAdmin ? [{ id: "analytics", label: "Analytics" }] : [])
+                ]}
+                activeTab={activeTab}
+                onTabChange={switchTab}
+              />
+            ) : (
+              <div className="flex justify-center">
+                <div className="bg-white rounded-lg p-1 shadow-sm border">
+                  {["friends", "generate", "recommendations", "saved", ...(currentUser?.isAdmin ? ["analytics"] : [])].map((tab) => (
+                    <button
+                      key={tab}
+                      onClick={() => switchTab(tab)}
+                      className={`px-4 py-2 rounded-md capitalize transition-colors ${
+                        activeTab === tab
+                          ? "bg-blue-600 text-white"
+                          : "text-gray-600 hover:text-gray-900"
+                      }`}
+                    >
+                      {tab === "generate" ? "Generate Gifts" : tab}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Friends Tab */}
           {activeTab === "friends" && (
-            <div className="bg-white rounded-lg p-6 shadow-sm">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-semibold">👥 Your Friends</h2>
-                <div className="flex items-center gap-4">
+            <div className="bg-white rounded-lg p-3 md:p-6 shadow-sm">
+              <div className="flex flex-col space-y-3 md:space-y-0 md:flex-row md:justify-between md:items-center mb-4 md:mb-6">
+                <h2 className="text-lg md:text-2xl font-semibold">👥 Your Friends</h2>
+                <div className="flex flex-col space-y-2 md:space-y-0 md:flex-row md:items-center md:gap-4">
                   {/* Search Button - Collapsible */}
                   {friends.length > 0 && (
-                    <div className={`relative transition-all duration-300 ${searchExpanded ? 'max-w-md' : 'max-w-max'}`}>
+                    <div className={`relative transition-all duration-300 ${searchExpanded ? 'w-full md:max-w-md' : 'max-w-max'}`}>
                       {!searchExpanded ? (
                         // Collapsed state - just the magnifying glass
                         <button
                           onClick={() => setSearchExpanded(true)}
-                          className="flex items-center justify-center w-10 h-10 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                          className="flex items-center justify-center w-8 h-8 md:w-10 md:h-10 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
                           title="Search friends"
                         >
-                          <svg className="h-5 w-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="h-4 w-4 md:h-5 md:w-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                           </svg>
                         </button>
@@ -641,7 +687,7 @@ function Home() {
                         <>
                           <input
                             type="text"
-                            placeholder="Search friends by name, country, interests, traits, notes, or category..."
+                            placeholder={isMobile ? "Search friends..." : "Search friends by name, country, interests, traits, notes, or category..."}
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             onBlur={() => {
@@ -650,11 +696,11 @@ function Home() {
                                 setSearchExpanded(false);
                               }
                             }}
-                            className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="w-full pl-8 md:pl-10 pr-8 md:pr-10 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             autoFocus
                           />
-                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <div className="absolute inset-y-0 left-0 pl-2 md:pl-3 flex items-center pointer-events-none">
+                            <svg className="h-4 w-4 md:h-5 md:w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                             </svg>
                           </div>
@@ -663,10 +709,10 @@ function Home() {
                               setSearchExpanded(false);
                               setSearchQuery("");
                             }}
-                            className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                            className="absolute inset-y-0 right-0 pr-2 md:pr-3 flex items-center"
                             title="Close search"
                           >
-                            <svg className="h-5 w-5 text-gray-400 hover:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="h-4 w-4 md:h-5 md:w-5 text-gray-400 hover:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                             </svg>
                           </button>
@@ -674,7 +720,7 @@ function Home() {
                       )}
                     </div>
                   )}
-                  {friends.length > 0 && (
+                  {friends.length > 0 && !isMobile && (
                     <div className="flex items-center bg-gray-100 rounded-lg p-1">
                       <button
                         onClick={() => setFriendsViewMode('grid')}
@@ -700,7 +746,7 @@ function Home() {
                   )}
                   <button 
                     onClick={() => setShowFriendForm(true)}
-                    className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+                    className="bg-blue-600 text-white px-3 md:px-4 py-2 rounded-md hover:bg-blue-700 text-sm md:text-base w-full md:w-auto"
                   >
                     Add Friend
                   </button>
@@ -727,36 +773,38 @@ function Home() {
                   No friends found matching your search. Try a different search term.
                 </div>
               ) : friendsViewMode === 'grid' ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
                   {filteredFriends.map((friend, index) => (
                     <div
                       key={friend.id}
-                      className={`group relative border rounded-lg p-4 transition-all duration-200 select-none ${
+                      className={`group relative border rounded-lg p-3 md:p-4 transition-all duration-200 select-none ${
                         draggedFriend === friend.id 
                           ? 'opacity-50 scale-95 rotate-2 cursor-grabbing shadow-2xl z-10' 
                           : dragOverFriend === friend.id
                           ? 'shadow-lg border-blue-400 bg-blue-50 scale-105'
                           : 'hover:shadow-md cursor-grab'
                       }`}
-                      draggable
-                      onDragStart={(e) => handleDragStart(e, friend.id)}
-                      onDragOver={(e) => handleDragOver(e, friend.id)}
-                      onDragLeave={handleDragLeave}
-                      onDrop={(e) => handleDrop(e, friend.id)}
-                      onDragEnd={handleDragEnd}
+                      draggable={!isMobile}
+                      onDragStart={!isMobile ? (e) => handleDragStart(e, friend.id) : undefined}
+                      onDragOver={!isMobile ? (e) => handleDragOver(e, friend.id) : undefined}
+                      onDragLeave={!isMobile ? handleDragLeave : undefined}
+                      onDrop={!isMobile ? (e) => handleDrop(e, friend.id) : undefined}
+                      onDragEnd={!isMobile ? handleDragEnd : undefined}
                     >
-                      {/* Drag Handle */}
-                      <div className="absolute top-3 left-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M3 15h18v-2H3v2zm0 4h18v-2H3v2zm0-8h18V9H3v2zm0-6v2h18V5H3z"/>
-                        </svg>
-                      </div>
+                      {/* Drag Handle - Desktop only */}
+                      {!isMobile && (
+                        <div className="absolute top-3 left-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M3 15h18v-2H3v2zm0 4h18v-2H3v2zm0-8h18V9H3v2zm0-6v2h18V5H3z"/>
+                          </svg>
+                        </div>
+                      )}
 
-                      {/* Profile Picture - Centered at top */}
-                      <div className="text-center mb-4">
+                      {/* Profile Picture - Smaller on mobile */}
+                      <div className="text-center mb-3 md:mb-4">
                         {friend.profilePicture ? (
                           <div 
-                            className="w-20 h-20 mx-auto rounded-full transition-all duration-300 hover:scale-125 hover:shadow-lg ring-2 ring-blue-200 hover:ring-blue-400 cursor-pointer"
+                            className="w-16 h-16 md:w-20 md:h-20 mx-auto rounded-full transition-all duration-300 hover:scale-125 hover:shadow-lg ring-2 ring-blue-200 hover:ring-blue-400 cursor-pointer"
                             onClick={() => friend.profilePicture && setFocusedImage({src: friend.profilePicture, alt: `${friend.name}'s profile picture`})}
                             onMouseEnter={() => setHoveredFriend(friend.id)}
                             onMouseLeave={() => setHoveredFriend(null)}
@@ -769,7 +817,7 @@ function Home() {
                           </div>
                         ) : (
                           <div 
-                            className="w-20 h-20 bg-gray-200 rounded-full mx-auto flex items-center justify-center text-2xl transition-all duration-300 hover:scale-125 hover:shadow-lg cursor-pointer"
+                            className="w-16 h-16 md:w-20 md:h-20 bg-gray-200 rounded-full mx-auto flex items-center justify-center text-xl md:text-2xl transition-all duration-300 hover:scale-125 hover:shadow-lg cursor-pointer"
                             onMouseEnter={() => setHoveredFriend(friend.id)}
                             onMouseLeave={() => setHoveredFriend(null)}
                           >
@@ -778,27 +826,31 @@ function Home() {
                         )}
                       </div>
 
-                      {/* Name and Info - Centered below picture */}
+                      {/* Name and Info - More compact on mobile */}
                       <div className="text-center mb-3">
-                        <h3 className="font-semibold text-lg">{friend.name}</h3>
-                        <p className="text-sm text-gray-500">{friend.country}</p>
-                        <p className={`text-xs italic transition-colors duration-200 ${
-                          hoveredFriend === friend.id 
-                            ? 'text-blue-600' 
-                            : 'text-gray-400'
-                        }`}>
-                          {hoveredFriend === friend.id ? 'Showing details...' : 'Hover profile to see details'}
-                        </p>
+                        <h3 className="font-semibold text-base md:text-lg">{friend.name}</h3>
+                        <p className="text-xs md:text-sm text-gray-500">{friend.country}</p>
+                        {!isMobile && (
+                          <p className={`text-xs italic transition-colors duration-200 ${
+                            hoveredFriend === friend.id 
+                              ? 'text-blue-600' 
+                              : 'text-gray-400'
+                          }`}>
+                            {hoveredFriend === friend.id ? 'Showing details...' : 'Hover profile to see details'}
+                          </p>
+                        )}
                       </div>
 
-                      {/* Action Buttons - Only visible on hover */}
-                      <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                      {/* Action Buttons - Always visible on mobile */}
+                      <div className={`absolute top-2 md:top-3 right-2 md:right-3 flex gap-1 transition-opacity duration-200 ${
+                        isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                      }`}>
                         <button
                           onClick={() => {
                             setEditingFriend(friend);
                             setShowFriendForm(true);
                           }}
-                          className="text-blue-600 hover:text-blue-800 p-1 bg-white rounded-full shadow-sm hover:shadow-md transition-all"
+                          className="text-blue-600 hover:text-blue-800 p-1 bg-white rounded-full shadow-sm hover:shadow-md transition-all text-xs md:text-sm"
                           title="Edit friend"
                         >
                           ✏️
@@ -809,23 +861,23 @@ function Home() {
                               deleteFriendMutation.mutate(friend.id);
                             }
                           }}
-                          className="text-red-600 hover:text-red-800 p-1 bg-white rounded-full shadow-sm hover:shadow-md transition-all"
+                          className="text-red-600 hover:text-red-800 p-1 bg-white rounded-full shadow-sm hover:shadow-md transition-all text-xs md:text-sm"
                           title="Delete friend"
                         >
                           🗑️
                         </button>
                       </div>
                       
-                      {/* Interests and Personality - only show on profile picture hover */}
+                      {/* Interests and Personality - Always show on mobile, hover on desktop */}
                       <div className={`transition-all duration-300 overflow-hidden ${
-                        hoveredFriend === friend.id 
-                          ? 'max-h-40 opacity-100 mb-3' 
+                        isMobile || hoveredFriend === friend.id 
+                          ? 'max-h-32 md:max-h-40 opacity-100 mb-3' 
                           : 'max-h-0 opacity-0 mb-0'
                       }`}>
                         <div className="mb-2">
-                          <p className="text-sm text-gray-600">Interests:</p>
+                          <p className="text-xs md:text-sm text-gray-600">Interests:</p>
                           <div className="flex flex-wrap gap-1 mt-1">
-                            {friend.interests.slice(0, 3).map((interest, index) => (
+                            {friend.interests.slice(0, isMobile ? 2 : 3).map((interest, index) => (
                               <span
                                 key={index}
                                 className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded"
@@ -833,15 +885,15 @@ function Home() {
                                 {interest}
                               </span>
                             ))}
-                            {friend.interests.length > 3 && (
+                            {friend.interests.length > (isMobile ? 2 : 3) && (
                               <span className="text-xs text-gray-500">
-                                +{friend.interests.length - 3} more
+                                +{friend.interests.length - (isMobile ? 2 : 3)} more
                               </span>
                             )}
                           </div>
                         </div>
                         <div className="mb-2">
-                          <p className="text-sm text-gray-600">Personality:</p>
+                          <p className="text-xs md:text-sm text-gray-600">Personality:</p>
                           <div className="flex flex-wrap gap-1 mt-1">
                             {friend.personalityTraits.slice(0, 2).map((trait, index) => (
                               <span
@@ -896,7 +948,7 @@ function Home() {
                     </button>
                   </div>
 
-                  {/* Carousel Content - Three Card View */}
+                  {/* Carousel Content - Responsive Three Card View */}
                   <div 
                     className="relative overflow-hidden"
                     onTouchStart={handleTouchStart}
@@ -908,50 +960,60 @@ function Home() {
                         No friends found matching your search.
                       </div>
                     ) : (
-                    <div className="flex justify-center items-center gap-4 px-4 py-8">
-                      {/* Previous Friend (Preview) */}
-                      <div 
-                        className="flex-shrink-0 w-48 transform scale-75 opacity-60 cursor-pointer transition-all duration-300 hover:scale-80 hover:opacity-80"
-                        onClick={() => filteredFriends.length > 0 && setCarouselIndex((carouselIndex - 1 + filteredFriends.length) % filteredFriends.length)}
-                      >
-                        {(() => {
-                          const prevIndex = (carouselIndex - 1 + filteredFriends.length) % filteredFriends.length;
-                          const prevFriend = filteredFriends[prevIndex];
-                          return (
-                            <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-md">
-                              <div className="text-center">
-                                {prevFriend.profilePicture ? (
-                                  <div className="w-16 h-16 mx-auto rounded-full mb-3 ring-2 ring-gray-200">
-                                    <img
-                                      src={prevFriend.profilePicture}
-                                      alt={prevFriend.name}
-                                      className="w-full h-full object-cover rounded-full"
-                                    />
-                                  </div>
-                                ) : (
-                                  <div className="w-16 h-16 bg-gray-200 rounded-full mx-auto flex items-center justify-center text-2xl mb-3">
-                                    👤
-                                  </div>
-                                )}
-                                <h4 className="font-semibold text-gray-900 mb-1">{prevFriend.name}</h4>
-                                <p className="text-xs text-gray-500">{prevFriend.country}</p>
+                    <div className={`flex justify-center items-center px-2 md:px-4 py-4 md:py-8 ${
+                      isMobile ? 'gap-2' : 'gap-4'
+                    }`}>
+                      {/* Previous Friend (Preview) - Hidden on mobile */}
+                      {!isMobile && (
+                        <div 
+                          className="flex-shrink-0 w-48 transform scale-75 opacity-60 cursor-pointer transition-all duration-300 hover:scale-80 hover:opacity-80"
+                          onClick={() => filteredFriends.length > 0 && setCarouselIndex((carouselIndex - 1 + filteredFriends.length) % filteredFriends.length)}
+                        >
+                          {(() => {
+                            const prevIndex = (carouselIndex - 1 + filteredFriends.length) % filteredFriends.length;
+                            const prevFriend = filteredFriends[prevIndex];
+                            return (
+                              <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-md">
+                                <div className="text-center">
+                                  {prevFriend.profilePicture ? (
+                                    <div className="w-16 h-16 mx-auto rounded-full mb-3 ring-2 ring-gray-200">
+                                      <img
+                                        src={prevFriend.profilePicture}
+                                        alt={prevFriend.name}
+                                        className="w-full h-full object-cover rounded-full"
+                                      />
+                                    </div>
+                                  ) : (
+                                    <div className="w-16 h-16 bg-gray-200 rounded-full mx-auto flex items-center justify-center text-2xl mb-3">
+                                      👤
+                                    </div>
+                                  )}
+                                  <h4 className="font-semibold text-gray-900 mb-1">{prevFriend.name}</h4>
+                                  <p className="text-xs text-gray-500">{prevFriend.country}</p>
+                                </div>
                               </div>
-                            </div>
-                          );
-                        })()}
-                      </div>
+                            );
+                          })()}
+                        </div>
+                      )}
 
-                      {/* Current Friend (Main) */}
-                      <div className="flex-shrink-0 w-80 transform scale-100 transition-all duration-300">
+                      {/* Current Friend (Main) - Responsive sizing */}
+                      <div className={`flex-shrink-0 transform scale-100 transition-all duration-300 ${
+                        isMobile ? 'w-full max-w-sm mx-2' : 'w-80'
+                      }`}>
                         {(() => {
                           const friend = filteredFriends[carouselIndex];
                           return (
-                            <div className="bg-white border-2 border-blue-200 rounded-2xl p-6 shadow-xl">
+                            <div className={`bg-white border-2 border-blue-200 rounded-2xl shadow-xl ${
+                              isMobile ? 'p-4' : 'p-6'
+                            }`}>
                               {/* Profile Section */}
-                              <div className="text-center mb-6">
+                              <div className={`text-center ${isMobile ? 'mb-4' : 'mb-6'}`}>
                                 {friend.profilePicture ? (
                                   <div 
-                                    className="w-24 h-24 mx-auto rounded-full transition-all duration-300 hover:scale-110 hover:shadow-lg ring-4 ring-blue-200 hover:ring-blue-400 cursor-pointer mb-4"
+                                    className={`mx-auto rounded-full transition-all duration-300 hover:scale-110 hover:shadow-lg ring-4 ring-blue-200 hover:ring-blue-400 cursor-pointer mb-3 md:mb-4 ${
+                                      isMobile ? 'w-20 h-20' : 'w-24 h-24'
+                                    }`}
                                     onClick={() => friend.profilePicture && setFocusedImage({src: friend.profilePicture, alt: `${friend.name}'s profile picture`})}
                                     onMouseEnter={() => setHoveredFriend(friend.id)}
                                     onMouseLeave={() => setHoveredFriend(null)}
@@ -964,72 +1026,92 @@ function Home() {
                                   </div>
                                 ) : (
                                   <div 
-                                    className="w-24 h-24 bg-gray-200 rounded-full mx-auto flex items-center justify-center text-3xl transition-all duration-300 hover:scale-110 hover:shadow-lg mb-4 cursor-pointer"
+                                    className={`bg-gray-200 rounded-full mx-auto flex items-center justify-center transition-all duration-300 hover:scale-110 hover:shadow-lg mb-3 md:mb-4 cursor-pointer ${
+                                      isMobile ? 'w-20 h-20 text-2xl' : 'w-24 h-24 text-3xl'
+                                    }`}
                                     onMouseEnter={() => setHoveredFriend(friend.id)}
                                     onMouseLeave={() => setHoveredFriend(null)}
                                   >
                                     👤
                                   </div>
                                 )}
-                                <h3 className="text-2xl font-bold text-gray-900 mb-1">{friend.name}</h3>
-                                <p className="text-gray-600 text-lg">{friend.country}</p>
-                                <p className="text-sm text-blue-600 font-medium">Category: {friend.category}</p>
+                                <h3 className={`font-bold text-gray-900 mb-1 ${
+                                  isMobile ? 'text-xl' : 'text-2xl'
+                                }`}>{friend.name}</h3>
+                                <p className={`text-gray-600 ${
+                                  isMobile ? 'text-base' : 'text-lg'
+                                }`}>{friend.country}</p>
+                                <p className={`text-blue-600 font-medium ${
+                                  isMobile ? 'text-xs' : 'text-sm'
+                                }`}>Category: {friend.category}</p>
                               </div>
 
                               {/* Interests Section */}
-                              <div className="mb-4">
-                                <h4 className="text-lg font-semibold text-gray-800 mb-2">🎯 Interests</h4>
+                              <div className={`${isMobile ? 'mb-3' : 'mb-4'}`}>
+                                <h4 className={`font-semibold text-gray-800 mb-2 ${
+                                  isMobile ? 'text-base' : 'text-lg'
+                                }`}>🎯 Interests</h4>
                                 <div className="flex flex-wrap gap-2">
-                                  {friend.interests.slice(0, 4).map((interest, idx) => (
+                                  {friend.interests.slice(0, isMobile ? 3 : 4).map((interest, idx) => (
                                     <span
                                       key={idx}
-                                      className="bg-blue-100 text-blue-800 text-sm px-3 py-1 rounded-full"
+                                      className={`bg-blue-100 text-blue-800 px-3 py-1 rounded-full ${
+                                        isMobile ? 'text-xs' : 'text-sm'
+                                      }`}
                                     >
                                       {interest}
                                     </span>
                                   ))}
-                                  {friend.interests.length > 4 && (
+                                  {friend.interests.length > (isMobile ? 3 : 4) && (
                                     <span className="text-xs text-gray-500 px-3 py-1">
-                                      +{friend.interests.length - 4} more
+                                      +{friend.interests.length - (isMobile ? 3 : 4)} more
                                     </span>
                                   )}
                                 </div>
                               </div>
 
                               {/* Personality Section */}
-                              <div className="mb-4">
-                                <h4 className="text-lg font-semibold text-gray-800 mb-2">✨ Personality</h4>
+                              <div className={`${isMobile ? 'mb-3' : 'mb-4'}`}>
+                                <h4 className={`font-semibold text-gray-800 mb-2 ${
+                                  isMobile ? 'text-base' : 'text-lg'
+                                }`}>✨ Personality</h4>
                                 <div className="flex flex-wrap gap-2">
-                                  {friend.personalityTraits.slice(0, 3).map((trait, idx) => (
+                                  {friend.personalityTraits.slice(0, isMobile ? 2 : 3).map((trait, idx) => (
                                     <span
                                       key={idx}
-                                      className="bg-green-100 text-green-800 text-sm px-3 py-1 rounded-full"
+                                      className={`bg-green-100 text-green-800 px-3 py-1 rounded-full ${
+                                        isMobile ? 'text-xs' : 'text-sm'
+                                      }`}
                                     >
                                       {trait}
                                     </span>
                                   ))}
-                                  {friend.personalityTraits.length > 3 && (
+                                  {friend.personalityTraits.length > (isMobile ? 2 : 3) && (
                                     <span className="text-xs text-gray-500 px-3 py-1">
-                                      +{friend.personalityTraits.length - 3} more
+                                      +{friend.personalityTraits.length - (isMobile ? 2 : 3)} more
                                     </span>
                                   )}
                                 </div>
                               </div>
 
-                              {/* Category & Currency */}
-                              <div className="mb-6 flex justify-between text-sm text-gray-600">
-                                <span>Category: <span className="font-medium text-gray-800">{friend.category}</span></span>
-                                <span>Currency: <span className="font-medium text-green-600">{friend.currency}</span></span>
-                              </div>
+                              {/* Category & Currency - Hide on mobile to save space */}
+                              {!isMobile && (
+                                <div className="mb-6 flex justify-between text-sm text-gray-600">
+                                  <span>Category: <span className="font-medium text-gray-800">{friend.category}</span></span>
+                                  <span>Currency: <span className="font-medium text-green-600">{friend.currency}</span></span>
+                                </div>
+                              )}
 
                               {/* Actions */}
-                              <div className="flex gap-2">
+                              <div className={`flex gap-2 ${isMobile ? 'mt-4' : ''}`}>
                                 <button
                                   onClick={() => {
                                     selectFriend(friend);
                                     switchTab("generate");
                                   }}
-                                  className="flex-1 bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 text-sm font-medium transition-colors"
+                                  className={`flex-1 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors ${
+                                    isMobile ? 'py-2 px-3 text-sm' : 'py-3 px-4 text-sm'
+                                  }`}
                                 >
                                   🎁 Generate Gifts
                                 </button>
@@ -1038,7 +1120,9 @@ function Home() {
                                     setEditingFriend(friend);
                                     setShowFriendForm(true);
                                   }}
-                                  className="p-3 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors"
+                                  className={`text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors ${
+                                    isMobile ? 'p-2' : 'p-3'
+                                  }`}
                                   title="Edit friend"
                                 >
                                   ✏️
@@ -1053,7 +1137,9 @@ function Home() {
                                       }
                                     }
                                   }}
-                                  className="p-3 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors"
+                                  className={`text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors ${
+                                    isMobile ? 'p-2' : 'p-3'
+                                  }`}
                                   title="Delete friend"
                                 >
                                   🗑️
@@ -1064,48 +1150,54 @@ function Home() {
                         })()}
                       </div>
 
-                      {/* Next Friend (Preview) */}
-                      <div 
-                        className="flex-shrink-0 w-48 transform scale-75 opacity-60 cursor-pointer transition-all duration-300 hover:scale-80 hover:opacity-80"
-                        onClick={() => filteredFriends.length > 0 && setCarouselIndex((carouselIndex + 1) % filteredFriends.length)}
-                      >
-                        {(() => {
-                          const nextIndex = (carouselIndex + 1) % filteredFriends.length;
-                          const nextFriend = filteredFriends[nextIndex];
-                          return (
-                            <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-md">
-                              <div className="text-center">
-                                {nextFriend.profilePicture ? (
-                                  <div className="w-16 h-16 mx-auto rounded-full mb-3 ring-2 ring-gray-200">
-                                    <img
-                                      src={nextFriend.profilePicture}
-                                      alt={nextFriend.name}
-                                      className="w-full h-full object-cover rounded-full"
-                                    />
-                                  </div>
-                                ) : (
-                                  <div className="w-16 h-16 bg-gray-200 rounded-full mx-auto flex items-center justify-center text-2xl mb-3">
-                                    👤
-                                  </div>
-                                )}
-                                <h4 className="font-semibold text-gray-900 mb-1">{nextFriend.name}</h4>
-                                <p className="text-xs text-gray-500">{nextFriend.country}</p>
+                      {/* Next Friend (Preview) - Hidden on mobile */}
+                      {!isMobile && (
+                        <div 
+                          className="flex-shrink-0 w-48 transform scale-75 opacity-60 cursor-pointer transition-all duration-300 hover:scale-80 hover:opacity-80"
+                          onClick={() => filteredFriends.length > 0 && setCarouselIndex((carouselIndex + 1) % filteredFriends.length)}
+                        >
+                          {(() => {
+                            const nextIndex = (carouselIndex + 1) % filteredFriends.length;
+                            const nextFriend = filteredFriends[nextIndex];
+                            return (
+                              <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-md">
+                                <div className="text-center">
+                                  {nextFriend.profilePicture ? (
+                                    <div className="w-16 h-16 mx-auto rounded-full mb-3 ring-2 ring-gray-200">
+                                      <img
+                                        src={nextFriend.profilePicture}
+                                        alt={nextFriend.name}
+                                        className="w-full h-full object-cover rounded-full"
+                                      />
+                                    </div>
+                                  ) : (
+                                    <div className="w-16 h-16 bg-gray-200 rounded-full mx-auto flex items-center justify-center text-2xl mb-3">
+                                      👤
+                                    </div>
+                                  )}
+                                  <h4 className="font-semibold text-gray-900 mb-1">{nextFriend.name}</h4>
+                                  <p className="text-xs text-gray-500">{nextFriend.country}</p>
+                                </div>
                               </div>
-                            </div>
-                          );
-                        })()}
-                      </div>
+                            );
+                          })()}
+                        </div>
+                      )}
                     </div>
                     )}
                   </div>
 
-                  {/* Dots Indicator */}
-                  <div className="flex justify-center mt-6 gap-2">
+                  {/* Dots Indicator - More prominent on mobile */}
+                  <div className={`flex justify-center gap-2 ${isMobile ? 'mt-4' : 'mt-6'}`}>
                     {filteredFriends.map((_, index) => (
                       <button
                         key={index}
                         onClick={() => setCarouselIndex(index)}
-                        className={`w-3 h-3 rounded-full transition-colors ${
+                        className={`rounded-full transition-colors ${
+                          isMobile 
+                            ? 'w-4 h-4' // Larger on mobile
+                            : 'w-3 h-3'
+                        } ${
                           index === carouselIndex
                             ? 'bg-blue-600'
                             : 'bg-gray-300 hover:bg-gray-400'
