@@ -12,23 +12,21 @@ import { useAnalytics, usePageTracking, usePerformanceTracking, useEngagementTra
 function Home() {
   // State declarations first
   const [isMobile, setIsMobile] = useState(false);
-  const [friendsViewMode, setFriendsViewMode] = useState<'grid' | 'carousel'>('grid');
+  const [friendsViewMode, setFriendsViewMode] = useState<'grid' | 'carousel'>(() => {
+    // Set initial state based on screen size - no complex logic
+    return typeof window !== 'undefined' && window.innerWidth < 768 ? 'carousel' : 'grid';
+  });
   
-  // Mobile detection
+  // Mobile detection - only handles screen size, never changes view mode
   useEffect(() => {
     const checkMobile = () => {
-      const mobile = window.innerWidth < 768;
-      setIsMobile(mobile);
-      // Set default view mode to carousel on mobile (only on initial load)
-      if (mobile) {
-        setFriendsViewMode('carousel');
-      }
+      setIsMobile(window.innerWidth < 768);
     };
     
     checkMobile();
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
-  }, []); // Remove the dependency to avoid circular reference
+  }, []);
 
   const [activeTab, setActiveTab] = useState("friends");
   const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null);
@@ -51,13 +49,6 @@ function Home() {
   const [dragOverFriend, setDragOverFriend] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchExpanded, setSearchExpanded] = useState(false);
-
-  // Set default view mode based on screen size
-  useEffect(() => {
-    if (isMobile && friendsViewMode === 'grid') {
-      setFriendsViewMode('carousel');
-    }
-  }, [isMobile, friendsViewMode]);
 
   // Touch/swipe support for carousel
   const [touchStart, setTouchStart] = useState(0);
@@ -668,80 +659,103 @@ function Home() {
               <div className="flex flex-col space-y-3 md:space-y-0 md:flex-row md:justify-between md:items-center mb-4 md:mb-6">
                 <h2 className="text-lg md:text-2xl font-semibold">👥 Your Friends</h2>
                 <div className="flex flex-col space-y-2 md:space-y-0 md:flex-row md:items-center md:gap-4">
-                  {/* Search Button - Collapsible */}
+                  {/* Search and View Mode Controls */}
                   {friends.length > 0 && (
-                    <div className={`relative transition-all duration-300 ${searchExpanded ? 'w-full md:max-w-md' : 'max-w-max'}`}>
-                      {!searchExpanded ? (
-                        // Collapsed state - just the magnifying glass
-                        <button
-                          onClick={() => setSearchExpanded(true)}
-                          className="flex items-center justify-center w-8 h-8 md:w-10 md:h-10 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-                          title="Search friends"
-                        >
-                          <svg className="h-4 w-4 md:h-5 md:w-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                          </svg>
-                        </button>
-                      ) : (
-                        // Expanded state - full search bar
-                        <>
-                          <input
-                            type="text"
-                            placeholder={isMobile ? "Search friends..." : "Search friends by name, country, interests, traits, notes, or category..."}
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            onBlur={() => {
-                              // Auto-collapse if no text when focus is lost
-                              if (!searchQuery.trim()) {
-                                setSearchExpanded(false);
-                              }
-                            }}
-                            className="w-full pl-8 md:pl-10 pr-8 md:pr-10 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            autoFocus
-                          />
-                          <div className="absolute inset-y-0 left-0 pl-2 md:pl-3 flex items-center pointer-events-none">
-                            <svg className="h-4 w-4 md:h-5 md:w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="flex items-center gap-2">
+                      {/* Search Button - Collapsible */}
+                      <div className={`relative transition-all duration-300 ${searchExpanded ? 'flex-1 md:max-w-md' : 'max-w-max'}`}>
+                        {!searchExpanded ? (
+                          // Collapsed state - just the magnifying glass
+                          <button
+                            onClick={() => setSearchExpanded(true)}
+                            className="flex items-center justify-center w-8 h-8 md:w-10 md:h-10 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                            title="Search friends"
+                          >
+                            <svg className="h-4 w-4 md:h-5 md:w-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                             </svg>
-                          </div>
-                          <button
-                            onClick={() => {
-                              setSearchExpanded(false);
-                              setSearchQuery("");
-                            }}
-                            className="absolute inset-y-0 right-0 pr-2 md:pr-3 flex items-center"
-                            title="Close search"
-                          >
-                            <svg className="h-4 w-4 md:h-5 md:w-5 text-gray-400 hover:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
                           </button>
-                        </>
+                        ) : (
+                          // Expanded state - full search bar
+                          <>
+                            <input
+                              type="text"
+                              placeholder={isMobile ? "Search friends..." : "Search friends by name, country, interests, traits, notes, or category..."}
+                              value={searchQuery}
+                              onChange={(e) => setSearchQuery(e.target.value)}
+                              onBlur={() => {
+                                // Auto-collapse if no text when focus is lost
+                                if (!searchQuery.trim()) {
+                                  setSearchExpanded(false);
+                                }
+                              }}
+                              className="w-full pl-8 md:pl-10 pr-8 md:pr-10 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              autoFocus
+                            />
+                            <div className="absolute inset-y-0 left-0 pl-2 md:pl-3 flex items-center pointer-events-none">
+                              <svg className="h-4 w-4 md:h-5 md:w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                              </svg>
+                            </div>
+                            <button
+                              onClick={() => {
+                                setSearchExpanded(false);
+                                setSearchQuery("");
+                              }}
+                              className="absolute inset-y-0 right-0 pr-2 md:pr-3 flex items-center"
+                              title="Close search"
+                            >
+                              <svg className="h-4 w-4 md:h-5 md:w-5 text-gray-400 hover:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          </>
+                        )}
+                      </div>
+                      
+                      {/* View Mode Toggle - Always visible next to search */}
+                      {!searchExpanded && (
+                        <div className="flex items-center bg-gray-100 rounded-lg p-1">
+                          <button
+                            onTouchStart={(e) => {
+                              e.preventDefault();
+                              setFriendsViewMode('grid');
+                            }}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setFriendsViewMode('grid');
+                            }}
+                            className={`px-2 md:px-3 py-1 text-xs md:text-sm rounded-md transition-colors ${
+                              friendsViewMode === 'grid'
+                                ? 'bg-white text-gray-900 shadow-sm'
+                                : 'text-gray-600 hover:text-gray-900'
+                            }`}
+                            type="button"
+                          >
+                            📱 Grid
+                          </button>
+                          <button
+                            onTouchStart={(e) => {
+                              e.preventDefault();
+                              setFriendsViewMode('carousel');
+                            }}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setFriendsViewMode('carousel');
+                            }}
+                            className={`px-2 md:px-3 py-1 text-xs md:text-sm rounded-md transition-colors ${
+                              friendsViewMode === 'carousel'
+                                ? 'bg-white text-gray-900 shadow-sm'
+                                : 'text-gray-600 hover:text-gray-900'
+                            }`}
+                            type="button"
+                          >
+                            🔄 Carousel
+                          </button>
+                        </div>
                       )}
-                    </div>
-                  )}
-                  {friends.length > 0 && !isMobile && (
-                    <div className="flex items-center bg-gray-100 rounded-lg p-1">
-                      <button
-                        onClick={() => setFriendsViewMode('grid')}
-                        className={`px-3 py-1 text-sm rounded-md transition-colors ${
-                          friendsViewMode === 'grid'
-                            ? 'bg-white text-gray-900 shadow-sm'
-                            : 'text-gray-600 hover:text-gray-900'
-                        }`}
-                      >
-                        📱 Grid
-                      </button>
-                      <button
-                        onClick={() => setFriendsViewMode('carousel')}
-                        className={`px-3 py-1 text-sm rounded-md transition-colors ${
-                          friendsViewMode === 'carousel'
-                            ? 'bg-white text-gray-900 shadow-sm'
-                            : 'text-gray-600 hover:text-gray-900'
-                        }`}
-                      >
-                        🔄 Carousel
-                      </button>
                     </div>
                   )}
                   <button 
