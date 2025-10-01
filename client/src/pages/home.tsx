@@ -631,20 +631,20 @@ function Home() {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-4 md:py-8">
-        <div className="max-w-6xl mx-auto">
-          {/* Compact header on mobile */}
-          <div className="text-center mb-4 md:mb-8">
-            <h1 className="text-2xl md:text-4xl font-bold mb-2 md:mb-8">
+      <div className="container mx-auto px-4 py-3 lg:py-6">
+        <div className="max-w-7xl mx-auto">
+          {/* Compact header on mobile, more space-efficient on desktop */}
+          <div className="text-center mb-3 lg:mb-6">
+            <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-1 lg:mb-4">
               🎁 Gift Genie
             </h1>
-            <p className="text-sm md:text-xl text-gray-600 mb-4 md:mb-12 hidden sm:block">
+            <p className="text-sm md:text-lg lg:text-xl text-gray-600 mb-2 lg:mb-6 hidden sm:block">
               Find the perfect gift for your friends with AI-powered recommendations
             </p>
           </div>
 
-          {/* Tab Navigation - Desktop: Horizontal tabs, Mobile: Dropdown */}
-          <div className="mb-4 md:mb-8">
+          {/* Tab Navigation - More compact on desktop */}
+          <div className="mb-3 lg:mb-6">
             {isMobile ? (
               <MobileTabsDropdown
                 tabs={[
@@ -680,9 +680,9 @@ function Home() {
 
           {/* Friends Tab */}
           {activeTab === "friends" && (
-            <div className="bg-white rounded-lg p-3 md:p-6 shadow-sm">
-              <div className="flex flex-col space-y-3 md:space-y-0 md:flex-row md:justify-between md:items-center mb-4 md:mb-6">
-                <h2 className="text-lg md:text-2xl font-semibold">👥 Your Friends</h2>
+            <div className="bg-white rounded-lg p-3 lg:p-4 xl:p-6 shadow-sm">
+              <div className="flex flex-col space-y-3 md:space-y-0 md:flex-row md:justify-between md:items-center mb-3 lg:mb-4">
+                <h2 className="text-lg md:text-xl lg:text-2xl font-semibold">👥 Your Friends</h2>
                 <div className="flex flex-col space-y-2 md:space-y-0 md:flex-row md:items-center md:gap-4">
                   {/* Search and View Mode Controls */}
                   {friends.length > 0 && (
@@ -812,7 +812,7 @@ function Home() {
                   No friends found matching your search. Try a different search term.
                 </div>
               ) : friendsViewMode === 'grid' ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 lg:gap-4">
                   {filteredFriends.map((friend, index) => (
                     <div
                       key={friend.id}
@@ -1269,19 +1269,20 @@ function Home() {
 
           {/* Generate Tab */}
           {activeTab === "generate" && (
-            <div className="bg-white rounded-lg p-6 shadow-sm">
-              <h2 className="text-2xl font-semibold mb-6">🤖 Generate Gift Recommendations</h2>
+            <div className="bg-white rounded-lg p-3 sm:p-4 md:p-6 shadow-sm">
+              <h2 className="text-lg sm:text-xl md:text-2xl font-semibold mb-4 md:mb-6">🤖 Generate Gift Recommendations</h2>
               
-              <div className="space-y-6">
+              <div className="space-y-4 md:space-y-6">
+                {/* Friend Selection Section */}
                 <div>
-                  <label className="block text-sm font-medium mb-2">Select Friend</label>
+                  <label className="block text-sm font-medium mb-2 md:mb-3">Select Friend</label>
                   <select
                     value={selectedFriend?.id || ""}
                     onChange={(e) => {
                       const friend = friends.find(f => f.id === e.target.value);
                       selectFriend(friend || null);
                     }}
-                    className="w-full p-3 border rounded-md"
+                    className="w-full p-3 border rounded-lg text-base"
                   >
                     <option value="">Choose a friend...</option>
                     {friends.map((friend) => (
@@ -1291,137 +1292,91 @@ function Home() {
                     ))}
                   </select>
 
-                  {/* Selected Friend Display - Horizontal Compact View */}
+                  {/* Selected Friend Display */}
                   {selectedFriend && (
-                    <div className="mt-4">
-                      <div 
-                        className="group relative border rounded-lg p-4 transition-all duration-200 hover:shadow-md bg-gradient-to-r from-blue-50 to-green-50 border-blue-200 w-full"
-                        onMouseEnter={() => setHoveredFriend(selectedFriend.id)}
-                        onMouseLeave={() => setHoveredFriend(null)}
-                      >
-                        <div className="flex items-start gap-4">
-                          {/* Profile Picture */}
-                          {selectedFriend.profilePicture ? (
-                            <div 
-                              className="w-16 h-16 rounded-full transition-all duration-300 hover:scale-110 hover:shadow-lg ring-2 ring-blue-200 hover:ring-blue-400 cursor-pointer flex-shrink-0"
-                              onClick={() => selectedFriend.profilePicture && setFocusedImage({src: selectedFriend.profilePicture, alt: `${selectedFriend.name}'s profile picture`})}
-                            >
-                              <img
-                                src={selectedFriend.profilePicture}
-                                alt={selectedFriend.name}
-                                className="w-full h-full object-cover rounded-full"
-                              />
-                            </div>
-                          ) : (
-                            <div className="w-16 h-16 bg-gradient-to-br from-blue-400 to-green-400 rounded-full flex items-center justify-center text-white text-xl font-bold transition-all duration-300 hover:scale-110 hover:shadow-lg cursor-pointer flex-shrink-0">
-                              {selectedFriend.name.charAt(0).toUpperCase()}
-                            </div>
-                          )}
+                    <div className="mt-3 md:mt-4 p-3 md:p-4 bg-gradient-to-r from-blue-50 to-green-50 rounded-lg border border-blue-200">
+                      <div className="flex items-start sm:items-center gap-3 md:gap-4">
+                        {/* Profile Picture */}
+                        {selectedFriend.profilePicture ? (
+                          <div 
+                            className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full transition-all duration-300 ring-2 ring-blue-200 cursor-pointer flex-shrink-0"
+                            onClick={() => selectedFriend.profilePicture && setFocusedImage({src: selectedFriend.profilePicture, alt: `${selectedFriend.name}'s profile picture`})}
+                          >
+                            <img
+                              src={selectedFriend.profilePicture}
+                              alt={selectedFriend.name}
+                              className="w-full h-full object-cover rounded-full"
+                            />
+                          </div>
+                        ) : (
+                          <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 bg-gradient-to-br from-blue-400 to-green-400 rounded-full flex items-center justify-center text-white text-lg sm:text-xl font-bold transition-all duration-300 cursor-pointer flex-shrink-0">
+                            {selectedFriend.name.charAt(0).toUpperCase()}
+                          </div>
+                        )}
 
-                          {/* Basic Info - Always Visible */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between mb-2">
-                              <div>
-                                <h3 className="font-semibold text-lg text-gray-800">{selectedFriend.name}</h3>
-                                <div className="flex items-center gap-4 text-sm text-gray-600">
+                        {/* Friend Info */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-semibold text-base md:text-lg text-gray-800 truncate">{selectedFriend.name}</h3>
+                              <div className="flex flex-col sm:flex-row sm:items-center sm:gap-3 text-xs sm:text-sm text-gray-600 mt-1 space-y-1 sm:space-y-0">
+                                <span className="flex items-center gap-1">
+                                  <span>📍</span>
+                                  <span className="truncate">{selectedFriend.country}</span>
+                                </span>
+                                <span className="flex items-center gap-1">
+                                  <span>💰</span>
+                                  {selectedFriend.currency}
+                                </span>
+                                {(selectedFriend.gender || selectedFriend.ageRange) && (
                                   <span className="flex items-center gap-1">
-                                    <span>📍</span>
-                                    {selectedFriend.country}
-                                  </span>
-                                  <span className="flex items-center gap-1">
-                                    <span>💰</span>
-                                    {selectedFriend.currency}
-                                  </span>
-                                  {(selectedFriend.gender || selectedFriend.ageRange) && (
-                                    <span className="flex items-center gap-1">
-                                      <span>👤</span>
+                                    <span>👤</span>
+                                    <span className="truncate">
                                       {selectedFriend.gender && selectedFriend.ageRange 
                                         ? `${selectedFriend.gender}, ${selectedFriend.ageRange}`
                                         : selectedFriend.gender || selectedFriend.ageRange
                                       }
                                     </span>
-                                  )}
-                                </div>
+                                  </span>
+                                )}
                               </div>
-                              
-                              {/* Edit Button */}
-                              <button
-                                onClick={() => {
-                                  setEditingFriend(selectedFriend);
-                                  setShowFriendForm(true);
-                                }}
-                                className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-blue-600 hover:text-blue-800 p-2 bg-white rounded-full shadow-sm hover:shadow-md"
-                                title="Edit friend"
-                              >
-                                ✏️
-                              </button>
                             </div>
-
-                            <p className={`text-xs italic transition-colors duration-200 ${
-                              hoveredFriend === selectedFriend.id 
-                                ? 'text-blue-600' 
-                                : 'text-gray-400'
-                            }`}>
-                              {hoveredFriend === selectedFriend.id ? 'Showing details...' : 'Hover profile to see details'}
-                            </p>
+                            
+                            {/* Edit Button */}
+                            <button
+                              onClick={() => {
+                                setEditingFriend(selectedFriend);
+                                setShowFriendForm(true);
+                              }}
+                              className="text-blue-600 hover:text-blue-800 p-1.5 md:p-2 bg-white rounded-full shadow-sm hover:shadow-md transition-all flex-shrink-0 ml-2"
+                              title="Edit friend"
+                            >
+                              ✏️
+                            </button>
                           </div>
-                        </div>
-                        
-                        {/* Expandable Details on Hover - Horizontal Layout */}
-                        <div className={`transition-all duration-300 overflow-hidden ${
-                          hoveredFriend === selectedFriend.id 
-                            ? 'max-h-32 opacity-100 mt-4' 
-                            : 'max-h-0 opacity-0 mt-0'
-                        }`}>
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {/* Interests */}
-                            <div>
-                              <p className="text-sm font-medium text-gray-700 mb-2">Interests</p>
-                              <div className="flex flex-wrap gap-1">
-                                {selectedFriend.interests.slice(0, 4).map((interest, index) => (
-                                  <span
-                                    key={index}
-                                    className="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded border border-blue-200"
-                                  >
-                                    {interest}
-                                  </span>
-                                ))}
-                                {selectedFriend.interests.length > 4 && (
-                                  <span className="text-xs text-gray-500 px-2 py-1">
-                                    +{selectedFriend.interests.length - 4} more
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-
-                            {/* Personality */}
-                            <div>
-                              <p className="text-sm font-medium text-gray-700 mb-2">Personality</p>
-                              <div className="flex flex-wrap gap-1">
-                                {selectedFriend.personalityTraits.slice(0, 4).map((trait, index) => (
-                                  <span
-                                    key={index}
-                                    className="bg-green-100 text-green-700 text-xs px-2 py-1 rounded border border-green-200"
-                                  >
-                                    {trait}
-                                  </span>
-                                ))}
-                                {selectedFriend.personalityTraits.length > 4 && (
-                                  <span className="text-xs text-gray-500 px-2 py-1">
-                                    +{selectedFriend.personalityTraits.length - 4} more
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-
-                            {/* Notes */}
-                            {selectedFriend.notes && (
-                              <div>
-                                <p className="text-sm font-medium text-gray-700 mb-2">Notes</p>
-                                <p className="text-xs text-gray-600 bg-white p-2 rounded border italic">
-                                  "{selectedFriend.notes.length > 80 ? selectedFriend.notes.substring(0, 80) + '...' : selectedFriend.notes}"
-                                </p>
-                              </div>
+                          
+                          {/* Quick Preview of Interests/Traits */}
+                          <div className="mt-2 md:mt-3 flex flex-wrap gap-1">
+                            {selectedFriend.interests.slice(0, isMobile ? 2 : 3).map((interest, index) => (
+                              <span
+                                key={index}
+                                className="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded border border-blue-200"
+                              >
+                                {interest}
+                              </span>
+                            ))}
+                            {selectedFriend.personalityTraits.slice(0, isMobile ? 1 : 2).map((trait, index) => (
+                              <span
+                                key={index}
+                                className="bg-green-100 text-green-700 text-xs px-2 py-1 rounded border border-green-200"
+                              >
+                                {trait}
+                              </span>
+                            ))}
+                            {((selectedFriend.interests.length > (isMobile ? 2 : 3)) || (selectedFriend.personalityTraits.length > (isMobile ? 1 : 2))) && (
+                              <span className="text-xs text-gray-500 px-2 py-1">
+                                +{Math.max(0, selectedFriend.interests.length - (isMobile ? 2 : 3)) + Math.max(0, selectedFriend.personalityTraits.length - (isMobile ? 1 : 2))} more
+                              </span>
                             )}
                           </div>
                         </div>
@@ -1430,159 +1385,129 @@ function Home() {
                   )}
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Budget: {getFormattedBudget()} {currentCurrency !== 'USD' ? `(${currentCurrency})` : ''}
-                  </label>
-                  
-                  {/* Budget slider */}
-                  <div className="mb-4 p-4 bg-gray-50 rounded-lg border">
-                    <div className="mb-2">
-                      <span className="text-sm text-gray-600">
-                        {useCustomBudget && parseInt(customBudget) > 500 
-                          ? "Slider disabled - using custom amount above $500" 
-                          : "Drag to adjust budget"
-                        }
-                      </span>
-                    </div>
-                    <input
-                      type="range"
-                      min={0}
-                      max={500}
-                      step={10}
-                      value={currentBudgetValue}
-                      onChange={(e) => {
-                        const value = Math.max(10, parseInt(e.target.value)); // Ensure minimum of 10
-                        updateBudget(value);
-                      }}
-                      className={`w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider ${
-                        useCustomBudget && parseInt(customBudget) > 500 ? 'opacity-50' : ''
-                      }`}
-                      disabled={useCustomBudget && parseInt(customBudget) > 500}
-                      style={{
-                        background: `linear-gradient(to right, #10B981 0%, #10B981 ${(currentBudgetValue / 500) * 100}%, #E5E7EB ${(currentBudgetValue / 500) * 100}%, #E5E7EB 100%)`
-                      }}
-                    />
-                    <div className="flex justify-between text-xs text-gray-500 mt-2 relative">
-                      <span className="absolute left-0 transform -translate-x-1/2">{currencySymbol}0</span>
-                      <span className="absolute left-1/2 transform -translate-x-1/2">{currencySymbol}250</span>
-                      <span className="absolute right-0 transform translate-x-1/2">{currencySymbol}500</span>
-                    </div>
-                  </div>
-
-                  {/* Quick budget buttons */}
-                  <div className="grid grid-cols-4 gap-2 mb-4">
-                    {[25, 50, 100, 200].map((amount) => (
-                      <button
-                        key={amount}
-                        type="button"
-                        onClick={() => {
-                          updateBudget(amount);
-                        }}
-                        className={`px-3 py-2 rounded-md text-sm ${
-                          currentBudgetValue === amount
-                            ? "bg-green-600 text-white"
-                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                        }`}
-                      >
-                        {currencySymbol}{amount}
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Custom budget input */}
+                {/* Budget Selection Section */}
+                {selectedFriend && (
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">
-                      {useCustomBudget && parseInt(customBudget) > 500 
-                        ? `Custom budget (overriding slider): ${currencySymbol}${customBudget}`
-                        : "Or enter custom budget:"
-                      }
+                    <label className="block text-sm font-medium mb-2 md:mb-3">
+                      Budget: {getFormattedBudget()} {currentCurrency !== 'USD' ? `(${currentCurrency})` : ''}
                     </label>
-                    <input
-                      type="text"
-                      value={useCustomBudget && customBudget ? customBudget : getFormattedBudget()}
-                      onChange={(e) => {
-                        const newValue = e.target.value.replace(/[^\d]/g, ''); // Extract just numbers
-                        if (newValue === "") {
-                          handleCustomBudgetChange("");
-                        } else {
-                          const numericValue = parseInt(newValue);
-                          if (numericValue > 500) {
-                            handleCustomBudgetChange(newValue);
-                          } else {
-                            // For values <= 500, update the slider instead
-                            updateBudget(numericValue);
-                          }
-                        }
-                      }}
-                      onBlur={(e) => {
-                        const numericValue = e.target.value.replace(/[^\d]/g, '');
-                        if (numericValue === "") {
-                          handleCustomBudgetChange("");
-                        } else {
-                          const value = parseInt(numericValue);
-                          if (value > 500) {
-                            handleCustomBudgetChange(numericValue);
-                          } else {
-                            updateBudget(value);
-                          }
-                        }
-                      }}
-                      placeholder={`e.g., 50, 100, 750 (values over 500 override slider)`}
-                      className="w-full p-2 border rounded-md text-sm"
-                    />
-                    {useCustomBudget && parseInt(customBudget) > 500 && (
-                      <p className="text-xs text-blue-600 mt-1">
-                        ✓ Using custom budget: {currencySymbol}{customBudget} (slider disabled)
-                      </p>
-                    )}
-                  </div>
-                </div>
+                    
+                    {/* Budget Controls in a Card */}
+                    <div className="p-3 md:p-4 bg-gray-50 rounded-lg border">
+                      {/* Quick Budget Buttons */}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3 md:mb-4">
+                        {[25, 50, 100, 200].map((amount) => (
+                          <button
+                            key={amount}
+                            type="button"
+                            onClick={() => updateBudget(amount)}
+                            className={`px-2 sm:px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                              currentBudgetValue === amount
+                                ? "bg-green-600 text-white shadow-sm"
+                                : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-200"
+                            }`}
+                          >
+                            {currencySymbol}{amount}
+                          </button>
+                        ))}
+                      </div>
 
-                {/* Loading Animation */}
-                {generateRecommendationsMutation.isPending && (
-                  <div className="mb-6 flex justify-center">
-                    <GiftWrappingAnimation />
+                      {/* Budget Slider */}
+                      <div className="mb-3 md:mb-4">
+                        <span className="text-xs sm:text-sm text-gray-600 block mb-2">
+                          {useCustomBudget && parseInt(customBudget) > 500 
+                            ? "Slider disabled - using custom amount above £500" 
+                            : "Or drag to adjust budget"
+                          }
+                        </span>
+                        <input
+                          type="range"
+                          min={10}
+                          max={500}
+                          step={10}
+                          value={currentBudgetValue}
+                          onChange={(e) => updateBudget(parseInt(e.target.value))}
+                          className={`w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer ${
+                            useCustomBudget && parseInt(customBudget) > 500 ? 'opacity-50' : ''
+                          }`}
+                          disabled={useCustomBudget && parseInt(customBudget) > 500}
+                          style={{
+                            background: `linear-gradient(to right, #10B981 0%, #10B981 ${(currentBudgetValue / 500) * 100}%, #E5E7EB ${(currentBudgetValue / 500) * 100}%, #E5E7EB 100%)`
+                          }}
+                        />
+                        <div className="flex justify-between text-xs text-gray-500 mt-1">
+                          <span>{currencySymbol}10</span>
+                          <span>{currencySymbol}250</span>
+                          <span>{currencySymbol}500</span>
+                        </div>
+                      </div>
+
+                      {/* Custom Budget Input */}
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">
+                          Or enter custom budget (for amounts over £500):
+                        </label>
+                        <input
+                          type="text"
+                          value={useCustomBudget && customBudget ? customBudget : ""}
+                          onChange={(e) => {
+                            const newValue = e.target.value.replace(/[^\d]/g, '');
+                            handleCustomBudgetChange(newValue);
+                          }}
+                          placeholder="e.g., 750"
+                          className="w-full p-2 border rounded-md text-sm"
+                        />
+                        {useCustomBudget && parseInt(customBudget) > 500 && (
+                          <p className="text-xs text-green-600 mt-1">
+                            ✓ Using custom budget: {currencySymbol}{customBudget}
+                          </p>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 )}
 
-                {/* Generate Button with Loading Bar */}
-                <div className="relative">
-                  <button
-                    onClick={handleGenerateRecommendations}
-                    disabled={!selectedFriend || !budget || generateRecommendationsMutation.isPending}
-                    className={`w-full py-3 rounded-md transition-all duration-300 relative overflow-hidden ${
-                      generateRecommendationsMutation.isPending
-                        ? "bg-blue-400 text-white cursor-not-allowed"
-                        : !selectedFriend || !budget
-                        ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                        : "bg-blue-600 text-white hover:bg-blue-700"
-                    }`}
-                  >
-                    {/* Loading Bar Background */}
+                {/* Generate Button */}
+                {selectedFriend && (
+                  <div className="pt-2">
                     {generateRecommendationsMutation.isPending && (
-                      <div className="absolute inset-0 bg-blue-500">
-                        <div className="h-full bg-blue-600 animate-pulse"></div>
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-blue-400 to-transparent animate-shimmer"></div>
+                      <div className="mb-4 md:mb-6 flex justify-center">
+                        <GiftWrappingAnimation />
                       </div>
                     )}
                     
-                    {/* Button Text */}
-                    <span className="relative z-10 font-medium">
+                    <button
+                      onClick={handleGenerateRecommendations}
+                      disabled={!selectedFriend || !budget || generateRecommendationsMutation.isPending}
+                      className={`w-full py-3 md:py-4 rounded-lg text-base md:text-lg font-semibold transition-all duration-300 ${
+                        generateRecommendationsMutation.isPending
+                          ? "bg-blue-400 text-white cursor-not-allowed"
+                          : "bg-blue-600 text-white hover:bg-blue-700 hover:shadow-lg transform hover:scale-[1.02]"
+                      }`}
+                    >
                       {generateRecommendationsMutation.isPending
                         ? "🎁 Generating Perfect Gifts..."
-                        : "Generate Gift Recommendations"}
-                    </span>
-                  </button>
-                </div>
+                        : "🎁 Generate Gift Recommendations"}
+                    </button>
+                  </div>
+                )}
+
+                {/* Help Text */}
+                {!selectedFriend && (
+                  <div className="text-center py-6 md:py-8 text-gray-500">
+                    <div className="text-3xl md:text-4xl mb-3 md:mb-4">👆</div>
+                    <h3 className="text-base md:text-lg font-medium mb-2">Select a friend to get started</h3>
+                    <p className="text-sm md:text-base">Choose someone from your friends list to generate personalized gift recommendations!</p>
+                  </div>
+                )}
               </div>
             </div>
           )}
 
           {/* Recommendations Tab */}
           {activeTab === "recommendations" && (
-            <div className="bg-white rounded-lg p-6 shadow-sm" style={{overflow: 'visible'}}>
-              <h2 className="text-2xl font-semibold mb-6">💡 Gift Recommendations</h2>
+            <div className="bg-white rounded-lg p-3 lg:p-4 xl:p-6 shadow-sm" style={{overflow: 'visible'}}>
+              <h2 className="text-lg md:text-xl lg:text-2xl font-semibold mb-3 lg:mb-4">💡 Gift Recommendations</h2>
               
               {/* Show who recommendations are for */}
               {recommendationsForFriend && (
@@ -1636,7 +1561,7 @@ function Home() {
                 </div>
               ) : (
                 <>
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6" style={{overflow: 'visible'}}>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-6" style={{overflow: 'visible'}}>
                     {recommendations.map((gift, index) => (
                                         <div key={index} className="border rounded-lg shadow-sm hover:shadow-md transition-shadow relative flex flex-col" style={{overflow: 'visible'}}>
                       {/* Gift Image */}
@@ -1865,15 +1790,15 @@ function Home() {
 
           {/* Saved Tab */}
           {activeTab === "saved" && (
-            <div className="bg-white rounded-lg p-6 shadow-sm" style={{overflow: 'visible'}}>
-              <h2 className="text-2xl font-semibold mb-6">💝 Saved Gifts</h2>
+            <div className="bg-white rounded-lg p-3 lg:p-4 xl:p-6 shadow-sm" style={{overflow: 'visible'}}>
+              <h2 className="text-lg md:text-xl lg:text-2xl font-semibold mb-3 lg:mb-4">💝 Saved Gifts</h2>
               
               {savedGifts.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
                   No saved gifts yet. Save some recommendations to see them here!
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 lg:gap-4">
                   {savedGifts.map((savedGift, index) => {
                     const friend = friends.find(f => f.id === savedGift.friendId);
                     return (
