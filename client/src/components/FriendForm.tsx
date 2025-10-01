@@ -155,14 +155,34 @@ export function FriendForm({ friend, onClose }: FriendFormProps) {
 
   const createFriendMutation = useMutation({
     mutationFn: async (data: InsertFriend) => {
+      console.log('Sending friend data:', JSON.stringify(data, null, 2));
       const response = await fetch("/api/friends", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
         credentials: 'include'
       });
-      if (!response.ok) throw new Error("Failed to create friend");
-      return response.json();
+      
+      const responseText = await response.text();
+      console.log('API Response:', response.status, responseText);
+      
+      if (!response.ok) {
+        let errorMessage = "Failed to create friend";
+        try {
+          const errorData = JSON.parse(responseText);
+          if (errorData.message) {
+            errorMessage = errorData.message;
+          }
+          if (errorData.errors) {
+            errorMessage += ": " + errorData.errors.map((e: any) => e.message).join(", ");
+          }
+        } catch (e) {
+          errorMessage = responseText;
+        }
+        throw new Error(errorMessage);
+      }
+      
+      return JSON.parse(responseText);
     },
     onSuccess: () => {
       setFormError(null);
@@ -171,6 +191,7 @@ export function FriendForm({ friend, onClose }: FriendFormProps) {
     },
     onError: (error: unknown) => {
       const message = error instanceof Error ? error.message : "Failed to create friend";
+      console.error('Create friend error:', message);
       setFormError(message);
     },
   });
@@ -248,10 +269,32 @@ export function FriendForm({ friend, onClose }: FriendFormProps) {
     }
   };
 
+  // Helper function to check if form is valid for submission
+  const isFormValid = () => {
+    return formData.name.trim().length > 0 && 
+           formData.personalityTraits.length > 0 && 
+           formData.interests.length > 0;
+  };
+
   const handleSubmit = () => {
+    // Validate required fields
+    const errors = [];
+    
     if (!formData.name.trim()) {
-      setFormError("Name is required");
-      setCurrentStep(1);
+      errors.push("Name is required");
+    }
+    
+    if (formData.personalityTraits.length === 0) {
+      errors.push("At least one personality trait is required");
+    }
+    
+    if (formData.interests.length === 0) {
+      errors.push("At least one interest is required");
+    }
+
+    if (errors.length > 0) {
+      setFormError(errors.join(", "));
+      setCurrentStep(1); // Go back to first step where name/traits/interests are entered
       return;
     }
 
@@ -265,6 +308,9 @@ export function FriendForm({ friend, onClose }: FriendFormProps) {
       notes: formData.notes?.trim() || null,
       profilePicture: formData.profilePicture?.trim() || null,
     };
+
+    // Debug logging
+    console.log('Form submission data:', submissionData);
 
     if (friend) {
       updateFriendMutation.mutate(submissionData);
@@ -353,9 +399,9 @@ export function FriendForm({ friend, onClose }: FriendFormProps) {
       case 2:
         return formData.category?.trim() !== "";
       case 3:
-        return true; // Personality traits are optional
+        return formData.personalityTraits.length > 0; // At least one personality trait required
       case 4:
-        return true; // Interests are optional
+        return formData.interests.length > 0; // At least one interest required
       case 5:
         return true; // Notes are optional
       default:
@@ -367,7 +413,10 @@ export function FriendForm({ friend, onClose }: FriendFormProps) {
     if (!canProceed()) {
       if (currentStep === 1 && !formData.name.trim()) {
         setFormError("Name is required");
-        setCurrentStep(1);
+      } else if (currentStep === 3 && formData.personalityTraits.length === 0) {
+        setFormError("Please select at least one personality trait to continue");
+      } else if (currentStep === 4 && formData.interests.length === 0) {
+        setFormError("Please select at least one interest to continue");
       }
       return;
     }
@@ -386,10 +435,10 @@ export function FriendForm({ friend, onClose }: FriendFormProps) {
   };
 
   const stepTitles = [
-    "Basic Information",
+    "Basic Information*",
     "Relationship",
-    "Personality",
-    "Interests",
+    "Personality*",
+    "Interests*",
     "Additional Notes"
   ];
 
@@ -737,7 +786,12 @@ export function FriendForm({ friend, onClose }: FriendFormProps) {
           <div className="space-y-6">
             <div className="text-center">
               <h3 className="text-lg font-semibold text-gray-900 mb-2">What's {formData.name} like?</h3>
-              <p className="text-gray-600">Select personality traits that describe them</p>
+              <p className="text-gray-600">
+                Select personality traits that describe them <span className="text-red-500">*</span>
+                {formData.personalityTraits.length > 0 && (
+                  <span className="ml-2 text-green-600">✓ {formData.personalityTraits.length} selected</span>
+                )}
+              </p>
             </div>
 
             {/* Selected Traits */}
@@ -816,7 +870,12 @@ export function FriendForm({ friend, onClose }: FriendFormProps) {
           <div className="space-y-6">
             <div className="text-center">
               <h3 className="text-lg font-semibold text-gray-900 mb-2">What does {formData.name} enjoy?</h3>
-              <p className="text-gray-600">Select their interests and hobbies</p>
+              <p className="text-gray-600">
+                Select their interests and hobbies <span className="text-red-500">*</span>
+                {formData.interests.length > 0 && (
+                  <span className="ml-2 text-green-600">✓ {formData.interests.length} selected</span>
+                )}
+              </p>
             </div>
 
             {/* Selected Interests */}
@@ -996,6 +1055,32 @@ export function FriendForm({ friend, onClose }: FriendFormProps) {
         {/* Content */}
         <div className="flex-1 overflow-y-auto px-6 py-6 space-y-4">
           {renderStep()}
+          
+          {/* Form validation summary */}
+          {!isFormValid() && (currentStep === 5 || formError) && (
+            <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <svg className="h-5 w-5 text-amber-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-sm font-medium text-amber-800">
+                    Please complete the required fields:
+                  </h3>
+                  <div className="mt-2 text-sm text-amber-700">
+                    <ul className="list-disc list-inside space-y-1">
+                      {!formData.name.trim() && <li>Friend's name is required</li>}
+                      {formData.personalityTraits.length === 0 && <li>At least one personality trait is required</li>}
+                      {formData.interests.length === 0 && <li>At least one interest is required</li>}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          
           {formError && (
             <div
               role="alert"
@@ -1029,9 +1114,9 @@ export function FriendForm({ friend, onClose }: FriendFormProps) {
             {friend && (
               <button
                 onClick={handleSubmit}
-                disabled={createFriendMutation.isPending || updateFriendMutation.isPending || !formData.name.trim()}
+                disabled={createFriendMutation.isPending || updateFriendMutation.isPending || !isFormValid()}
                 className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                title={!formData.name.trim() ? "Name is required to save" : "Save friend data"}
+                title={!isFormValid() ? "Name, personality traits, and interests are required" : "Save friend data"}
               >
                 {updateFriendMutation.isPending
                   ? 'Saving...'
@@ -1042,7 +1127,15 @@ export function FriendForm({ friend, onClose }: FriendFormProps) {
             {currentStep < 5 && (
               <button
                 onClick={nextStep}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                disabled={!canProceed()}
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                title={
+                  currentStep === 3 && formData.personalityTraits.length === 0 
+                    ? "Please select at least one personality trait"
+                    : currentStep === 4 && formData.interests.length === 0
+                    ? "Please select at least one interest"
+                    : "Continue to next step"
+                }
               >
                 Next
               </button>
@@ -1051,8 +1144,9 @@ export function FriendForm({ friend, onClose }: FriendFormProps) {
             {currentStep === 5 && !friend && (
               <button
                 onClick={handleSubmit}
-                disabled={createFriendMutation.isPending || !formData.name.trim()}
+                disabled={createFriendMutation.isPending || !isFormValid()}
                 className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+                title={!isFormValid() ? "Name, personality traits, and interests are required" : "Save friend"}
               >
                 {createFriendMutation.isPending ? 'Saving...' : 'Save Friend'}
               </button>
