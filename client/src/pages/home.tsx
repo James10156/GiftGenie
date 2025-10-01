@@ -483,16 +483,26 @@ function Home() {
         interests: selectedFriend?.interests,
       });
     },
-    onSuccess: (data) => {
-      setRecommendations(data);
-      setRecommendationsForFriend(selectedFriend);
-      
-      // Track successful gift generation
-      if (selectedFriend) {
-        trackGiftGeneration(selectedFriend, parseInt(budget), selectedFriend.currency);
+    onSuccess: (data, variables) => {
+      // If we already have recommendations for this friend, append new ones
+      // Otherwise, replace the recommendations (normal generation)
+      if (recommendationsForFriend && recommendationsForFriend.id === variables.friendId && recommendations.length > 0) {
+        // Filter out duplicates by name and append new recommendations
+        const existingNames = new Set(recommendations.map(r => r.name.toLowerCase()));
+        const newRecommendations = data.filter((rec: any) => !existingNames.has(rec.name.toLowerCase()));
+        setRecommendations(prev => [...prev, ...newRecommendations]);
+      } else {
+        // First time generating or different friend
+        setRecommendations(data);
+        setRecommendationsForFriend(selectedFriend);
+        switchTab("recommendations");
       }
       
-      switchTab("recommendations");
+      // Track successful gift generation
+      const friendForTracking = recommendationsForFriend?.id === variables.friendId ? recommendationsForFriend : selectedFriend;
+      if (friendForTracking) {
+        trackGiftGeneration(friendForTracking, parseInt(budget), friendForTracking.currency);
+      }
     },
   });
 
@@ -555,6 +565,19 @@ function Home() {
       });
     }
   };
+
+  const handleSuggestMore = () => {
+    if (recommendationsForFriend && budget) {
+      const formattedBudget = getFormattedBudget();
+      generateRecommendationsMutation.mutate({
+        friendId: recommendationsForFriend.id,
+        budget: formattedBudget,
+      });
+    }
+  };
+
+  // Add a convenient way to check if generating
+  const isGenerating = generateRecommendationsMutation.isPending;
 
   const handleSaveGift = (gift: GiftRecommendation) => {
     if (selectedFriend) {
@@ -1542,8 +1565,9 @@ function Home() {
                   <p>Generate some recommendations to see personalized gift ideas here!</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6" style={{overflow: 'visible'}}>
-                  {recommendations.map((gift, index) => (
+                <>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6" style={{overflow: 'visible'}}>
+                    {recommendations.map((gift, index) => (
                                         <div key={index} className="border rounded-lg shadow-sm hover:shadow-md transition-shadow relative flex flex-col" style={{overflow: 'visible'}}>
                       {/* Gift Image */}
                       {gift.image && (
@@ -1740,7 +1764,31 @@ function Home() {
                       </div>
                     </div>
                   ))}
-                </div>
+                  </div>
+                  
+                  {/* Suggest More Button */}
+                  <div className="mt-6 text-center">
+                    <button
+                      onClick={handleSuggestMore}
+                      disabled={isGenerating}
+                      className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 mx-auto"
+                    >
+                      {isGenerating ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                          Generating more...
+                        </>
+                      ) : (
+                        <>
+                          🎁 Suggest More Gifts
+                        </>
+                      )}
+                    </button>
+                    <p className="text-sm text-gray-500 mt-2">
+                      Get additional gift recommendations for {recommendationsForFriend?.name}
+                    </p>
+                  </div>
+                </>
               )}
             </div>
           )}
