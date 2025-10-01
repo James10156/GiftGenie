@@ -38,6 +38,37 @@ export function FriendCard({ friend, onFindGifts }: FriendCardProps) {
     return colors[index];
   };
 
+  const getCurrencyFallbackSymbol = (currency: string) => {
+    const symbols: Record<string, string> = {
+      USD: '$',
+      EUR: '€',
+      GBP: '£',
+      CAD: 'CA$',
+      AUD: 'A$',
+      JPY: '¥',
+    };
+
+    return symbols[currency] ?? `${currency} `;
+  };
+
+  const formatBudget = (budget?: number | null, currency = 'USD') => {
+    if (budget === undefined || budget === null) return null;
+
+    try {
+      const formatter = new Intl.NumberFormat(undefined, {
+        style: 'currency',
+        currency,
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      });
+      return formatter.format(budget);
+    } catch {
+      return `${getCurrencyFallbackSymbol(currency)}${budget.toFixed(2)}`;
+    }
+  };
+
+  const formattedBudget = formatBudget(friend.budget, friend.currency ?? 'USD');
+
   return (
     <div className="border rounded-xl p-4 hover:shadow-md transition-shadow">
       <div className="flex items-center mb-4">
@@ -111,6 +142,23 @@ export function FriendCard({ friend, onFindGifts }: FriendCardProps) {
         </div>
       </div>
 
+      <div className="mb-4 space-y-2">
+        <div className="text-sm text-gray-600">Gift Preferences</div>
+        <div className="flex flex-col gap-1 text-sm text-gray-700">
+          <div className="flex items-center gap-2">
+            <span className="text-gray-500">Budget</span>
+            <span className="font-semibold" data-testid="friend-budget">
+              {formattedBudget ?? 'Not set'}
+            </span>
+          </div>
+          {friend.notes && (
+            <p className="text-gray-600" data-testid="friend-notes">
+              {friend.notes}
+            </p>
+          )}
+        </div>
+      </div>
+
       <div className="flex space-x-2">
         <Button 
           onClick={onFindGifts}
@@ -118,7 +166,13 @@ export function FriendCard({ friend, onFindGifts }: FriendCardProps) {
         >
           Find Gifts
         </Button>
-        <Button variant="outline" size="sm" onClick={() => setIsEditModalOpen(true)}>
+        <Button
+          variant="outline"
+          size="sm"
+          aria-label="Edit friend"
+          title="Edit friend"
+          onClick={() => setIsEditModalOpen(true)}
+        >
           <Edit size={16} />
         </Button>
       </div>

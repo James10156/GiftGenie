@@ -120,14 +120,16 @@ export function FriendForm({ friend, onClose }: FriendFormProps) {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [manualUrl, setManualUrl] = useState(friend?.profilePicture || "");
+  const [formError, setFormError] = useState<string | null>(null);
   const [formData, setFormData] = useState<InsertFriend>({
     name: friend?.name || "",
     personalityTraits: (friend?.personalityTraits as string[]) || [],
     interests: (friend?.interests as string[]) || [],
     category: friend?.category || "Friend",
     notes: friend?.notes || "",
-    country: friend?.country || "United Kingdom",
-    currency: friend?.currency || "GBP",
+  country: friend?.country || "United Kingdom",
+  currency: friend?.currency || "GBP",
+  budget: typeof (friend as Friend | undefined)?.budget === "number" ? (friend as Friend).budget : null,
     profilePicture: friend?.profilePicture || "",
   });
 
@@ -161,8 +163,13 @@ export function FriendForm({ friend, onClose }: FriendFormProps) {
       return response.json();
     },
     onSuccess: () => {
+      setFormError(null);
       queryClient.invalidateQueries({ queryKey: ["friends"] });
       onClose();
+    },
+    onError: (error: unknown) => {
+      const message = error instanceof Error ? error.message : "Failed to create friend";
+      setFormError(message);
     },
   });
 
@@ -178,14 +185,19 @@ export function FriendForm({ friend, onClose }: FriendFormProps) {
       return response.json();
     },
     onSuccess: () => {
+      setFormError(null);
       queryClient.invalidateQueries({ queryKey: ["friends"] });
       onClose();
+    },
+    onError: (error: unknown) => {
+      const message = error instanceof Error ? error.message : "Failed to update friend";
+      setFormError(message);
     },
   });
 
   const handleCountryChange = (country: string) => {
-    const currency = COUNTRY_CURRENCY_MAP[country] || 'USD';
-    setFormData({ ...formData, country, currency });
+  const currency = COUNTRY_CURRENCY_MAP[country] || 'USD';
+  setFormData({ ...formData, country, currency });
   };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -235,6 +247,14 @@ export function FriendForm({ friend, onClose }: FriendFormProps) {
   };
 
   const handleSubmit = () => {
+    if (!formData.name.trim()) {
+      setFormError("Name is required");
+      setCurrentStep(1);
+      return;
+    }
+
+    setFormError(null);
+
     if (friend) {
       updateFriendMutation.mutate(formData);
     } else {
@@ -250,14 +270,16 @@ export function FriendForm({ friend, onClose }: FriendFormProps) {
     }
   };
 
-  const addPersonalityTrait = (trait: string) => {
-    if (trait && !formData.personalityTraits.includes(trait)) {
-      setFormData({
-        ...formData,
-        personalityTraits: [...formData.personalityTraits, trait]
-      });
-    }
-    setNewTrait("");
+  const togglePersonalityTrait = (trait: string) => {
+    if (!trait) return;
+
+    const isSelected = formData.personalityTraits.includes(trait);
+    setFormData({
+      ...formData,
+      personalityTraits: isSelected
+        ? (formData.personalityTraits as string[]).filter(t => t !== trait)
+        : [...formData.personalityTraits, trait]
+    });
   };
 
   const removePersonalityTrait = (trait: string) => {
@@ -267,14 +289,15 @@ export function FriendForm({ friend, onClose }: FriendFormProps) {
     });
   };
 
-  const addInterest = (interest: string) => {
-    if (interest && !formData.interests.includes(interest)) {
+  const addPersonalityTrait = (trait: string) => {
+    const trimmed = trait.trim();
+    if (trimmed && !formData.personalityTraits.includes(trimmed)) {
       setFormData({
         ...formData,
-        interests: [...formData.interests, interest]
+        personalityTraits: [...formData.personalityTraits, trimmed]
       });
     }
-    setNewInterest("");
+    setNewTrait("");
   };
 
   const removeInterest = (interest: string) => {
@@ -282,6 +305,29 @@ export function FriendForm({ friend, onClose }: FriendFormProps) {
       ...formData,
       interests: (formData.interests as string[]).filter(i => i !== interest)
     });
+  };
+
+  const toggleInterest = (interest: string) => {
+    if (!interest) return;
+
+    const isSelected = formData.interests.includes(interest);
+    setFormData({
+      ...formData,
+      interests: isSelected
+        ? (formData.interests as string[]).filter(i => i !== interest)
+        : [...formData.interests, interest]
+    });
+  };
+
+  const addInterest = (interest: string) => {
+    const trimmed = interest.trim();
+    if (trimmed && !formData.interests.includes(trimmed)) {
+      setFormData({
+        ...formData,
+        interests: [...formData.interests, trimmed]
+      });
+    }
+    setNewInterest("");
   };
 
   const handleCategorySelect = (category: string) => {
@@ -307,7 +353,17 @@ export function FriendForm({ friend, onClose }: FriendFormProps) {
   };
 
   const nextStep = () => {
-    if (currentStep < 5 && canProceed()) {
+    if (!canProceed()) {
+      if (currentStep === 1 && !formData.name.trim()) {
+        setFormError("Name is required");
+        setCurrentStep(1);
+      }
+      return;
+    }
+
+    setFormError(null);
+
+    if (currentStep < 5) {
       setCurrentStep(currentStep + 1);
     }
   };
@@ -338,7 +394,9 @@ export function FriendForm({ friend, onClose }: FriendFormProps) {
 
             {/* Profile Picture */}
             <div className="text-center">
-              <label className="block text-sm font-medium mb-3">Profile Picture (Optional)</label>
+              <label className="block text-sm font-medium mb-3" id="profile-picture-label" htmlFor="profile-picture-url">
+                Profile Picture (Optional)
+              </label>
               
               {/* Profile Picture Display */}
               <div className="mb-4">
@@ -368,9 +426,10 @@ export function FriendForm({ friend, onClose }: FriendFormProps) {
               <div className="space-y-3">
                 {/* File Upload */}
                 <div>
-                  <label className="block text-xs text-gray-600 mb-2">Upload from your device</label>
+                  <label className="block text-xs text-gray-600 mb-2" htmlFor="profile-picture-upload">Upload from your device</label>
                   <div className="relative">
                     <input
+                      id="profile-picture-upload"
                       type="file"
                       accept="image/*"
                       onChange={handleFileUpload}
@@ -437,8 +496,9 @@ export function FriendForm({ friend, onClose }: FriendFormProps) {
 
                     {/* URL Input */}
                     <div>
-                      <label className="block text-xs text-gray-600 mb-2">Enter image URL</label>
+                      <label className="block text-xs text-gray-600 mb-2" htmlFor="profile-picture-url">Profile Picture URL</label>
                       <input
+                        id="profile-picture-url"
                         type="url"
                         placeholder="https://example.com/image.jpg"
                         value={manualUrl}
@@ -453,14 +513,21 @@ export function FriendForm({ friend, onClose }: FriendFormProps) {
 
             {/* Name */}
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <label className="block text-sm font-medium mb-2" htmlFor="friend-name">
                 Friend's Name <span className="text-red-500">*</span>
               </label>
               <input
+                id="friend-name"
                 type="text"
                 placeholder="Enter your friend's name"
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setFormData({ ...formData, name: value });
+                  if (formError && formError.toLowerCase().includes("name")) {
+                    setFormError(null);
+                  }
+                }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 required
               />
@@ -468,10 +535,11 @@ export function FriendForm({ friend, onClose }: FriendFormProps) {
 
             {/* Country */}
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <label className="block text-sm font-medium mb-2" htmlFor="friend-country">
                 Country <span className="text-red-500">*</span>
               </label>
               <select
+                id="friend-country"
                 value={formData.country}
                 onChange={(e) => handleCountryChange(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -481,9 +549,37 @@ export function FriendForm({ friend, onClose }: FriendFormProps) {
                   <option key={country} value={country}>{country}</option>
                 ))}
               </select>
-              <p className="text-sm text-gray-500 mt-1">
-                Currency: {COUNTRY_CURRENCY_MAP[formData.country || 'Other'] || 'USD'}
-              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2" htmlFor="friend-budget">
+                    Preferred Budget
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    id="friend-budget"
+                    value={formData.budget ?? ''}
+                    onChange={(e) => setFormData({ ...formData, budget: e.target.value ? Number(e.target.value) : null })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Enter a budget"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2" htmlFor="friend-currency">
+                    Currency
+                  </label>
+                  <select
+                    value={formData.currency}
+                    id="friend-currency"
+                    onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    {Array.from(new Set(Object.values(COUNTRY_CURRENCY_MAP))).map(currency => (
+                      <option key={currency} value={currency}>{currency}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
             </div>
           </div>
         );
@@ -621,12 +717,12 @@ export function FriendForm({ friend, onClose }: FriendFormProps) {
                   <button
                     key={trait}
                     type="button"
-                    onClick={() => addPersonalityTrait(trait)}
-                    disabled={formData.personalityTraits.includes(trait)}
+                    onClick={() => togglePersonalityTrait(trait)}
+                    aria-pressed={formData.personalityTraits.includes(trait)}
                     className={`p-2 text-sm border rounded-lg transition-colors ${
                       formData.personalityTraits.includes(trait)
-                        ? 'bg-blue-600 text-white border-blue-600'
-                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 disabled:opacity-50'
+                        ? 'bg-blue-600 text-white border-blue-600 selected'
+                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
                     }`}
                   >
                     {trait}
@@ -641,7 +737,7 @@ export function FriendForm({ friend, onClose }: FriendFormProps) {
               <div className="flex gap-2">
                 <input
                   type="text"
-                  placeholder="Enter a custom personality trait"
+                  placeholder="Add custom trait"
                   value={newTrait}
                   onChange={(e) => setNewTrait(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && addPersonalityTrait(newTrait)}
@@ -700,12 +796,12 @@ export function FriendForm({ friend, onClose }: FriendFormProps) {
                   <button
                     key={interest}
                     type="button"
-                    onClick={() => addInterest(interest)}
-                    disabled={formData.interests.includes(interest)}
+                    onClick={() => toggleInterest(interest)}
+                    aria-pressed={formData.interests.includes(interest)}
                     className={`p-2 text-sm border rounded-lg transition-colors ${
                       formData.interests.includes(interest)
-                        ? 'bg-green-600 text-white border-green-600'
-                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 disabled:opacity-50'
+                        ? 'bg-green-600 text-white border-green-600 selected'
+                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
                     }`}
                   >
                     {interest}
@@ -720,7 +816,7 @@ export function FriendForm({ friend, onClose }: FriendFormProps) {
               <div className="flex gap-2">
                 <input
                   type="text"
-                  placeholder="Enter a custom interest or hobby"
+                  placeholder="Add custom interest"
                   value={newInterest}
                   onChange={(e) => setNewInterest(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && addInterest(newInterest)}
@@ -748,8 +844,9 @@ export function FriendForm({ friend, onClose }: FriendFormProps) {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2">Additional Notes (Optional)</label>
+              <label className="block text-sm font-medium mb-2" htmlFor="friend-notes">Additional Notes (Optional)</label>
               <textarea
+                id="friend-notes"
                 placeholder="Any other details about your friend that might be helpful for gift recommendations? For example: recent life events, current interests, things they've mentioned wanting, etc."
                 value={formData.notes || ""}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
@@ -766,7 +863,8 @@ export function FriendForm({ friend, onClose }: FriendFormProps) {
               <h4 className="font-medium text-gray-900 mb-3">Summary</h4>
               <div className="space-y-2 text-sm">
                 <p><strong>Name:</strong> {formData.name}</p>
-                <p><strong>Country:</strong> {formData.country} ({COUNTRY_CURRENCY_MAP[formData.country || 'Other'] || 'USD'})</p>
+                <p><strong>Country:</strong> {formData.country} ({formData.currency || COUNTRY_CURRENCY_MAP[formData.country || 'Other'] || 'USD'})</p>
+                <p><strong>Budget:</strong> {typeof formData.budget === 'number' ? `${formData.currency || COUNTRY_CURRENCY_MAP[formData.country || 'Other'] || 'USD'} ${formData.budget}` : 'Not specified'}</p>
                 <p><strong>Relationship:</strong> {formData.category}</p>
                 {formData.personalityTraits.length > 0 && (
                   <p><strong>Personality:</strong> {formData.personalityTraits.join(', ')}</p>
@@ -839,25 +937,41 @@ export function FriendForm({ friend, onClose }: FriendFormProps) {
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto px-6 py-6">
+        <div className="flex-1 overflow-y-auto px-6 py-6 space-y-4">
           {renderStep()}
+          {formError && (
+            <div
+              role="alert"
+              className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+            >
+              {formError}
+            </div>
+          )}
         </div>
 
         {/* Footer */}
         <div className="border-t border-gray-200 px-6 py-4 flex items-center justify-between">
-          <button
-            onClick={prevStep}
-            disabled={currentStep === 1}
-            className="px-4 py-2 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Previous
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={prevStep}
+              disabled={currentStep === 1}
+              className="px-4 py-2 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Previous
+            </button>
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-gray-600 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100"
+              type="button"
+            >
+              Cancel
+            </button>
+          </div>
           <div className="flex space-x-2">
             {currentStep < 5 ? (
               <button
                 onClick={nextStep}
-                disabled={!canProceed()}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
               >
                 Next
               </button>
@@ -871,7 +985,7 @@ export function FriendForm({ friend, onClose }: FriendFormProps) {
                   ? 'Saving...'
                   : friend
                   ? 'Update Friend'
-                  : 'Add Friend'
+                  : 'Save Friend'
                 }
               </button>
             )}

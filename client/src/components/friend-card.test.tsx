@@ -38,8 +38,8 @@ describe('FriendCard', () => {
     render(<FriendCard friend={mockFriend} onFindGifts={mockOnFindGifts} />);
 
     expect(screen.getByText('John Doe')).toBeInTheDocument();
-    expect(screen.getByText('$100')).toBeInTheDocument();
-    expect(screen.getByText('United States')).toBeInTheDocument();
+    expect(screen.getByText('$100.00')).toBeInTheDocument();
+    expect(screen.getByText(/United States/)).toBeInTheDocument();
     expect(screen.getByText('Best friend from college')).toBeInTheDocument();
   });
 
@@ -76,11 +76,11 @@ describe('FriendCard', () => {
     expect(profileImage).toHaveAttribute('src', 'https://example.com/profile.jpg');
   });
 
-  it('calls onFindGifts when "Find Perfect Gifts" button is clicked', async () => {
+  it('calls onFindGifts when the primary action button is clicked', async () => {
     const user = userEvent.setup();
     render(<FriendCard friend={mockFriend} onFindGifts={mockOnFindGifts} />);
 
-    const findGiftsButton = screen.getByText('Find Perfect Gifts');
+    const findGiftsButton = screen.getByText('Find Gifts');
     await user.click(findGiftsButton);
 
     expect(mockOnFindGifts).toHaveBeenCalledTimes(1);
@@ -90,7 +90,7 @@ describe('FriendCard', () => {
     const user = userEvent.setup();
     render(<FriendCard friend={mockFriend} onFindGifts={mockOnFindGifts} />);
 
-    const editButton = screen.getByRole('button', { name: /edit/i });
+    const editButton = screen.getByRole('button', { name: /edit friend/i });
     await user.click(editButton);
 
     expect(screen.getByTestId('edit-friend-modal')).toBeInTheDocument();
@@ -101,7 +101,7 @@ describe('FriendCard', () => {
     render(<FriendCard friend={mockFriend} onFindGifts={mockOnFindGifts} />);
 
     // Open modal
-    const editButton = screen.getByRole('button', { name: /edit/i });
+  const editButton = screen.getByRole('button', { name: /edit friend/i });
     await user.click(editButton);
 
     // Close modal
@@ -121,7 +121,7 @@ describe('FriendCard', () => {
 
     render(<FriendCard friend={todayFriend} onFindGifts={mockOnFindGifts} />);
 
-    expect(screen.getByText('Today')).toBeInTheDocument();
+  expect(screen.getByText(/Today/)).toBeInTheDocument();
   });
 
   it('handles friends without creation date', () => {
@@ -132,7 +132,7 @@ describe('FriendCard', () => {
 
     render(<FriendCard friend={friendWithoutDate as any} onFindGifts={mockOnFindGifts} />);
 
-    expect(screen.getByText('Recently')).toBeInTheDocument();
+  expect(screen.getByText(/Recently/)).toBeInTheDocument();
   });
 
   it('handles long names for initials generation', () => {
@@ -179,7 +179,7 @@ describe('FriendCard', () => {
 
     render(<FriendCard friend={friendWithEuros} onFindGifts={mockOnFindGifts} />);
 
-    expect(screen.getByText('€150')).toBeInTheDocument();
+  expect(screen.getByText('€150.00')).toBeInTheDocument();
   });
 
   it('handles zero budget', () => {
@@ -190,7 +190,7 @@ describe('FriendCard', () => {
 
     render(<FriendCard friend={friendWithZeroBudget} onFindGifts={mockOnFindGifts} />);
 
-    expect(screen.getByText('$0')).toBeInTheDocument();
+  expect(screen.getByText('$0.00')).toBeInTheDocument();
   });
 
   it('truncates long notes appropriately', () => {
@@ -216,7 +216,7 @@ describe('FriendCard', () => {
     const user = userEvent.setup();
     render(<FriendCard friend={mockFriend} onFindGifts={mockOnFindGifts} />);
 
-    const findGiftsButton = screen.getByText('Find Perfect Gifts');
+  const findGiftsButton = screen.getByText('Find Gifts');
     
     // Test that the button is interactive
     await user.hover(findGiftsButton);
@@ -258,8 +258,8 @@ describe('FriendCard', () => {
     it('has accessible button labels', () => {
       render(<FriendCard friend={mockFriend} onFindGifts={mockOnFindGifts} />);
 
-      const editButton = screen.getByRole('button', { name: /edit/i });
-      const findGiftsButton = screen.getByRole('button', { name: /find perfect gifts/i });
+  const editButton = screen.getByRole('button', { name: /edit friend/i });
+  const findGiftsButton = screen.getByRole('button', { name: /find gifts/i });
 
       expect(editButton).toBeInTheDocument();
       expect(findGiftsButton).toBeInTheDocument();

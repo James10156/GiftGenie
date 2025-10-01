@@ -1,11 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { getProductImage, getAlternativeProductImage } from './imageService';
 
-// Mock node-fetch
 const mockFetch = vi.fn();
-vi.mock('node-fetch', () => ({
-  default: mockFetch,
-}));
 
 // Mock environment variables
 const mockEnv = {
@@ -16,12 +12,14 @@ const mockEnv = {
 describe('Image Service', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubGlobal('fetch', mockFetch as unknown as typeof fetch);
     // Mock process.env
     Object.assign(process.env, mockEnv);
   });
 
   afterEach(() => {
     vi.clearAllMocks();
+    vi.unstubAllGlobals();
   });
 
   describe('getProductImage', () => {
