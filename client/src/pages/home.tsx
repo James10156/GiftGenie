@@ -812,7 +812,7 @@ function Home() {
                   No friends found matching your search. Try a different search term.
                 </div>
               ) : friendsViewMode === 'grid' ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 lg:gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4">
                   {filteredFriends.map((friend, index) => (
                     <div
                       key={friend.id}
@@ -1798,7 +1798,7 @@ function Home() {
                   No saved gifts yet. Save some recommendations to see them here!
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 lg:gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4">
                   {savedGifts.map((savedGift, index) => {
                     const friend = friends.find(f => f.id === savedGift.friendId);
                     return (
