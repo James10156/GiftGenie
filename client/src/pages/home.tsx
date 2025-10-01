@@ -1351,10 +1351,6 @@ function Home() {
                                   <span>📍</span>
                                   <span className="truncate">{selectedFriend.country}</span>
                                 </span>
-                                <span className="flex items-center gap-1">
-                                  <span>💰</span>
-                                  {selectedFriend.currency}
-                                </span>
                                 {(selectedFriend.gender || selectedFriend.ageRange) && (
                                   <span className="flex items-center gap-1">
                                     <span>👤</span>
