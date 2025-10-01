@@ -1427,12 +1427,12 @@ function Home() {
                           step={10}
                           value={currentBudgetValue}
                           onChange={(e) => updateBudget(parseInt(e.target.value))}
-                          className={`w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer ${
+                          className={`w-full slider cursor-pointer ${
                             useCustomBudget && parseInt(customBudget) > 500 ? 'opacity-50' : ''
                           }`}
                           disabled={useCustomBudget && parseInt(customBudget) > 500}
                           style={{
-                            background: `linear-gradient(to right, #10B981 0%, #10B981 ${(currentBudgetValue / 500) * 100}%, #E5E7EB ${(currentBudgetValue / 500) * 100}%, #E5E7EB 100%)`
+                            background: `linear-gradient(to right, #10B981 0%, #10B981 ${((currentBudgetValue - 10) / (500 - 10)) * 100}%, #E5E7EB ${((currentBudgetValue - 10) / (500 - 10)) * 100}%, #E5E7EB 100%)`
                           }}
                         />
                         <div className="flex justify-between text-xs text-gray-500 mt-1">
@@ -1449,7 +1449,7 @@ function Home() {
                         </label>
                         <input
                           type="text"
-                          value={useCustomBudget && customBudget ? customBudget : ""}
+                          value={customBudget}
                           onChange={(e) => {
                             const newValue = e.target.value.replace(/[^\d]/g, '');
                             handleCustomBudgetChange(newValue);

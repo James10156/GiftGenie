@@ -240,3 +240,62 @@
 .animate-shimmer {
   animation: shimmer 2s infinite;
 }
+
+/* Custom slider styling - Complete override with !important */
+input[type="range"].slider {
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  width: 100% !important;
+  height: 8px !important;
+  border-radius: 4px !important;
+  outline: none !important;
+  cursor: pointer !important;
+}
+
+/* Webkit browsers (Chrome, Safari, Edge) */
+input[type="range"].slider::-webkit-slider-track {
+  -webkit-appearance: none !important;
+  height: 8px !important;
+  border-radius: 4px !important;
+  background: transparent !important;
+  border: none !important;
+}
+
+input[type="range"].slider::-webkit-slider-thumb {
+  -webkit-appearance: none !important;
+  height: 20px !important;
+  width: 20px !important;
+  border-radius: 50% !important;
+  background: #10B981 !important;
+  border: 2px solid white !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+  cursor: pointer !important;
+  margin-top: 0 !important;
+}
+
+/* Firefox */
+input[type="range"].slider::-moz-range-track {
+  height: 8px !important;
+  border-radius: 4px !important;
+  background: transparent !important;
+  border: none !important;
+}
+
+input[type="range"].slider::-moz-range-thumb {
+  height: 16px !important;
+  width: 16px !important;
+  border-radius: 50% !important;
+  background: #10B981 !important;
+  border: 2px solid white !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+  cursor: pointer !important;
+}
+
+/* Focus states */
+input[type="range"].slider:focus::-webkit-slider-thumb {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1), 0 0 0 3px rgba(16, 185, 129, 0.2) !important;
+}
+
+input[type="range"].slider:focus::-moz-range-thumb {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1), 0 0 0 3px rgba(16, 185, 129, 0.2) !important;
+}
