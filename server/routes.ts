@@ -293,15 +293,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Analytics endpoints
   app.post("/api/analytics/events", async (req: AuthenticatedRequest, res) => {
     try {
+      console.log("[analytics-events] Incoming payload:", JSON.stringify(req.body, null, 2)); // Debug log
       const result = insertUserAnalyticsSchema.safeParse(req.body);
       if (!result.success) {
+        console.error("[analytics-events] Validation failed:", result.error.issues); // Debug log
         return res.status(400).json({ 
           message: "Invalid analytics data",
           errors: result.error.issues 
         });
       }
-
-      const analytics = await storageAdapter.createUserAnalytics(result.data, req.user?.id);
+      // Determine userId for analytics event
+      const userId = req.user?.id || req.body.userId || req.body.sessionId;
+      if (userId) {
+        let userExists = await storageAdapter.getUser(userId);
+        if (!userExists) {
+          // Create minimal guest user record
+          await storageAdapter.createUser({
+            id: userId,
+            username: userId,
+            password: "", // No password for guest
+            isAdmin: false
+          });
+        }
+      }
+      // Always pass userId to analytics creation
+      const analytics = await storageAdapter.createUserAnalytics(result.data, userId);
+      console.log("[analytics-events] Inserted analytics:", JSON.stringify(analytics, null, 2)); // Debug log
       res.status(201).json(analytics);
     } catch (error) {
       console.error("Failed to create analytics event:", error);
@@ -318,10 +335,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         analytics = await storageAdapter.getUserAnalytics(req.user!.id, limit);
       }
+      console.log("[analytics-events] Fetched analytics:", JSON.stringify(analytics, null, 2)); // Debug log
       res.json(analytics);
     } catch (error) {
       console.error("Failed to fetch analytics:", error);
-      res.status(500).json({ message: "Failed to fetch analytics data" });
+      if (error && error.stack) console.error(error.stack); // Print stack trace for debugging
+      res.status(500).json({ message: "Failed to fetch analytics data", error: error?.message || error });
     }
   });
 

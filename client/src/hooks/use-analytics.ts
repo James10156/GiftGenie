@@ -128,7 +128,7 @@ export function useAnalytics() {
       sessionId,
       userAgent: navigator.userAgent,
     };
-
+    console.log('[trackEvent] Sending analytics event:', event); // Debug log
     eventMutation.mutate(event);
   }, [sessionId, eventMutation]);
 

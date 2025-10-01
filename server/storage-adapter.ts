@@ -446,6 +446,22 @@ export class StorageAdapter implements IStorageAdapter {
   enableDatabaseStorage(databaseStorage: any) {
     this.databaseStorage = databaseStorage;
   }
+
+  async getAllUserAnalytics(limit: number = 100): Promise<UserAnalytics[]> {
+    try {
+      if (this.databaseStorage) {
+        const result = await this.databaseStorage.getAllUserAnalytics(limit);
+        console.log('[storageAdapter.getAllUserAnalytics] result:', JSON.stringify(result, null, 2));
+        return result;
+      }
+      const memResult = await this.memStorage.getAllUserAnalytics(limit);
+      console.log('[storageAdapter.getAllUserAnalytics] memResult:', JSON.stringify(memResult, null, 2));
+      return memResult;
+    } catch (error) {
+      console.error('[storageAdapter.getAllUserAnalytics] Error:', error);
+      throw error;
+    }
+  }
 }
 
 export const storageAdapter = new StorageAdapter();
