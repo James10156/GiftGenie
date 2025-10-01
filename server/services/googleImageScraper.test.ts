@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { getGoogleImageResult, getProductImageFromGoogle } from './googleImageScraper';
 
 // Mock node-fetch
-const mockFetch = vi.fn();
+const mockFetch = vi.hoisted(() => vi.fn());
 vi.mock('node-fetch', () => ({
   default: mockFetch,
 }));
@@ -10,6 +10,7 @@ vi.mock('node-fetch', () => ({
 describe('Google Images Scraper', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockFetch.mockReset();
     // Clear any existing timers
     vi.useFakeTimers();
   });
@@ -260,7 +261,11 @@ describe('Google Images Scraper', () => {
           },
         });
 
-      const result = await getProductImageFromGoogle('Nintendo Switch', 'Gaming console');
+      const resultPromise = getProductImageFromGoogle('Nintendo Switch', 'Gaming console');
+
+      await vi.advanceTimersByTimeAsync(5000);
+
+      const result = await resultPromise;
 
       expect(result).toBe('https://final-strategy.com/image.jpg');
       expect(mockFetch).toHaveBeenCalledTimes(4);
@@ -272,11 +277,9 @@ describe('Google Images Scraper', () => {
         text: () => Promise.resolve('<html></html>'),
       });
 
-      const startTime = Date.now();
-      await getProductImageFromGoogle('test product');
-      
-      // Run all pending timers to simulate delays
-      vi.runAllTimers();
+      const promise = getProductImageFromGoogle('test product');
+      await vi.advanceTimersByTimeAsync(5000);
+      await promise;
       
       expect(mockFetch).toHaveBeenCalledTimes(3); // 3 strategies attempted
     });
@@ -287,7 +290,9 @@ describe('Google Images Scraper', () => {
         text: () => Promise.resolve('<html></html>'),
       });
 
-      const result = await getProductImageFromGoogle('non-existent product');
+      const promise = getProductImageFromGoogle('non-existent product');
+      await vi.advanceTimersByTimeAsync(5000);
+      const result = await promise;
 
       expect(result).toBeNull();
     });

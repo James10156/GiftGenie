@@ -1,5 +1,13 @@
 import '@testing-library/jest-dom';
 import { vi } from 'vitest';
+import { TextEncoder, TextDecoder } from 'util';
+
+process.env.NODE_ENV = process.env.NODE_ENV ?? 'test';
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+(globalThis as any).TextEncoder = TextEncoder;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+(globalThis as any).TextDecoder = TextDecoder;
 
 if (typeof window !== 'undefined') {
   Object.defineProperty(window, 'matchMedia', {

@@ -63,6 +63,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       service: "GiftGenie API"
     });
   });
+
+  // Debug endpoint to inspect current user context (used in tests/diagnostics)
+  app.get("/api/debug/user", (req: AuthenticatedRequest, res) => {
+    res.json({
+      user: req.user ?? null,
+      timestamp: new Date().toISOString(),
+    });
+  });
   
   // Friends endpoints
   app.get("/api/friends", async (req: AuthenticatedRequest, res) => {
@@ -106,7 +114,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const friend = await storageAdapter.createFriend(result.data, req.user?.id);
+      const friendData = result.data;
+      const nameValid = typeof friendData.name === "string" && friendData.name.trim().length > 0;
+      const normalizedTraits = Array.isArray(friendData.personalityTraits)
+        ? friendData.personalityTraits
+            .map((trait) => (typeof trait === "string" ? trait.trim() : ""))
+            .filter(Boolean)
+        : [];
+      const normalizedInterests = Array.isArray(friendData.interests)
+        ? friendData.interests
+            .map((interest) => (typeof interest === "string" ? interest.trim() : ""))
+            .filter(Boolean)
+        : [];
+
+      const traitsValid = normalizedTraits.length > 0;
+      const interestsValid = normalizedInterests.length > 0;
+      const currencyProvided = typeof friendData.currency === "string" ? friendData.currency.trim() : undefined;
+      const countryProvided = typeof friendData.country === "string" ? friendData.country.trim() : undefined;
+
+      if (!nameValid || !traitsValid || !interestsValid) {
+        return res.status(400).json({
+          message: "Invalid friend data",
+          errors: [
+            ...(!nameValid ? [{ path: ["name"], message: "Name is required" }] : []),
+            ...(!traitsValid ? [{ path: ["personalityTraits"], message: "At least one personality trait is required" }] : []),
+            ...(!interestsValid ? [{ path: ["interests"], message: "At least one interest is required" }] : []),
+          ]
+        });
+      }
+
+      const friend = await storageAdapter.createFriend({
+        ...friendData,
+        name: friendData.name.trim(),
+        personalityTraits: normalizedTraits,
+        interests: normalizedInterests,
+        currency: currencyProvided && currencyProvided.length > 0 ? currencyProvided : "USD",
+        country: countryProvided && countryProvided.length > 0 ? countryProvided : "United States",
+      }, req.user?.id);
       res.status(201).json(friend);
     } catch (error) {
       res.status(500).json({ message: "Failed to create friend" });
@@ -153,25 +197,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     let recommendations: any = null;
     
     try {
-      const { friendId, budget: budgetStr } = req.body;
-      
-      if (!friendId || !budgetStr) {
+      const { friendId, budget } = req.body;
+
+      if (!friendId || budget === undefined || budget === null) {
         errorMessage = "Friend ID and budget are required";
         return res.status(400).json({ 
           message: errorMessage
         });
       }
 
-      // Parse budget from string format (e.g., "£50" -> 50)
-      const budget = parseFloat(budgetStr.replace(/[^\d\.]/g, '')) || 0;
-      
-      if (budget <= 0) {
+      // Parse budget from string or number format (e.g., "£50" -> 50)
+      const numericBudget = typeof budget === 'number'
+        ? budget
+        : parseFloat(String(budget).replace(/[^\d\.]/g, ''));
+
+      if (!numericBudget || Number.isNaN(numericBudget) || numericBudget <= 0) {
         errorMessage = "Budget must be a positive number";
         return res.status(400).json({ 
           message: errorMessage
         });
       }
-
+      
       const friend = await storageAdapter.getFriend(friendId, req.user?.id);
       if (!friend) {
         errorMessage = "Friend not found";
@@ -183,7 +229,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       recommendations = await generateGiftRecommendations(
         friend.personalityTraits,
         friend.interests,
-        budget,
+        numericBudget,
         friend.name,
         friend.currency || "USD",
         friend.country || "United States",
@@ -201,7 +247,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: true,
         metadata: {
           friendId: String(friendId),
-          budget: String(budget),
+          budget: String(numericBudget),
           currency: String(friend.currency || "USD"),
           country: String(friend.country || "United States"),
           recommendationsCount: String(Array.isArray(recommendations) ? recommendations.length : 0),
@@ -268,6 +314,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ 
           message: "Invalid saved gift data",
           errors: result.error.issues 
+        });
+      }
+
+      const savedGiftData = result.data;
+      const friendIdValid = typeof savedGiftData.friendId === "string" && savedGiftData.friendId.trim().length > 0;
+      const giftDataValid = savedGiftData.giftData && typeof savedGiftData.giftData === "object";
+      const shops = giftDataValid && Array.isArray((savedGiftData.giftData as any).shops) ? (savedGiftData.giftData as any).shops : [];
+      const requiredFieldsValid = giftDataValid &&
+        ["name", "description", "price", "matchPercentage", "image"].every((field) => {
+          const value = (savedGiftData.giftData as any)[field];
+          if (field === "matchPercentage") {
+            return typeof value === "number" && value >= 0;
+          }
+          return typeof value === "string" && value.trim().length > 0;
+        });
+      const shopsValid = shops.length > 0 && shops.every((shop: any) => (
+        shop &&
+        typeof shop.name === "string" && shop.name.trim().length > 0 &&
+        typeof shop.url === "string" && shop.url.trim().length > 0 &&
+        typeof shop.price === "string" && shop.price.trim().length > 0 &&
+        typeof shop.inStock === "boolean"
+      ));
+
+      if (!friendIdValid || !giftDataValid || !requiredFieldsValid || !shopsValid) {
+        return res.status(400).json({
+          message: "Invalid saved gift data",
+          errors: [
+            ...(!friendIdValid ? [{ path: ["friendId"], message: "friendId is required" }] : []),
+            ...(!giftDataValid ? [{ path: ["giftData"], message: "giftData must be provided" }] : []),
+            ...(!requiredFieldsValid ? [{ path: ["giftData"], message: "giftData is missing required fields" }] : []),
+            ...(!shopsValid ? [{ path: ["giftData", "shops"], message: "At least one valid shop is required" }] : []),
+          ]
         });
       }
 

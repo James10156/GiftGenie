@@ -43,6 +43,6 @@ export default defineConfig({
       ["../server/**/*.test.ts", "node"],
     ],
     include: ["../server/**/*.test.ts", "src/**/*.test.{ts,tsx}"],
-    setupFiles: ["./src/test-setup.ts"],
+    setupFiles: ["./src/test-setup.ts", "../server/test-setup.ts"],
   },
 });

@@ -23,6 +23,11 @@
     "test:node": "node tests/run-tests.mjs",
     "test:comprehensive": "node tests/run-tests.mjs"
   },
+  "vitest": {
+    "setupFiles": [
+      "./server/test-setup.ts"
+    ]
+  },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
     "@jridgewell/trace-mapping": "^0.3.25",

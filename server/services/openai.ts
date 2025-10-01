@@ -4,9 +4,39 @@ import { getProductImage } from "./imageService.ts";
 import { generateRealProductUrls, findBestProductMatch, PRODUCT_DATABASE } from "./productDatabase.ts";
 import { getProductImageFromGoogle } from './googleImageScraper.ts';
 
-const openai = new OpenAI({ 
-  apiKey: process.env.OPENAI_API_KEY 
-});
+let cachedOpenAIClient: OpenAI | null | undefined;
+
+function resolveOpenAIApiKey(): string | null {
+  const configuredKey = process.env.OPENAI_API_KEY?.trim();
+  if (configuredKey) {
+    return configuredKey;
+  }
+
+  if (process.env.NODE_ENV === "test") {
+    return "test-api-key";
+  }
+
+  return null;
+}
+
+export function getOpenAIClient(): OpenAI | null {
+  if (cachedOpenAIClient !== undefined) {
+    return cachedOpenAIClient;
+  }
+
+  const apiKey = resolveOpenAIApiKey();
+  if (!apiKey) {
+    cachedOpenAIClient = null;
+    return cachedOpenAIClient;
+  }
+
+  cachedOpenAIClient = new OpenAI({ apiKey });
+  return cachedOpenAIClient;
+}
+
+export function resetOpenAIClient(): void {
+  cachedOpenAIClient = undefined;
+}
 
 // Simulated gift recommendation data for development
 const giftTemplates = {
@@ -1071,6 +1101,12 @@ export async function generateGiftRecommendations(
     const additionalContext = notes ? `\n\nAdditional context about ${friendName}: ${notes}` : '';
     
     console.log(`Generating AI-powered gifts for ${friendName} with traits: ${personalityTraits.join(', ')}, interests: ${interests.join(', ')}, budget: ${symbol}${budget}, currency: ${currency}${additionalContext ? '. Additional notes: ' + notes : ''}`);
+
+    const openaiClient = getOpenAIClient();
+    if (!openaiClient) {
+      console.warn('OpenAI client unavailable; falling back to template recommendations.');
+      return generateFallbackRecommendations(personalityTraits, interests, budget, friendName, currency, country, notes);
+    }
     
     const prompt = `You are a thoughtful gift recommendation expert who specializes in finding REAL, commercially available products. Generate 5-6 personalized gift ideas for ${friendName} based on their profile:
 
@@ -1136,7 +1172,7 @@ Respond in JSON format with this structure:
   ]
 }`;
 
-    const response = await openai.chat.completions.create({
+  const response = await openaiClient.chat.completions.create({
       model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
       messages: [
         {
@@ -1210,11 +1246,13 @@ Respond in JSON format with this structure:
       const productKey = findBestProductMatch(rec.name || '');
       
       if (productKey && PRODUCT_DATABASE[productKey]) {
-        // Database match found - use database price range
+        // Database match found - use database price range and image
         const product = PRODUCT_DATABASE[productKey];
         priceRange = `${symbol}${product.price_range[0]} - ${symbol}${product.price_range[1]}`;
         // Update basePrice to align with database pricing for shop generation
         basePrice = (product.price_range[0] + product.price_range[1]) / 2;
+        // Use the database image directly
+        imageUrl = product.image;
       }
 
       // If we don't have a valid imageUrl yet (either no database match or database validation failed), use simplified priority system

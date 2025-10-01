@@ -44,8 +44,10 @@ export class MemStorage implements IStorage {
     this.recommendationFeedback = new Map();
     this.performanceMetrics = new Map();
     
-    // Add some initial demo friends
-    this.initializeDemoData();
+    // Add some initial demo friends outside of test runs
+    if (process.env.NODE_ENV !== 'test') {
+      this.initializeDemoData();
+    }
   }
 
   private initializeDemoData() {
@@ -263,6 +265,12 @@ export class MemStorage implements IStorage {
       .slice(0, limit);
   }
 
+  async getAllUserAnalytics(limit: number = 100): Promise<UserAnalytics[]> {
+    return Array.from(this.userAnalytics.values())
+      .sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime())
+      .slice(0, limit);
+  }
+
   async createRecommendationFeedback(feedback: InsertRecommendationFeedback, userId?: string): Promise<RecommendationFeedback> {
     const id = randomUUID();
     const recommendationFeedback: RecommendationFeedback = {
@@ -283,6 +291,12 @@ export class MemStorage implements IStorage {
   async getRecommendationFeedback(userId: string, limit: number = 100): Promise<RecommendationFeedback[]> {
     return Array.from(this.recommendationFeedback.values())
       .filter(feedback => feedback.userId === userId)
+      .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+      .slice(0, limit);
+  }
+
+  async getAllRecommendationFeedback(limit: number = 100): Promise<RecommendationFeedback[]> {
+    return Array.from(this.recommendationFeedback.values())
       .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
       .slice(0, limit);
   }

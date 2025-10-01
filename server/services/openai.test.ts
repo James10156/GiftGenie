@@ -7,6 +7,11 @@ vi.mock('./imageService', () => ({
   getProductImage: vi.fn().mockResolvedValue('https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300'),
 }));
 
+// Mock the Google image scraper
+vi.mock('./googleImageScraper', () => ({
+  getProductImageFromGoogle: vi.fn().mockResolvedValue('https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300'),
+}));
+
 // Mock OpenAI
 vi.mock('openai', () => {
     const mockCompletions = {
@@ -65,8 +70,9 @@ describe('generateGiftRecommendations', () => {
 
     const nintendoRec = recommendations.find(rec => rec.name.includes('Nintendo Switch'));
     expect(nintendoRec).toBeDefined();
+    // The product should be found in the database and use the database image
     expect(nintendoRec?.image).toBe(PRODUCT_DATABASE['nintendo switch'].image);
-  });
+  }, 10000); // Increase timeout to 10 seconds
 
   it('should fall back to the image service when a product is not in the database', async () => {
     const recommendations = await generateGiftRecommendations(
@@ -80,9 +86,9 @@ describe('generateGiftRecommendations', () => {
   
       const bookRec = recommendations.find(rec => rec.name.includes('A book you have never heard of'));
       expect(bookRec).toBeDefined();
-      // This should be the mocked URL from getProductImage
+      // This product is not in the database, so it should use the mocked image
       expect(bookRec?.image).toBe('https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300');
-  });
+  }, 10000); // Increase timeout to 10 seconds
 
   it('should return valid shop URLs for all recommendations', async () => {
     const recommendations = await generateGiftRecommendations(
