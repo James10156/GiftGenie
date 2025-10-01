@@ -1051,9 +1051,11 @@ function Home() {
                         {(() => {
                           const friend = filteredFriends[carouselIndex];
                           return (
-                            <div className={`bg-white border-2 border-blue-200 rounded-2xl shadow-xl ${
-                              isMobile ? 'p-4' : 'p-6'
-                            }`}>
+                            <div 
+                              className={`group bg-white border-2 border-blue-200 rounded-2xl shadow-xl transition-all duration-300 ${
+                                isMobile ? 'p-4' : 'p-6'
+                              }`}
+                            >
                               {/* Profile Section */}
                               <div className={`text-center ${isMobile ? 'mb-4' : 'mb-6'}`}>
                                 {friend.profilePicture ? (
@@ -1085,82 +1087,107 @@ function Home() {
                                 <h3 className={`font-bold text-gray-900 mb-1 ${
                                   isMobile ? 'text-xl' : 'text-2xl'
                                 }`}>{friend.name}</h3>
-                                <p className={`text-gray-600 ${
-                                  isMobile ? 'text-base' : 'text-lg'
-                                }`}>{friend.country}</p>
-                                {(friend.gender || friend.ageRange) && (
-                                  <p className={`text-gray-500 ${
-                                    isMobile ? 'text-sm' : 'text-base'
-                                  }`}>
-                                    {friend.gender && friend.ageRange 
-                                      ? `${friend.gender}, ${friend.ageRange}`
-                                      : friend.gender || friend.ageRange
-                                    }
+                                <div className={`space-y-1 ${isMobile ? 'text-sm' : 'text-base'}`}>
+                                  <p className="text-gray-600 flex items-center justify-center gap-1">
+                                    <span>📍</span>
+                                    {friend.country}
                                   </p>
+                                  {(friend.gender || friend.ageRange) && (
+                                    <p className="text-gray-500 flex items-center justify-center gap-1">
+                                      <span>👤</span>
+                                      {friend.gender && friend.ageRange 
+                                        ? `${friend.gender}, ${friend.ageRange}`
+                                        : friend.gender || friend.ageRange
+                                      }
+                                    </p>
+                                  )}
+                                  <p className="text-blue-600 font-medium flex items-center justify-center gap-1">
+                                    <span>🏷️</span>
+                                    {friend.category}
+                                  </p>
+                                </div>
+                                
+                                {/* Hover instruction */}
+                                <p className={`text-xs transition-colors duration-200 mt-2 ${
+                                  hoveredFriend === friend.id 
+                                    ? 'text-blue-600' 
+                                    : 'text-gray-400'
+                                }`}>
+                                  {hoveredFriend === friend.id ? 'Showing details...' : (isMobile ? 'Tap profile to see details' : 'Hover profile to see details')}
+                                </p>
+                              </div>
+
+                              {/* Expandable Details Section */}
+                              <div className={`transition-all duration-300 overflow-hidden ${
+                                hoveredFriend === friend.id || isMobile
+                                  ? 'max-h-96 opacity-100' 
+                                  : 'max-h-0 opacity-0'
+                              }`}>
+                                {/* Interests Section */}
+                                <div className={`${isMobile ? 'mb-3' : 'mb-4'}`}>
+                                  <h4 className={`font-semibold text-gray-800 mb-2 ${
+                                    isMobile ? 'text-base' : 'text-lg'
+                                  }`}>🎯 Interests</h4>
+                                  <div className="flex flex-wrap gap-2">
+                                    {friend.interests.slice(0, isMobile ? 4 : 6).map((interest, idx) => (
+                                      <span
+                                        key={idx}
+                                        className={`bg-blue-100 text-blue-800 px-3 py-1 rounded-full ${
+                                          isMobile ? 'text-xs' : 'text-sm'
+                                        }`}
+                                      >
+                                        {interest}
+                                      </span>
+                                    ))}
+                                    {friend.interests.length > (isMobile ? 4 : 6) && (
+                                      <span className="text-xs text-gray-500 px-3 py-1">
+                                        +{friend.interests.length - (isMobile ? 4 : 6)} more
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Personality Section */}
+                                <div className={`${isMobile ? 'mb-3' : 'mb-4'}`}>
+                                  <h4 className={`font-semibold text-gray-800 mb-2 ${
+                                    isMobile ? 'text-base' : 'text-lg'
+                                  }`}>✨ Personality</h4>
+                                  <div className="flex flex-wrap gap-2">
+                                    {friend.personalityTraits.slice(0, isMobile ? 3 : 5).map((trait, idx) => (
+                                      <span
+                                        key={idx}
+                                        className={`bg-green-100 text-green-800 px-3 py-1 rounded-full ${
+                                          isMobile ? 'text-xs' : 'text-sm'
+                                        }`}
+                                      >
+                                        {trait}
+                                      </span>
+                                    ))}
+                                    {friend.personalityTraits.length > (isMobile ? 3 : 5) && (
+                                      <span className="text-xs text-gray-500 px-3 py-1">
+                                        +{friend.personalityTraits.length - (isMobile ? 3 : 5)} more
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Notes Section (if exists) */}
+                                {friend.notes && (
+                                  <div className={`${isMobile ? 'mb-3' : 'mb-4'}`}>
+                                    <h4 className={`font-semibold text-gray-800 mb-2 ${
+                                      isMobile ? 'text-base' : 'text-lg'
+                                    }`}>📝 Notes</h4>
+                                    <p className={`text-gray-600 bg-gray-50 p-3 rounded-lg italic ${
+                                      isMobile ? 'text-sm' : 'text-base'
+                                    }`}>
+                                      "{friend.notes.length > 100 ? friend.notes.substring(0, 100) + '...' : friend.notes}"
+                                    </p>
+                                  </div>
                                 )}
-                                <p className={`text-blue-600 font-medium ${
-                                  isMobile ? 'text-xs' : 'text-sm'
-                                }`}>Category: {friend.category}</p>
                               </div>
-
-                              {/* Interests Section */}
-                              <div className={`${isMobile ? 'mb-3' : 'mb-4'}`}>
-                                <h4 className={`font-semibold text-gray-800 mb-2 ${
-                                  isMobile ? 'text-base' : 'text-lg'
-                                }`}>🎯 Interests</h4>
-                                <div className="flex flex-wrap gap-2">
-                                  {friend.interests.slice(0, isMobile ? 3 : 4).map((interest, idx) => (
-                                    <span
-                                      key={idx}
-                                      className={`bg-blue-100 text-blue-800 px-3 py-1 rounded-full ${
-                                        isMobile ? 'text-xs' : 'text-sm'
-                                      }`}
-                                    >
-                                      {interest}
-                                    </span>
-                                  ))}
-                                  {friend.interests.length > (isMobile ? 3 : 4) && (
-                                    <span className="text-xs text-gray-500 px-3 py-1">
-                                      +{friend.interests.length - (isMobile ? 3 : 4)} more
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-
-                              {/* Personality Section */}
-                              <div className={`${isMobile ? 'mb-3' : 'mb-4'}`}>
-                                <h4 className={`font-semibold text-gray-800 mb-2 ${
-                                  isMobile ? 'text-base' : 'text-lg'
-                                }`}>✨ Personality</h4>
-                                <div className="flex flex-wrap gap-2">
-                                  {friend.personalityTraits.slice(0, isMobile ? 2 : 3).map((trait, idx) => (
-                                    <span
-                                      key={idx}
-                                      className={`bg-green-100 text-green-800 px-3 py-1 rounded-full ${
-                                        isMobile ? 'text-xs' : 'text-sm'
-                                      }`}
-                                    >
-                                      {trait}
-                                    </span>
-                                  ))}
-                                  {friend.personalityTraits.length > (isMobile ? 2 : 3) && (
-                                    <span className="text-xs text-gray-500 px-3 py-1">
-                                      +{friend.personalityTraits.length - (isMobile ? 2 : 3)} more
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-
-                              {/* Category & Currency - Hide on mobile to save space */}
-                              {!isMobile && (
-                                <div className="mb-6 flex justify-between text-sm text-gray-600">
-                                  <span>Category: <span className="font-medium text-gray-800">{friend.category}</span></span>
-                                  <span>Currency: <span className="font-medium text-green-600">{friend.currency}</span></span>
-                                </div>
-                              )}
 
                               {/* Actions */}
-                              <div className={`flex gap-2 ${isMobile ? 'mt-4' : ''}`}>
+                              <div className={`flex gap-2 ${isMobile ? 'mt-4' : 'mt-6'}`}>
                                 <button
                                   onClick={() => {
                                     selectFriend(friend);
