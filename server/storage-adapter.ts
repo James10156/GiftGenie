@@ -154,6 +154,8 @@ export class StorageAdapter implements IStorageAdapter {
         country: friend.country || "United States",
         currency: friend.currency || "USD",
         profilePicture: friend.profilePicture || null,
+        gender: friend.gender || null,
+        ageRange: friend.ageRange || null,
         createdAt: new Date().toISOString()
       };
       guestStorage.friends.push(newFriend);
@@ -184,6 +186,8 @@ export class StorageAdapter implements IStorageAdapter {
         if (friend.country !== undefined) existingFriend.country = friend.country;
         if (friend.currency !== undefined) existingFriend.currency = friend.currency;
         if (friend.profilePicture !== undefined) existingFriend.profilePicture = friend.profilePicture || null;
+        if (friend.gender !== undefined) existingFriend.gender = friend.gender || null;
+        if (friend.ageRange !== undefined) existingFriend.ageRange = friend.ageRange || null;
         return existingFriend;
       }
       return undefined;

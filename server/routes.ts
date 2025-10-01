@@ -251,7 +251,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         friend.name,
         friend.currency || "USD",
         friend.country || "United States",
-        friend.notes || undefined
+        friend.notes || undefined,
+        friend.gender || undefined,
+        friend.ageRange || undefined
       );
       const aiResponseTime = Date.now() - aiStartTime;
 

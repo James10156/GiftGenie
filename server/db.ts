@@ -91,6 +91,8 @@ export class DatabaseStorage implements IStorage {
         country: friend.country,
         currency: friend.currency,
         profilePicture: friend.profilePicture,
+        gender: friend.gender,
+        ageRange: friend.ageRange,
       }).returning();
       return result[0];
     });
@@ -108,6 +110,8 @@ export class DatabaseStorage implements IStorage {
         country: friend.country,
         currency: friend.currency,
         profilePicture: friend.profilePicture,
+        gender: friend.gender,
+        ageRange: friend.ageRange,
       }).returning();
       return result[0];
     });
@@ -124,6 +128,8 @@ export class DatabaseStorage implements IStorage {
       if (friend.country !== undefined) updateData.country = friend.country;
       if (friend.currency !== undefined) updateData.currency = friend.currency;
       if (friend.profilePicture !== undefined) updateData.profilePicture = friend.profilePicture;
+      if (friend.gender !== undefined) updateData.gender = friend.gender;
+      if (friend.ageRange !== undefined) updateData.ageRange = friend.ageRange;
       
       const result = await db!.update(friends)
         .set(updateData)
@@ -144,6 +150,8 @@ export class DatabaseStorage implements IStorage {
       if (friend.country !== undefined) updateData.country = friend.country;
       if (friend.currency !== undefined) updateData.currency = friend.currency;
       if (friend.profilePicture !== undefined) updateData.profilePicture = friend.profilePicture;
+      if (friend.gender !== undefined) updateData.gender = friend.gender;
+      if (friend.ageRange !== undefined) updateData.ageRange = friend.ageRange;
       
       const result = await db!.update(friends)
         .set(updateData)

@@ -21,6 +21,8 @@ export const friends = pgTable("friends", {
   country: text("country").notNull().default("United States"),
   currency: text("currency").notNull().default("USD"),
   profilePicture: text("profile_picture"),
+  gender: text("gender"), // Can be "Male", "Female", or null
+  ageRange: text("age_range"), // Can be "18-25", "26-30", "31-35", etc., or null
   createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
 });
 
@@ -122,6 +124,8 @@ export const insertFriendSchema = createInsertSchema(friends).pick({
   country: true,
   currency: true,
   profilePicture: true,
+  gender: true,
+  ageRange: true,
 });
 
 export const insertSavedGiftSchema = createInsertSchema(savedGifts).pick({

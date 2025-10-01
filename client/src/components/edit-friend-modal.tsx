@@ -49,6 +49,25 @@ const currencies = [
   { code: "INR", symbol: "₹", name: "Indian Rupee" }
 ];
 
+const genderOptions = [
+  { value: "Male", label: "Male" },
+  { value: "Female", label: "Female" }
+];
+
+const ageRangeOptions = [
+  { value: "18-25", label: "18-25" },
+  { value: "26-30", label: "26-30" },
+  { value: "31-35", label: "31-35" },
+  { value: "36-40", label: "36-40" },
+  { value: "41-45", label: "41-45" },
+  { value: "46-50", label: "46-50" },
+  { value: "51-55", label: "51-55" },
+  { value: "56-60", label: "56-60" },
+  { value: "61-65", label: "61-65" },
+  { value: "66-70", label: "66-70" },
+  { value: "70+", label: "70+" }
+];
+
 export function EditFriendModal({ isOpen, onClose, friend }: EditFriendModalProps) {
   const [selectedTraits, setSelectedTraits] = useState<string[]>(friend.personalityTraits);
   const [selectedInterests, setSelectedInterests] = useState<string[]>(friend.interests);
@@ -79,6 +98,8 @@ export function EditFriendModal({ isOpen, onClose, friend }: EditFriendModalProp
       country: friend.country || "United States",
       currency: friend.currency || "USD",
       profilePicture: friend.profilePicture || "",
+      gender: friend.gender || "",
+      ageRange: friend.ageRange || "",
     },
   });
 
@@ -288,6 +309,61 @@ export function EditFriendModal({ isOpen, onClose, friend }: EditFriendModalProp
                 </FormItem>
               )}
             />
+
+            {/* Gender and Age Range (Optional) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="gender"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm font-medium text-gray-700">Gender (Optional)</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value || ""}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select gender" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="">Not specified</SelectItem>
+                        {genderOptions.map((gender) => (
+                          <SelectItem key={gender.value} value={gender.value}>
+                            {gender.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="ageRange"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm font-medium text-gray-700">Age Range (Optional)</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value || ""}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select age range" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="">Not specified</SelectItem>
+                        {ageRangeOptions.map((ageRange) => (
+                          <SelectItem key={ageRange.value} value={ageRange.value}>
+                            {ageRange.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             {/* Country and Currency */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

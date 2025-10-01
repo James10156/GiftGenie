@@ -121,16 +121,18 @@ export function FriendForm({ friend, onClose }: FriendFormProps) {
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [manualUrl, setManualUrl] = useState(friend?.profilePicture || "");
   const [formError, setFormError] = useState<string | null>(null);
+  const [budget, setBudget] = useState<number | null>((friend as any)?.budget || null);
   const [formData, setFormData] = useState<InsertFriend>({
     name: friend?.name || "",
     personalityTraits: (friend?.personalityTraits as string[]) || [],
     interests: (friend?.interests as string[]) || [],
     category: friend?.category || "Friend",
     notes: friend?.notes || "",
-  country: friend?.country || "United Kingdom",
-  currency: friend?.currency || "GBP",
-  budget: typeof (friend as Friend | undefined)?.budget === "number" ? (friend as Friend).budget : null,
+    country: friend?.country || "United Kingdom",
+    currency: friend?.currency || "GBP",
     profilePicture: friend?.profilePicture || "",
+    gender: friend?.gender || "",
+    ageRange: friend?.ageRange || "",
   });
 
   const [newTrait, setNewTrait] = useState("");
@@ -255,10 +257,19 @@ export function FriendForm({ friend, onClose }: FriendFormProps) {
 
     setFormError(null);
 
+    // Convert empty strings to null for optional fields
+    const submissionData = {
+      ...formData,
+      gender: formData.gender?.trim() || null,
+      ageRange: formData.ageRange?.trim() || null,
+      notes: formData.notes?.trim() || null,
+      profilePicture: formData.profilePicture?.trim() || null,
+    };
+
     if (friend) {
-      updateFriendMutation.mutate(formData);
+      updateFriendMutation.mutate(submissionData);
     } else {
-      createFriendMutation.mutate(formData);
+      createFriendMutation.mutate(submissionData);
     }
   };
 
@@ -533,6 +544,50 @@ export function FriendForm({ friend, onClose }: FriendFormProps) {
               />
             </div>
 
+            {/* Gender and Age Range (Optional) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-2" htmlFor="friend-gender">
+                  Gender (Optional)
+                </label>
+                <select
+                  id="friend-gender"
+                  value={formData.gender || ""}
+                  onChange={(e) => setFormData({ ...formData, gender: e.target.value || null })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="">Not specified</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2" htmlFor="friend-age-range">
+                  Age Range (Optional)
+                </label>
+                <select
+                  id="friend-age-range"
+                  value={formData.ageRange || ""}
+                  onChange={(e) => setFormData({ ...formData, ageRange: e.target.value || null })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="">Not specified</option>
+                  <option value="18-25">18-25</option>
+                  <option value="26-30">26-30</option>
+                  <option value="31-35">31-35</option>
+                  <option value="36-40">36-40</option>
+                  <option value="41-45">41-45</option>
+                  <option value="46-50">46-50</option>
+                  <option value="51-55">51-55</option>
+                  <option value="56-60">56-60</option>
+                  <option value="61-65">61-65</option>
+                  <option value="66-70">66-70</option>
+                  <option value="70+">70+</option>
+                </select>
+              </div>
+            </div>
+
             {/* Country */}
             <div>
               <label className="block text-sm font-medium mb-2" htmlFor="friend-country">
@@ -558,8 +613,8 @@ export function FriendForm({ friend, onClose }: FriendFormProps) {
                     type="number"
                     min={0}
                     id="friend-budget"
-                    value={formData.budget ?? ''}
-                    onChange={(e) => setFormData({ ...formData, budget: e.target.value ? Number(e.target.value) : null })}
+                    value={budget ?? ''}
+                    onChange={(e) => setBudget(e.target.value ? Number(e.target.value) : null)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="Enter a budget"
                   />
@@ -863,8 +918,10 @@ export function FriendForm({ friend, onClose }: FriendFormProps) {
               <h4 className="font-medium text-gray-900 mb-3">Summary</h4>
               <div className="space-y-2 text-sm">
                 <p><strong>Name:</strong> {formData.name}</p>
+                {formData.gender && <p><strong>Gender:</strong> {formData.gender}</p>}
+                {formData.ageRange && <p><strong>Age Range:</strong> {formData.ageRange}</p>}
                 <p><strong>Country:</strong> {formData.country} ({formData.currency || COUNTRY_CURRENCY_MAP[formData.country || 'Other'] || 'USD'})</p>
-                <p><strong>Budget:</strong> {typeof formData.budget === 'number' ? `${formData.currency || COUNTRY_CURRENCY_MAP[formData.country || 'Other'] || 'USD'} ${formData.budget}` : 'Not specified'}</p>
+                <p><strong>Budget:</strong> {typeof budget === 'number' ? `${formData.currency || COUNTRY_CURRENCY_MAP[formData.country || 'Other'] || 'USD'} ${budget}` : 'Not specified'}</p>
                 <p><strong>Relationship:</strong> {formData.category}</p>
                 {formData.personalityTraits.length > 0 && (
                   <p><strong>Personality:</strong> {formData.personalityTraits.join(', ')}</p>
@@ -968,25 +1025,36 @@ export function FriendForm({ friend, onClose }: FriendFormProps) {
             </button>
           </div>
           <div className="flex space-x-2">
-            {currentStep < 5 ? (
+            {/* Save button only available when editing existing friends */}
+            {friend && (
+              <button
+                onClick={handleSubmit}
+                disabled={createFriendMutation.isPending || updateFriendMutation.isPending || !formData.name.trim()}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                title={!formData.name.trim() ? "Name is required to save" : "Save friend data"}
+              >
+                {updateFriendMutation.isPending
+                  ? 'Saving...'
+                  : 'Save Changes'
+                }
+              </button>
+            )}
+            {currentStep < 5 && (
               <button
                 onClick={nextStep}
                 className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
               >
                 Next
               </button>
-            ) : (
+            )}
+            {/* Final save button on last step for new friends */}
+            {currentStep === 5 && !friend && (
               <button
                 onClick={handleSubmit}
-                disabled={createFriendMutation.isPending || updateFriendMutation.isPending}
+                disabled={createFriendMutation.isPending || !formData.name.trim()}
                 className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
               >
-                {createFriendMutation.isPending || updateFriendMutation.isPending
-                  ? 'Saving...'
-                  : friend
-                  ? 'Update Friend'
-                  : 'Save Friend'
-                }
+                {createFriendMutation.isPending ? 'Saving...' : 'Save Friend'}
               </button>
             )}
           </div>

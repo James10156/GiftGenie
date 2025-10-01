@@ -1094,18 +1094,22 @@ export async function generateGiftRecommendations(
   friendName: string,
   currency: string = "USD",
   country: string = "United States",
-  notes?: string
+  notes?: string,
+  gender?: string,
+  ageRange?: string
 ): Promise<GiftRecommendation[]> {
   try {
     const symbol = getCurrencySymbol(currency);
     const additionalContext = notes ? `\n\nAdditional context about ${friendName}: ${notes}` : '';
+    const genderContext = gender ? `\n\nGender: ${gender}` : '';
+    const ageContext = ageRange ? `\n\nAge range: ${ageRange}` : '';
     
-    console.log(`Generating AI-powered gifts for ${friendName} with traits: ${personalityTraits.join(', ')}, interests: ${interests.join(', ')}, budget: ${symbol}${budget}, currency: ${currency}${additionalContext ? '. Additional notes: ' + notes : ''}`);
+    console.log(`Generating AI-powered gifts for ${friendName} with traits: ${personalityTraits.join(', ')}, interests: ${interests.join(', ')}, budget: ${symbol}${budget}, currency: ${currency}${gender ? `, gender: ${gender}` : ''}${ageRange ? `, age: ${ageRange}` : ''}${additionalContext ? '. Additional notes: ' + notes : ''}`);
 
     const openaiClient = getOpenAIClient();
     if (!openaiClient) {
       console.warn('OpenAI client unavailable; falling back to template recommendations.');
-      return generateFallbackRecommendations(personalityTraits, interests, budget, friendName, currency, country, notes);
+      return generateFallbackRecommendations(personalityTraits, interests, budget, friendName, currency, country, notes, gender, ageRange);
     }
     
     const prompt = `You are a thoughtful gift recommendation expert who specializes in finding REAL, commercially available products. Generate 5-6 personalized gift ideas for ${friendName} based on their profile:
@@ -1113,7 +1117,7 @@ export async function generateGiftRecommendations(
 Personality Traits: ${personalityTraits.join(', ')}
 Interests: ${interests.join(', ')}
 Budget: ${symbol}${budget} (MAXIMUM - do not exceed this amount)
-Currency: ${currency}${additionalContext}
+Currency: ${currency}${additionalContext}${genderContext}${ageContext}
 
 CRITICAL REQUIREMENTS:
 - All gift prices must be within the budget of ${symbol}${budget}. Do not recommend anything that costs more than this amount.
@@ -1341,7 +1345,7 @@ Respond in JSON format with this structure:
     console.error('OpenAI API error:', error);
     
     // Fallback to enhanced template-based recommendations
-    return generateFallbackRecommendations(personalityTraits, interests, budget, friendName, currency, country, notes);
+    return generateFallbackRecommendations(personalityTraits, interests, budget, friendName, currency, country, notes, gender, ageRange);
   }
 }
 
@@ -1353,9 +1357,11 @@ async function generateFallbackRecommendations(
   friendName: string,
   currency: string = "USD",
   country: string = "United States",
-  notes?: string
+  notes?: string,
+  gender?: string,
+  ageRange?: string
 ): Promise<GiftRecommendation[]> {
-  console.log(`Using fallback recommendations for ${friendName}`);
+  console.log(`Using fallback recommendations for ${friendName}${gender ? ` (${gender})` : ''}${ageRange ? ` (${ageRange})` : ''}`);
   
   const recommendations: GiftRecommendation[] = [];
   const usedGifts = new Set<string>();

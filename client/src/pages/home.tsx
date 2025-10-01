@@ -417,7 +417,9 @@ function Home() {
       friend.interests.some(interest => interest.toLowerCase().includes(query)) ||
       friend.personalityTraits.some(trait => trait.toLowerCase().includes(query)) ||
       (friend.notes && friend.notes.toLowerCase().includes(query)) ||
-      friend.category.toLowerCase().includes(query)
+      friend.category.toLowerCase().includes(query) ||
+      (friend.gender && friend.gender.toLowerCase().includes(query)) ||
+      (friend.ageRange && friend.ageRange.toLowerCase().includes(query))
     );
   });
 
@@ -867,6 +869,14 @@ function Home() {
                       <div className="text-center mb-3">
                         <h3 className="font-semibold text-base md:text-lg">{friend.name}</h3>
                         <p className="text-xs md:text-sm text-gray-500">{friend.country}</p>
+                        {(friend.gender || friend.ageRange) && (
+                          <p className="text-xs text-gray-400">
+                            {friend.gender && friend.ageRange 
+                              ? `${friend.gender}, ${friend.ageRange}`
+                              : friend.gender || friend.ageRange
+                            }
+                          </p>
+                        )}
                         {!isMobile && (
                           <p className={`text-xs italic transition-colors duration-200 ${
                             hoveredFriend === friend.id 
@@ -1078,6 +1088,16 @@ function Home() {
                                 <p className={`text-gray-600 ${
                                   isMobile ? 'text-base' : 'text-lg'
                                 }`}>{friend.country}</p>
+                                {(friend.gender || friend.ageRange) && (
+                                  <p className={`text-gray-500 ${
+                                    isMobile ? 'text-sm' : 'text-base'
+                                  }`}>
+                                    {friend.gender && friend.ageRange 
+                                      ? `${friend.gender}, ${friend.ageRange}`
+                                      : friend.gender || friend.ageRange
+                                    }
+                                  </p>
+                                )}
                                 <p className={`text-blue-600 font-medium ${
                                   isMobile ? 'text-xs' : 'text-sm'
                                 }`}>Category: {friend.category}</p>
