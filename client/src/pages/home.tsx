@@ -45,6 +45,7 @@ function Home() {
   const [giftFeedback, setGiftFeedback] = useState<{[key: string]: { rating: number | null, feedback: string, showFeedback: boolean }}>({});
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [hoveredFriend, setHoveredFriend] = useState<string | null>(null);
+  const [expandedMobileFriend, setExpandedMobileFriend] = useState<string | null>(null);
   const [draggedFriend, setDraggedFriend] = useState<string | null>(null);
   const [dragOverFriend, setDragOverFriend] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -864,24 +865,38 @@ function Home() {
                       </div>
 
                       {/* Name and Info - More compact on mobile */}
-                      <div className="text-center mb-3">
+                      <div 
+                        className={`text-center mb-3 ${isMobile ? 'cursor-pointer' : ''}`}
+                        onClick={() => {
+                          if (isMobile) {
+                            setExpandedMobileFriend(expandedMobileFriend === friend.id ? null : friend.id);
+                          }
+                        }}
+                      >
                         <h3 className="font-semibold text-base md:text-lg">{friend.name}</h3>
-                        <p className="text-xs md:text-sm text-gray-500">{friend.country}</p>
-                        {(friend.gender || friend.ageRange) && (
-                          <p className="text-xs text-gray-400">
-                            {friend.gender && friend.ageRange 
-                              ? `${friend.gender}, ${friend.ageRange}`
-                              : friend.gender || friend.ageRange
-                            }
-                          </p>
-                        )}
                         {!isMobile && (
-                          <p className={`text-xs italic transition-colors duration-200 ${
-                            hoveredFriend === friend.id 
-                              ? 'text-blue-600' 
-                              : 'text-gray-400'
-                          }`}>
-                            {hoveredFriend === friend.id ? 'Showing details...' : 'Hover profile to see details'}
+                          <>
+                            <p className="text-xs md:text-sm text-gray-500">{friend.country}</p>
+                            {(friend.gender || friend.ageRange) && (
+                              <p className="text-xs text-gray-400">
+                                {friend.gender && friend.ageRange 
+                                  ? `${friend.gender}, ${friend.ageRange}`
+                                  : friend.gender || friend.ageRange
+                                }
+                              </p>
+                            )}
+                            <p className={`text-xs italic transition-colors duration-200 ${
+                              hoveredFriend === friend.id 
+                                ? 'text-blue-600' 
+                                : 'text-gray-400'
+                            }`}>
+                              {hoveredFriend === friend.id ? 'Showing details...' : 'Hover profile to see details'}
+                            </p>
+                          </>
+                        )}
+                        {isMobile && (
+                          <p className="text-xs text-gray-400 mt-1">
+                            {expandedMobileFriend === friend.id ? 'Tap to collapse' : 'Tap to expand'}
                           </p>
                         )}
                       </div>
@@ -913,14 +928,40 @@ function Home() {
                         </button>
                       </div>
                       
-                      {/* Interests and Personality - Always show on mobile, hover on desktop */}
+                      {/* Interests and Personality - Click to expand on mobile, hover on desktop */}
                       <div className={`transition-all duration-300 overflow-hidden ${
-                        isMobile || hoveredFriend === friend.id 
-                          ? 'max-h-32 md:max-h-40 opacity-100 mb-3' 
+                        (!isMobile && hoveredFriend === friend.id) || (isMobile && expandedMobileFriend === friend.id)
+                          ? `${isMobile ? 'max-h-96' : 'max-h-40'} opacity-100 mb-3`
                           : 'max-h-0 opacity-0 mb-0'
                       }`}>
+                        {/* Basic Info - Mobile only */}
+                        {isMobile && (
+                          <div className="mb-2 text-center">
+                            <p className="text-xs text-gray-500 flex items-center justify-center gap-1">
+                              <span>📍</span>
+                              {friend.country}
+                            </p>
+                            {(friend.gender || friend.ageRange) && (
+                              <p className="text-xs text-gray-400 flex items-center justify-center gap-1">
+                                <span>👤</span>
+                                {friend.gender && friend.ageRange 
+                                  ? `${friend.gender}, ${friend.ageRange}`
+                                  : friend.gender || friend.ageRange
+                                }
+                              </p>
+                            )}
+                            <p className="text-xs text-blue-600 font-medium flex items-center justify-center gap-1">
+                              <span>🏷️</span>
+                              {friend.category}
+                            </p>
+                          </div>
+                        )}
+                        
                         <div className="mb-2">
-                          <p className="text-xs md:text-sm text-gray-600">Interests:</p>
+                          <p className="text-xs md:text-sm text-gray-600 flex items-center gap-1">
+                            <span>🎯</span>
+                            Interests:
+                          </p>
                           <div className="flex flex-wrap gap-1 mt-1">
                             {friend.interests.slice(0, isMobile ? 2 : 3).map((interest, index) => (
                               <span
@@ -938,7 +979,10 @@ function Home() {
                           </div>
                         </div>
                         <div className="mb-2">
-                          <p className="text-xs md:text-sm text-gray-600">Personality:</p>
+                          <p className="text-xs md:text-sm text-gray-600 flex items-center gap-1">
+                            <span>✨</span>
+                            Personality:
+                          </p>
                           <div className="flex flex-wrap gap-1 mt-1">
                             {friend.personalityTraits.slice(0, 2).map((trait, index) => (
                               <span
@@ -955,6 +999,20 @@ function Home() {
                             )}
                           </div>
                         </div>
+                        
+                        {/* Notes Section (if exists) */}
+                        {friend.notes && (
+                          <div className={`${isMobile ? 'mb-3' : 'mb-4'}`}>
+                            <h4 className={`font-semibold text-gray-800 mb-2 ${
+                              isMobile ? 'text-base' : 'text-lg'
+                            }`}>📝 Notes</h4>
+                            <p className={`text-gray-600 bg-gray-50 p-3 rounded-lg italic ${
+                              isMobile ? 'text-sm' : 'text-base'
+                            }`}>
+                              "{friend.notes.length > 100 ? friend.notes.substring(0, 100) + '...' : friend.notes}"
+                            </p>
+                          </div>
+                        )}
                       </div>
                       
                       <button
@@ -1087,39 +1145,61 @@ function Home() {
                                 <h3 className={`font-bold text-gray-900 mb-1 ${
                                   isMobile ? 'text-xl' : 'text-2xl'
                                 }`}>{friend.name}</h3>
-                                <div className={`space-y-1 ${isMobile ? 'text-sm' : 'text-base'}`}>
-                                  <p className="text-gray-600 flex items-center justify-center gap-1">
-                                    <span>📍</span>
-                                    {friend.country}
-                                  </p>
-                                  {(friend.gender || friend.ageRange) && (
-                                    <p className="text-gray-500 flex items-center justify-center gap-1">
-                                      <span>👤</span>
-                                      {friend.gender && friend.ageRange 
-                                        ? `${friend.gender}, ${friend.ageRange}`
-                                        : friend.gender || friend.ageRange
-                                      }
+                                
+                                {/* Basic info - Show on desktop, hide on mobile unless expanded */}
+                                <div className={`space-y-1 ${isMobile ? 'text-sm' : 'text-base'} ${
+                                  isMobile ? 'cursor-pointer' : ''
+                                }`}
+                                onClick={() => {
+                                  if (isMobile) {
+                                    setExpandedMobileFriend(expandedMobileFriend === friend.id ? null : friend.id);
+                                  }
+                                }}
+                                >
+                                  {(!isMobile || expandedMobileFriend === friend.id) && (
+                                    <>
+                                      <p className="text-gray-600 flex items-center justify-center gap-1">
+                                        <span>📍</span>
+                                        {friend.country}
+                                      </p>
+                                      {(friend.gender || friend.ageRange) && (
+                                        <p className="text-gray-500 flex items-center justify-center gap-1">
+                                          <span>👤</span>
+                                          {friend.gender && friend.ageRange 
+                                            ? `${friend.gender}, ${friend.ageRange}`
+                                            : friend.gender || friend.ageRange
+                                          }
+                                        </p>
+                                      )}
+                                      <p className="text-blue-600 font-medium flex items-center justify-center gap-1">
+                                        <span>🏷️</span>
+                                        {friend.category}
+                                      </p>
+                                    </>
+                                  )}
+                                  
+                                  {isMobile && (
+                                    <p className="text-xs text-gray-400 mt-2">
+                                      {expandedMobileFriend === friend.id ? 'Tap to collapse' : 'Tap to expand'}
                                     </p>
                                   )}
-                                  <p className="text-blue-600 font-medium flex items-center justify-center gap-1">
-                                    <span>🏷️</span>
-                                    {friend.category}
-                                  </p>
                                 </div>
                                 
-                                {/* Hover instruction */}
-                                <p className={`text-xs transition-colors duration-200 mt-2 ${
-                                  hoveredFriend === friend.id 
-                                    ? 'text-blue-600' 
-                                    : 'text-gray-400'
-                                }`}>
-                                  {hoveredFriend === friend.id ? 'Showing details...' : (isMobile ? 'Tap profile to see details' : 'Hover profile to see details')}
-                                </p>
+                                {/* Hover instruction - Desktop only */}
+                                {!isMobile && (
+                                  <p className={`text-xs transition-colors duration-200 mt-2 ${
+                                    hoveredFriend === friend.id 
+                                      ? 'text-blue-600' 
+                                      : 'text-gray-400'
+                                  }`}>
+                                    {hoveredFriend === friend.id ? 'Showing details...' : 'Hover profile to see details'}
+                                  </p>
+                                )}
                               </div>
 
                               {/* Expandable Details Section */}
                               <div className={`transition-all duration-300 overflow-hidden ${
-                                hoveredFriend === friend.id || isMobile
+                                (!isMobile && hoveredFriend === friend.id) || (isMobile && expandedMobileFriend === friend.id)
                                   ? 'max-h-96 opacity-100' 
                                   : 'max-h-0 opacity-0'
                               }`}>
