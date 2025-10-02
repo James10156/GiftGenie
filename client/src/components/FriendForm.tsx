@@ -120,96 +120,96 @@ const PROFILE_PICTURE_GALLERY = {
   cartoon: [
     {
       id: 'cartoon-1',
-      url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix&backgroundColor=b6e3f4&clothingColor=262e33',
+      url: 'https://res.cloudinary.com/dwno2tfxm/image/upload/v1759404520/giftgenie/profile-gallery/cartoon-felix.png',
       alt: 'Cute cartoon girl with ponytails'
     },
     {
       id: 'cartoon-2', 
-      url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Aneka&backgroundColor=c0aede&clothingColor=3c4f5c',
+      url: 'https://res.cloudinary.com/dwno2tfxm/image/upload/v1759404523/giftgenie/profile-gallery/cartoon-aneka.png',
       alt: 'Friendly cartoon boy with glasses'
     },
     {
       id: 'cartoon-3',
-      url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Luna&backgroundColor=ffd93d&clothingColor=65c9ff',
+      url: 'https://res.cloudinary.com/dwno2tfxm/image/upload/v1759404526/giftgenie/profile-gallery/cartoon-luna.png',
       alt: 'Cartoon girl with curly hair'
     },
     {
       id: 'cartoon-4',
-      url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Max&backgroundColor=ffdfbf&clothingColor=ff488e',
+      url: 'https://res.cloudinary.com/dwno2tfxm/image/upload/v1759404529/giftgenie/profile-gallery/cartoon-max.png',
       alt: 'Cartoon boy with cap'
     },
     {
       id: 'cartoon-5',
-      url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Zoe&backgroundColor=d1d4f9&clothingColor=74d680',
+      url: 'https://res.cloudinary.com/dwno2tfxm/image/upload/v1759404532/giftgenie/profile-gallery/cartoon-zoe.png',
       alt: 'Cartoon girl with braids'
     },
     {
       id: 'cartoon-6',
-      url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Oliver&backgroundColor=ffd1dc&clothingColor=fd9644',
+      url: 'https://res.cloudinary.com/dwno2tfxm/image/upload/v1759404535/giftgenie/profile-gallery/cartoon-oliver.png',
       alt: 'Cartoon boy with hoodie'
     }
   ],
   realistic: [
     {
       id: 'realistic-1',
-      url: 'https://images.unsplash.com/photo-1494790108755-2616b612b47c?w=150&h=150&fit=crop&crop=face',
+      url: 'https://res.cloudinary.com/dwno2tfxm/image/upload/v1759404539/giftgenie/profile-gallery/realistic-sarah.png',
       alt: 'Professional woman headshot'
     },
     {
       id: 'realistic-2',
-      url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face',
+      url: 'https://res.cloudinary.com/dwno2tfxm/image/upload/v1759404541/giftgenie/profile-gallery/realistic-michael.png',
       alt: 'Professional man headshot'
     },
     {
       id: 'realistic-3',
-      url: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face',
+      url: 'https://res.cloudinary.com/dwno2tfxm/image/upload/v1759404544/giftgenie/profile-gallery/realistic-emma.png',
       alt: 'Young woman smiling'
     },
     {
       id: 'realistic-4',
-      url: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face',
+      url: 'https://res.cloudinary.com/dwno2tfxm/image/upload/v1759404548/giftgenie/profile-gallery/realistic-david.png',
       alt: 'Young man casual'
     },
     {
       id: 'realistic-5',
-      url: 'https://images.unsplash.com/photo-1544725176-7c40e5a71c5e?w=150&h=150&fit=crop&crop=face',
+      url: 'https://res.cloudinary.com/dwno2tfxm/image/upload/v1759404551/giftgenie/profile-gallery/realistic-jessica.png',
       alt: 'Woman with glasses'
     },
     {
       id: 'realistic-6',
-      url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&crop=face',
+      url: 'https://res.cloudinary.com/dwno2tfxm/image/upload/v1759404555/giftgenie/profile-gallery/realistic-james.png',
       alt: 'Man with beard'
     }
   ],
   popCulture: [
     {
       id: 'pop-1',
-      url: 'https://api.dicebear.com/7.x/bottts/svg?seed=superhero&backgroundColor=b6e3f4&colors=ffdfbf,ffd93d,65c9ff',
+      url: 'https://res.cloudinary.com/dwno2tfxm/image/upload/v1759404558/giftgenie/profile-gallery/pop-superhero.png',
       alt: 'Robot superhero avatar'
     },
     {
       id: 'pop-2',
-      url: 'https://api.dicebear.com/7.x/personas/svg?seed=anime&backgroundColor=c0aede&colors=ff488e,74d680',
+      url: 'https://res.cloudinary.com/dwno2tfxm/image/upload/v1759404560/giftgenie/profile-gallery/pop-anime.png',
       alt: 'Anime-style character'
     },
     {
       id: 'pop-3',
-      url: 'https://api.dicebear.com/7.x/pixel-art/svg?seed=retro&backgroundColor=ffd93d&colors=262e33,3c4f5c',
+      url: 'https://res.cloudinary.com/dwno2tfxm/image/upload/v1759404563/giftgenie/profile-gallery/pop-retro.png',
       alt: 'Pixel art character'
     },
     {
       id: 'pop-4',
-      url: 'https://api.dicebear.com/7.x/fun-emoji/svg?seed=party&backgroundColor=ffdfbf&colors=fd9644,ff488e',
+      url: 'https://res.cloudinary.com/dwno2tfxm/image/upload/v1759404566/giftgenie/profile-gallery/pop-party.png',
       alt: 'Fun emoji style'
     },
     {
       id: 'pop-5',
-      url: 'https://api.dicebear.com/7.x/adventurer/svg?seed=fantasy&backgroundColor=d1d4f9&colors=74d680,65c9ff',
+      url: 'https://res.cloudinary.com/dwno2tfxm/image/upload/v1759404569/giftgenie/profile-gallery/pop-fantasy.png',
       alt: 'Fantasy adventurer'
     },
     {
       id: 'pop-6',
-      url: 'https://api.dicebear.com/7.x/big-smile/svg?seed=happy&backgroundColor=ffd1dc&colors=ffd93d,ff488e',
+      url: 'https://res.cloudinary.com/dwno2tfxm/image/upload/v1759404571/giftgenie/profile-gallery/pop-happy.png',
       alt: 'Happy character'
     }
   ]

@@ -1,0 +1,98 @@
+{
+  "cartoon": [
+    {
+      "id": "cartoon-1",
+      "url": "https://res.cloudinary.com/dwno2tfxm/image/upload/v1759404520/giftgenie/profile-gallery/cartoon-felix.png",
+      "alt": "Cute cartoon girl with ponytails"
+    },
+    {
+      "id": "cartoon-2",
+      "url": "https://res.cloudinary.com/dwno2tfxm/image/upload/v1759404523/giftgenie/profile-gallery/cartoon-aneka.png",
+      "alt": "Friendly cartoon boy with glasses"
+    },
+    {
+      "id": "cartoon-3",
+      "url": "https://res.cloudinary.com/dwno2tfxm/image/upload/v1759404526/giftgenie/profile-gallery/cartoon-luna.png",
+      "alt": "Cartoon girl with curly hair"
+    },
+    {
+      "id": "cartoon-4",
+      "url": "https://res.cloudinary.com/dwno2tfxm/image/upload/v1759404529/giftgenie/profile-gallery/cartoon-max.png",
+      "alt": "Cartoon boy with cap"
+    },
+    {
+      "id": "cartoon-5",
+      "url": "https://res.cloudinary.com/dwno2tfxm/image/upload/v1759404532/giftgenie/profile-gallery/cartoon-zoe.png",
+      "alt": "Cartoon girl with braids"
+    },
+    {
+      "id": "cartoon-6",
+      "url": "https://res.cloudinary.com/dwno2tfxm/image/upload/v1759404535/giftgenie/profile-gallery/cartoon-oliver.png",
+      "alt": "Cartoon boy with hoodie"
+    }
+  ],
+  "realistic": [
+    {
+      "id": "realistic-1",
+      "url": "https://res.cloudinary.com/dwno2tfxm/image/upload/v1759404539/giftgenie/profile-gallery/realistic-sarah.png",
+      "alt": "Professional woman headshot"
+    },
+    {
+      "id": "realistic-2",
+      "url": "https://res.cloudinary.com/dwno2tfxm/image/upload/v1759404541/giftgenie/profile-gallery/realistic-michael.png",
+      "alt": "Professional man headshot"
+    },
+    {
+      "id": "realistic-3",
+      "url": "https://res.cloudinary.com/dwno2tfxm/image/upload/v1759404544/giftgenie/profile-gallery/realistic-emma.png",
+      "alt": "Young woman smiling"
+    },
+    {
+      "id": "realistic-4",
+      "url": "https://res.cloudinary.com/dwno2tfxm/image/upload/v1759404548/giftgenie/profile-gallery/realistic-david.png",
+      "alt": "Young man casual"
+    },
+    {
+      "id": "realistic-5",
+      "url": "https://res.cloudinary.com/dwno2tfxm/image/upload/v1759404551/giftgenie/profile-gallery/realistic-jessica.png",
+      "alt": "Woman with glasses"
+    },
+    {
+      "id": "realistic-6",
+      "url": "https://res.cloudinary.com/dwno2tfxm/image/upload/v1759404555/giftgenie/profile-gallery/realistic-james.png",
+      "alt": "Man with beard"
+    }
+  ],
+  "popCulture": [
+    {
+      "id": "pop-1",
+      "url": "https://res.cloudinary.com/dwno2tfxm/image/upload/v1759404558/giftgenie/profile-gallery/pop-superhero.png",
+      "alt": "Robot superhero avatar"
+    },
+    {
+      "id": "pop-2",
+      "url": "https://res.cloudinary.com/dwno2tfxm/image/upload/v1759404560/giftgenie/profile-gallery/pop-anime.png",
+      "alt": "Anime-style character"
+    },
+    {
+      "id": "pop-3",
+      "url": "https://res.cloudinary.com/dwno2tfxm/image/upload/v1759404563/giftgenie/profile-gallery/pop-retro.png",
+      "alt": "Pixel art character"
+    },
+    {
+      "id": "pop-4",
+      "url": "https://res.cloudinary.com/dwno2tfxm/image/upload/v1759404566/giftgenie/profile-gallery/pop-party.png",
+      "alt": "Fun emoji style"
+    },
+    {
+      "id": "pop-5",
+      "url": "https://res.cloudinary.com/dwno2tfxm/image/upload/v1759404569/giftgenie/profile-gallery/pop-fantasy.png",
+      "alt": "Fantasy adventurer"
+    },
+    {
+      "id": "pop-6",
+      "url": "https://res.cloudinary.com/dwno2tfxm/image/upload/v1759404571/giftgenie/profile-gallery/pop-happy.png",
+      "alt": "Happy character"
+    }
+  ]
+}
