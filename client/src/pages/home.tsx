@@ -54,31 +54,69 @@ function Home() {
   // Touch/swipe support for carousel
   const [touchStart, setTouchStart] = useState(0);
   const [touchEnd, setTouchEnd] = useState(0);
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [swipeOffset, setSwipeOffset] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
 
   const handleTouchStart = (e: React.TouchEvent) => {
     setTouchStart(e.targetTouches[0].clientX);
+    setTouchEnd(0);
+    setIsDragging(true);
+    setIsAnimating(false);
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    setTouchEnd(e.targetTouches[0].clientX);
+    if (!isDragging) return;
+    const currentX = e.targetTouches[0].clientX;
+    setTouchEnd(currentX);
+    
+    // Calculate real-time offset for smooth dragging
+    const offset = currentX - touchStart;
+    
+    // Only prevent default if this is clearly a horizontal swipe
+    if (Math.abs(offset) > 10) {
+      e.preventDefault(); // Prevent page scrolling during horizontal swipe
+    }
+    
+    const maxOffset = 150; // Maximum drag distance
+    const clampedOffset = Math.max(-maxOffset, Math.min(maxOffset, offset));
+    setSwipeOffset(clampedOffset);
   };
 
   const handleTouchEnd = () => {
-    if (!touchStart || !touchEnd) return;
+    if (!touchStart || !touchEnd || !isDragging) {
+      setIsDragging(false);
+      setSwipeOffset(0);
+      return;
+    }
     
+    setIsDragging(false);
     const distance = touchStart - touchEnd;
     const minSwipeDistance = 50;
     
     if (filteredFriends.length > 0) {
-      if (distance > minSwipeDistance) {
-        // Swipe left - next friend (continuous)
-        setCarouselIndex((carouselIndex + 1) % filteredFriends.length);
-      }
+      setIsAnimating(true);
       
-      if (distance < -minSwipeDistance) {
-        // Swipe right - previous friend (continuous)
-        setCarouselIndex((carouselIndex - 1 + filteredFriends.length) % filteredFriends.length);
+      if (Math.abs(distance) > minSwipeDistance) {
+        if (distance > 0) {
+          // Swipe left - next friend
+          setCarouselIndex((carouselIndex + 1) % filteredFriends.length);
+        } else {
+          // Swipe right - previous friend
+          setCarouselIndex((carouselIndex - 1 + filteredFriends.length) % filteredFriends.length);
+        }
+        
+        // Immediately reset offset for smooth continuous transition
+        setSwipeOffset(0);
+        setIsAnimating(false);
+      } else {
+        // Snap back to center if swipe wasn't strong enough
+        setSwipeOffset(0);
+        setIsAnimating(false);
       }
+    } else {
+      setSwipeOffset(0);
+      setIsAnimating(false);
     }
   };
 
@@ -776,7 +814,7 @@ function Home() {
                             }`}
                             type="button"
                           >
-                            🔄 Carousel
+                            🔄 {isMobile ? 'Swipe' : 'Carousel'}
                           </button>
                         </div>
                       )}
@@ -1053,10 +1091,16 @@ function Home() {
 
                   {/* Carousel Content - Responsive Three Card View */}
                   <div 
-                    className="relative overflow-hidden"
+                    className={`relative overflow-hidden ${
+                      isMobile && isDragging ? 'bg-gradient-to-r from-blue-50 via-white to-blue-50' : ''
+                    }`}
                     onTouchStart={handleTouchStart}
                     onTouchMove={handleTouchMove}
                     onTouchEnd={handleTouchEnd}
+                    style={isMobile ? {
+                      transition: isDragging ? 'background 0.2s ease' : 'background 0.3s ease',
+                      touchAction: 'pan-y pinch-zoom', // Allow vertical scrolling but prevent horizontal
+                    } : {}}
                   >
                     {filteredFriends.length === 0 ? (
                       <div className="text-center py-8 text-gray-500">
@@ -1101,21 +1145,30 @@ function Home() {
                         </div>
                       )}
 
-                      {/* Current Friend (Main) - Responsive sizing */}
-                      <div className={`flex-shrink-0 transform scale-100 transition-all duration-300 ${
-                        isMobile ? 'w-full max-w-sm mx-2' : 'w-80'
-                      }`}>
+                      {/* Current Friend (Main) - Responsive sizing with floating animation */}
+                      <div 
+                        className={`flex-shrink-0 transform scale-100 transition-all duration-300 ${
+                          isMobile ? 'w-full max-w-sm mx-2' : 'w-80'
+                        }`}
+                      >
                         {(() => {
                           const friend = filteredFriends[carouselIndex];
                           if (!friend) return null;
                           return (
                             <div 
-                              className={`group bg-white border-2 border-blue-200 rounded-2xl shadow-xl transition-all duration-300 ${
+                              className={`group bg-white border-2 border-blue-200 rounded-2xl shadow-xl transition-all duration-300 overflow-hidden ${
                                 isMobile ? 'p-4' : 'p-6'
                               }`}
                             >
-                              {/* Profile Section */}
-                              <div className={`text-center ${isMobile ? 'mb-4' : 'mb-6'}`}>
+                              {/* Sliding content wrapper */}
+                              <div 
+                                style={isMobile ? {
+                                  transform: `translateX(${swipeOffset}px)`,
+                                  transition: isDragging || isAnimating ? 'none' : 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                } : {}}
+                              >
+                                {/* Profile Section */}
+                                <div className={`text-center ${isMobile ? 'mb-4' : 'mb-6'}`}>
                                 {friend.profilePicture ? (
                                   <div 
                                     className={`mx-auto rounded-full transition-all duration-300 hover:scale-110 hover:shadow-lg ring-4 ring-blue-200 hover:ring-blue-400 cursor-pointer mb-3 md:mb-4 ${
@@ -1309,6 +1362,7 @@ function Home() {
                                   🗑️
                                 </button>
                               </div>
+                              </div> {/* Close sliding content wrapper */}
                             </div>
                           );
                         })()}
@@ -1351,6 +1405,29 @@ function Home() {
                     </div>
                     )}
                   </div>
+
+                  {/* Mobile Swipe Indicators */}
+                  {isMobile && filteredFriends.length > 1 && (
+                    <div className="absolute inset-y-0 left-0 right-0 flex items-center justify-between pointer-events-none">
+                      {/* Left swipe indicator */}
+                      <div className={`ml-4 transition-all duration-200 ${
+                        swipeOffset > 30 ? 'opacity-70 scale-110' : 'opacity-30'
+                      }`}>
+                        <div className="bg-white/80 backdrop-blur-sm rounded-full p-2 shadow-lg">
+                          <span className="text-blue-600">👈</span>
+                        </div>
+                      </div>
+                      
+                      {/* Right swipe indicator */}
+                      <div className={`mr-4 transition-all duration-200 ${
+                        swipeOffset < -30 ? 'opacity-70 scale-110' : 'opacity-30'
+                      }`}>
+                        <div className="bg-white/80 backdrop-blur-sm rounded-full p-2 shadow-lg">
+                          <span className="text-blue-600">👉</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Dots Indicator - More prominent on mobile */}
                   <div className={`flex justify-center gap-2 ${isMobile ? 'mt-4' : 'mt-6'}`}>
