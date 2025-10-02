@@ -115,6 +115,106 @@ const COMMON_CATEGORIES = [
   "Childhood Friends", "Business Associates", "Mentors", "Students"
 ];
 
+// Profile Picture Gallery Options
+const PROFILE_PICTURE_GALLERY = {
+  cartoon: [
+    {
+      id: 'cartoon-1',
+      url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix&backgroundColor=b6e3f4&clothingColor=262e33',
+      alt: 'Cute cartoon girl with ponytails'
+    },
+    {
+      id: 'cartoon-2', 
+      url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Aneka&backgroundColor=c0aede&clothingColor=3c4f5c',
+      alt: 'Friendly cartoon boy with glasses'
+    },
+    {
+      id: 'cartoon-3',
+      url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Luna&backgroundColor=ffd93d&clothingColor=65c9ff',
+      alt: 'Cartoon girl with curly hair'
+    },
+    {
+      id: 'cartoon-4',
+      url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Max&backgroundColor=ffdfbf&clothingColor=ff488e',
+      alt: 'Cartoon boy with cap'
+    },
+    {
+      id: 'cartoon-5',
+      url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Zoe&backgroundColor=d1d4f9&clothingColor=74d680',
+      alt: 'Cartoon girl with braids'
+    },
+    {
+      id: 'cartoon-6',
+      url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Oliver&backgroundColor=ffd1dc&clothingColor=fd9644',
+      alt: 'Cartoon boy with hoodie'
+    }
+  ],
+  realistic: [
+    {
+      id: 'realistic-1',
+      url: 'https://images.unsplash.com/photo-1494790108755-2616b612b47c?w=150&h=150&fit=crop&crop=face',
+      alt: 'Professional woman headshot'
+    },
+    {
+      id: 'realistic-2',
+      url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face',
+      alt: 'Professional man headshot'
+    },
+    {
+      id: 'realistic-3',
+      url: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face',
+      alt: 'Young woman smiling'
+    },
+    {
+      id: 'realistic-4',
+      url: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face',
+      alt: 'Young man casual'
+    },
+    {
+      id: 'realistic-5',
+      url: 'https://images.unsplash.com/photo-1544725176-7c40e5a71c5e?w=150&h=150&fit=crop&crop=face',
+      alt: 'Woman with glasses'
+    },
+    {
+      id: 'realistic-6',
+      url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&crop=face',
+      alt: 'Man with beard'
+    }
+  ],
+  popCulture: [
+    {
+      id: 'pop-1',
+      url: 'https://api.dicebear.com/7.x/bottts/svg?seed=superhero&backgroundColor=b6e3f4&colors=ffdfbf,ffd93d,65c9ff',
+      alt: 'Robot superhero avatar'
+    },
+    {
+      id: 'pop-2',
+      url: 'https://api.dicebear.com/7.x/personas/svg?seed=anime&backgroundColor=c0aede&colors=ff488e,74d680',
+      alt: 'Anime-style character'
+    },
+    {
+      id: 'pop-3',
+      url: 'https://api.dicebear.com/7.x/pixel-art/svg?seed=retro&backgroundColor=ffd93d&colors=262e33,3c4f5c',
+      alt: 'Pixel art character'
+    },
+    {
+      id: 'pop-4',
+      url: 'https://api.dicebear.com/7.x/fun-emoji/svg?seed=party&backgroundColor=ffdfbf&colors=fd9644,ff488e',
+      alt: 'Fun emoji style'
+    },
+    {
+      id: 'pop-5',
+      url: 'https://api.dicebear.com/7.x/adventurer/svg?seed=fantasy&backgroundColor=d1d4f9&colors=74d680,65c9ff',
+      alt: 'Fantasy adventurer'
+    },
+    {
+      id: 'pop-6',
+      url: 'https://api.dicebear.com/7.x/big-smile/svg?seed=happy&backgroundColor=ffd1dc&colors=ffd93d,ff488e',
+      alt: 'Happy character'
+    }
+  ]
+};
+
 export function FriendForm({ friend, onClose }: FriendFormProps) {
   const [currentStep, setCurrentStep] = useState(1);
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -138,6 +238,8 @@ export function FriendForm({ friend, onClose }: FriendFormProps) {
   const [newTrait, setNewTrait] = useState("");
   const [newInterest, setNewInterest] = useState("");
   const [customCategory, setCustomCategory] = useState("");
+  const [showGallery, setShowGallery] = useState(false);
+  const [galleryCategory, setGalleryCategory] = useState<'cartoon' | 'realistic' | 'popCulture'>('cartoon');
 
   // Fetch existing categories for suggestions
   const { data: existingCategories = [] } = useQuery({
@@ -511,6 +613,17 @@ export function FriendForm({ friend, onClose }: FriendFormProps) {
                 </p>
                 <p className="text-xs text-gray-400">Max 5MB • JPG, PNG, GIF</p>
                 
+                {/* Gallery Option */}
+                <div className="mt-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowGallery(!showGallery)}
+                    className="text-sm text-blue-600 hover:text-blue-700 underline"
+                  >
+                    {showGallery ? 'Hide Gallery' : 'Choose from Gallery'}
+                  </button>
+                </div>
+                
                 {/* Success message */}
                 {uploadSuccess && (
                   <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded-md">
@@ -520,6 +633,73 @@ export function FriendForm({ friend, onClose }: FriendFormProps) {
                       </svg>
                       <span className="text-xs text-green-700">Photo uploaded successfully!</span>
                     </div>
+                  </div>
+                )}
+                
+                {/* Profile Picture Gallery */}
+                {showGallery && (
+                  <div className="mt-4 p-4 border border-gray-200 rounded-lg bg-gray-50">
+                    {/* Category Tabs */}
+                    <div className="flex justify-center mb-4">
+                      <div className="bg-white rounded-lg p-1 shadow-sm border">
+                        {[
+                          { key: 'cartoon', label: '🎨 Cartoon', emoji: '🎨' },
+                          { key: 'realistic', label: '📸 Realistic', emoji: '📸' },
+                          { key: 'popCulture', label: '🎬 Pop Culture', emoji: '🎬' }
+                        ].map((category) => (
+                          <button
+                            key={category.key}
+                            type="button"
+                            onClick={() => setGalleryCategory(category.key as any)}
+                            className={`px-3 py-1 text-xs rounded-md transition-colors ${
+                              galleryCategory === category.key
+                                ? 'bg-blue-600 text-white'
+                                : 'text-gray-600 hover:text-gray-900'
+                            }`}
+                          >
+                            {category.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    {/* Gallery Grid */}
+                    <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto">
+                      {PROFILE_PICTURE_GALLERY[galleryCategory].map((pic) => (
+                        <button
+                          key={pic.id}
+                          type="button"
+                          onClick={() => {
+                            setFormData({ ...formData, profilePicture: pic.url });
+                            setShowGallery(false);
+                            setUploadSuccess(false);
+                          }}
+                          className="relative group aspect-square rounded-lg overflow-hidden border-2 border-gray-200 hover:border-blue-400 transition-colors"
+                        >
+                          <img
+                            src={pic.url}
+                            alt={pic.alt}
+                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-200"
+                            onError={(e) => {
+                              // Fallback for broken images
+                              const target = e.target as HTMLImageElement;
+                              target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjRjNGNEY2Ii8+Cjx0ZXh0IHg9IjIwIiB5PSIyNCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE2IiBmaWxsPSIjOUI5QkE0IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj7wn5OBPC90ZXh0Pgo8L3N2Zz4K';
+                            }}
+                          />
+                          <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200 flex items-center justify-center">
+                            <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-white bg-opacity-90 rounded-full p-1">
+                              <svg className="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                              </svg>
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                    
+                    <p className="text-xs text-gray-500 mt-2 text-center">
+                      Click any image to select it as your friend's profile picture
+                    </p>
                   </div>
                 )}
               </div>
