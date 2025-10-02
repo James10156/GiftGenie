@@ -1,8 +1,8 @@
 import { drizzle } from "drizzle-orm/neon-http";
 import { neon } from "@neondatabase/serverless";
 import { eq, and, isNull } from "drizzle-orm";
-import { users, friends, savedGifts, userAnalytics, recommendationFeedback, performanceMetrics, blogPosts } from "@shared/schema";
-import type { User, InsertUser, Friend, InsertFriend, SavedGift, InsertSavedGift, UserAnalytics, InsertUserAnalytics, RecommendationFeedback, InsertRecommendationFeedback, PerformanceMetrics, InsertPerformanceMetrics, BlogPost, InsertBlogPost } from "@shared/schema";
+import { users, friends, savedGifts, userAnalytics, recommendationFeedback, performanceMetrics, blogPosts, giftReminders } from "@shared/schema";
+import type { User, InsertUser, Friend, InsertFriend, SavedGift, InsertSavedGift, UserAnalytics, InsertUserAnalytics, RecommendationFeedback, InsertRecommendationFeedback, PerformanceMetrics, InsertPerformanceMetrics, BlogPost, InsertBlogPost, GiftReminder, InsertGiftReminder } from "@shared/schema";
 import { IStorage } from "./storage";
 
 const databaseUrl = process.env.DATABASE_URL;
@@ -491,6 +491,78 @@ export class DatabaseStorage implements IStorage {
     return ensureDatabase(async () => {
       const result = await db!.delete(blogPosts).where(eq(blogPosts.id, id)).returning();
       return result.length > 0;
+    });
+  }
+
+  // Gift Reminders Methods
+  async getGiftReminder(id: string): Promise<GiftReminder | undefined> {
+    return ensureDatabase(async () => {
+      const result = await db!.select().from(giftReminders).where(eq(giftReminders.id, id)).limit(1);
+      return result[0];
+    });
+  }
+
+  async getUserGiftReminders(userId: string): Promise<GiftReminder[]> {
+    return ensureDatabase(async () => {
+      const result = await db!.select().from(giftReminders)
+        .where(eq(giftReminders.userId, userId))
+        .orderBy(giftReminders.reminderDate);
+      return result;
+    });
+  }
+
+  async getFriendGiftReminders(friendId: string): Promise<GiftReminder[]> {
+    return ensureDatabase(async () => {
+      const result = await db!.select().from(giftReminders)
+        .where(eq(giftReminders.friendId, friendId))
+        .orderBy(giftReminders.reminderDate);
+      return result;
+    });
+  }
+
+  async createGiftReminder(reminder: InsertGiftReminder): Promise<GiftReminder> {
+    return ensureDatabase(async () => {
+      const result = await db!.insert(giftReminders).values(reminder).returning();
+      return result[0];
+    });
+  }
+
+  async updateGiftReminder(id: string, reminder: Partial<InsertGiftReminder>): Promise<GiftReminder | undefined> {
+    return ensureDatabase(async () => {
+      const result = await db!.update(giftReminders)
+        .set({ ...reminder, updatedAt: new Date().toISOString() })
+        .where(eq(giftReminders.id, id))
+        .returning();
+      return result[0];
+    });
+  }
+
+  async deleteGiftReminder(id: string): Promise<boolean> {
+    return ensureDatabase(async () => {
+      const result = await db!.delete(giftReminders).where(eq(giftReminders.id, id)).returning();
+      return result.length > 0;
+    });
+  }
+
+  async getDueReminders(beforeDate?: string): Promise<GiftReminder[]> {
+    return ensureDatabase(async () => {
+      const checkDate = beforeDate || new Date().toISOString();
+      const result = await db!.select().from(giftReminders)
+        .where(and(
+          eq(giftReminders.status, 'active'),
+          // TODO: Add proper date comparison when we implement the job scheduler
+        ));
+      return result;
+    });
+  }
+
+  async updateUserNotificationPreferences(userId: string, preferences: any): Promise<User | undefined> {
+    return ensureDatabase(async () => {
+      const result = await db!.update(users)
+        .set({ notificationPreferences: preferences })
+        .where(eq(users.id, userId))
+        .returning();
+      return result[0];
     });
   }
 }

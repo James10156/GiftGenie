@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type Friend, type InsertFriend, type SavedGift, type InsertSavedGift, type UserAnalytics, type InsertUserAnalytics, type RecommendationFeedback, type InsertRecommendationFeedback, type PerformanceMetrics, type InsertPerformanceMetrics, type BlogPost, type InsertBlogPost } from "@shared/schema";
+import { type User, type InsertUser, type Friend, type InsertFriend, type SavedGift, type InsertSavedGift, type UserAnalytics, type InsertUserAnalytics, type RecommendationFeedback, type InsertRecommendationFeedback, type PerformanceMetrics, type InsertPerformanceMetrics, type BlogPost, type InsertBlogPost, type GiftReminder, type InsertGiftReminder } from "@shared/schema";
 import { randomUUID } from "crypto";
 
 export interface IStorage {
@@ -33,6 +33,16 @@ export interface IStorage {
   createBlogPost(blogPost: InsertBlogPost & { authorId: string }): Promise<BlogPost>;
   updateBlogPost(id: string, blogPost: Partial<InsertBlogPost> & { updatedAt?: string }): Promise<BlogPost | undefined>;
   deleteBlogPost(id: string): Promise<boolean>;
+
+  // Gift reminder methods
+  getGiftReminder(id: string): Promise<GiftReminder | undefined>;
+  getUserGiftReminders(userId: string): Promise<GiftReminder[]>;
+  getFriendGiftReminders(friendId: string): Promise<GiftReminder[]>;
+  createGiftReminder(reminder: InsertGiftReminder): Promise<GiftReminder>;
+  updateGiftReminder(id: string, reminder: Partial<InsertGiftReminder>): Promise<GiftReminder | undefined>;
+  deleteGiftReminder(id: string): Promise<boolean>;
+  getDueReminders(beforeDate?: string): Promise<GiftReminder[]>; // For scheduled job processing
+  updateUserNotificationPreferences(userId: string, preferences: any): Promise<User | undefined>;
 }
 
 export class MemStorage implements IStorage {

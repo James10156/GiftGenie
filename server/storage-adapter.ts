@@ -1,4 +1,4 @@
-import type { User, InsertUser, Friend, InsertFriend, SavedGift, InsertSavedGift, UserAnalytics, InsertUserAnalytics, RecommendationFeedback, InsertRecommendationFeedback, PerformanceMetrics, InsertPerformanceMetrics, BlogPost, InsertBlogPost } from "@shared/schema";
+import type { User, InsertUser, Friend, InsertFriend, SavedGift, InsertSavedGift, UserAnalytics, InsertUserAnalytics, RecommendationFeedback, InsertRecommendationFeedback, PerformanceMetrics, InsertPerformanceMetrics, BlogPost, InsertBlogPost, GiftReminder, InsertGiftReminder } from "@shared/schema";
 import { MemStorage } from "./storage";
 import { DatabaseStorage } from "./db";
 
@@ -38,6 +38,16 @@ export interface IStorageAdapter {
   createBlogPost(blogPost: InsertBlogPost & { authorId: string }): Promise<BlogPost>;
   updateBlogPost(id: string, blogPost: Partial<InsertBlogPost> & { updatedAt?: string }): Promise<BlogPost | undefined>;
   deleteBlogPost(id: string): Promise<boolean>;
+
+  // Gift reminder operations
+  getGiftReminder(id: string, userId?: string): Promise<GiftReminder | undefined>;
+  getUserGiftReminders(userId: string): Promise<GiftReminder[]>;
+  getFriendGiftReminders(friendId: string, userId?: string): Promise<GiftReminder[]>;
+  createGiftReminder(reminder: InsertGiftReminder, userId?: string): Promise<GiftReminder>;
+  updateGiftReminder(id: string, reminder: Partial<InsertGiftReminder>, userId?: string): Promise<GiftReminder | undefined>;
+  deleteGiftReminder(id: string, userId?: string): Promise<boolean>;
+  getDueReminders(beforeDate?: string): Promise<GiftReminder[]>;
+  updateUserNotificationPreferences(userId: string, preferences: any): Promise<User | undefined>;
 }
 
 export class StorageAdapter implements IStorageAdapter {
@@ -466,6 +476,81 @@ export class StorageAdapter implements IStorageAdapter {
       console.error('[storageAdapter.getAllUserAnalytics] Error:', error);
       throw error;
     }
+  }
+
+  // Gift Reminder Methods
+  async getGiftReminder(id: string, userId?: string): Promise<GiftReminder | undefined> {
+    if (this.databaseStorage) {
+      const reminder = await this.databaseStorage.getGiftReminder(id);
+      // Check ownership if userId provided
+      if (reminder && userId && reminder.userId !== userId) {
+        return undefined;
+      }
+      return reminder;
+    }
+    // Guest users don't have reminders in memory storage
+    return undefined;
+  }
+
+  async getUserGiftReminders(userId: string): Promise<GiftReminder[]> {
+    if (this.databaseStorage) {
+      return this.databaseStorage.getUserGiftReminders(userId);
+    }
+    // Guest users don't have reminders
+    return [];
+  }
+
+  async getFriendGiftReminders(friendId: string, userId?: string): Promise<GiftReminder[]> {
+    if (this.databaseStorage) {
+      return this.databaseStorage.getFriendGiftReminders(friendId);
+    }
+    return [];
+  }
+
+  async createGiftReminder(reminder: InsertGiftReminder, userId?: string): Promise<GiftReminder> {
+    if (this.databaseStorage) {
+      const reminderWithUser = { ...reminder, userId: userId || reminder.userId };
+      return this.databaseStorage.createGiftReminder(reminderWithUser);
+    }
+    throw new Error("Gift reminders require database storage");
+  }
+
+  async updateGiftReminder(id: string, reminder: Partial<InsertGiftReminder>, userId?: string): Promise<GiftReminder | undefined> {
+    if (this.databaseStorage) {
+      // Check ownership first
+      const existing = await this.getGiftReminder(id, userId);
+      if (!existing) {
+        return undefined;
+      }
+      return this.databaseStorage.updateGiftReminder(id, reminder);
+    }
+    return undefined;
+  }
+
+  async deleteGiftReminder(id: string, userId?: string): Promise<boolean> {
+    if (this.databaseStorage) {
+      // Check ownership first
+      const existing = await this.getGiftReminder(id, userId);
+      if (!existing) {
+        return false;
+      }
+      return this.databaseStorage.deleteGiftReminder(id);
+    }
+    return false;
+  }
+
+  async getDueReminders(beforeDate?: string): Promise<GiftReminder[]> {
+    if (this.databaseStorage) {
+      return this.databaseStorage.getDueReminders(beforeDate);
+    }
+    return [];
+  }
+
+  async updateUserNotificationPreferences(userId: string, preferences: any): Promise<User | undefined> {
+    if (this.databaseStorage) {
+      return this.databaseStorage.updateUserNotificationPreferences(userId, preferences);
+    }
+    return undefined;
   }
 }
 

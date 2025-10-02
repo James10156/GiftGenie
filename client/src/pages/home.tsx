@@ -8,6 +8,8 @@ import { AuthModal } from "../components/auth-modal";
 import { AnalyticsDashboard } from "../components/analytics-dashboard";
 import { MobileTabsDropdown } from "../components/mobile-tabs-dropdown";
 import { ThemeSelector } from "../components/ThemeSelector";
+import { AlarmIcon } from "../components/AlarmIcon";
+import { ReminderModal, type ReminderFormData } from "../components/ReminderModal";
 import { getThemeById } from "../lib/themes";
 import { useAnalytics, usePageTracking, usePerformanceTracking, useEngagementTracking } from "../hooks/use-analytics";
 
@@ -48,6 +50,9 @@ function Home() {
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [hoveredFriend, setHoveredFriend] = useState<string | null>(null);
   const [expandedMobileFriend, setExpandedMobileFriend] = useState<string | null>(null);
+  const [showReminderModal, setShowReminderModal] = useState(false);
+  const [reminderForFriend, setReminderForFriend] = useState<Friend | null>(null);
+  const [friendReminders, setFriendReminders] = useState<{[friendId: string]: any[]}>({});
   const [draggedFriend, setDraggedFriend] = useState<string | null>(null);
   const [dragOverFriend, setDragOverFriend] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -746,6 +751,70 @@ function Home() {
     }
   };
 
+  // Gift Reminder Functions
+  const handleCreateReminder = (friendId: string) => {
+    const friend = friends?.find(f => f.id === friendId);
+    if (friend) {
+      setReminderForFriend(friend);
+      setShowReminderModal(true);
+    }
+  };
+
+  const handleSaveReminder = async (reminderData: ReminderFormData) => {
+    if (!reminderForFriend) return;
+
+    try {
+      const response = await fetch("/api/reminders", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...reminderData,
+          friendId: reminderForFriend.id,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to create reminder");
+      }
+
+      // Refresh friend reminders
+      const reminderResponse = await fetch(`/api/friends/${reminderForFriend.id}/reminders`);
+      if (reminderResponse.ok) {
+        const reminders = await reminderResponse.json();
+        setFriendReminders(prev => ({
+          ...prev,
+          [reminderForFriend.id]: reminders
+        }));
+      }
+
+      console.log("Reminder created successfully");
+    } catch (error) {
+      console.error("Error creating reminder:", error);
+    }
+  };
+
+  // Load reminders for friends
+  useEffect(() => {
+    if (friends && friends.length > 0) {
+      friends.forEach(async (friend) => {
+        try {
+          const response = await fetch(`/api/friends/${friend.id}/reminders`);
+          if (response.ok) {
+            const reminders = await response.json();
+            setFriendReminders(prev => ({
+              ...prev,
+              [friend.id]: reminders
+            }));
+          }
+        } catch (error) {
+          console.error(`Error loading reminders for friend ${friend.id}:`, error);
+        }
+      });
+    }
+  }, [friends]);
+
   const handleGenerateRecommendations = () => {
     if (selectedFriend && budget) {
       const formattedBudget = getFormattedBudget();
@@ -1095,6 +1164,13 @@ function Home() {
                       <div className={`absolute top-2 md:top-3 right-2 md:right-3 flex gap-1 transition-opacity duration-200 ${
                         isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
                       }`}>
+                        <AlarmIcon
+                          friendId={friend.id}
+                          friendName={friend.name}
+                          hasReminders={friendReminders[friend.id]?.length > 0}
+                          onCreateReminder={handleCreateReminder}
+                          className="bg-white rounded-full shadow-sm hover:shadow-md transition-all"
+                        />
                         <button
                           onClick={() => {
                             setEditingFriend(friend);
@@ -1431,6 +1507,13 @@ function Home() {
                                     >
                                       🎁 Generate Gifts
                                     </button>
+                                    <AlarmIcon
+                                      friendId={friend.id}
+                                      friendName={friend.name}
+                                      hasReminders={friendReminders[friend.id]?.length > 0}
+                                      onCreateReminder={handleCreateReminder}
+                                      className="hover:bg-blue-50 rounded-lg transition-colors"
+                                    />
                                     <button
                                       onClick={() => {
                                         setEditingFriend(friend);
@@ -1606,6 +1689,13 @@ function Home() {
                                   >
                                     🎁 Generate Gifts
                                   </button>
+                                  <AlarmIcon
+                                    friendId={friend.id}
+                                    friendName={friend.name}
+                                    hasReminders={friendReminders[friend.id]?.length > 0}
+                                    onCreateReminder={handleCreateReminder}
+                                    className="hover:bg-blue-50 rounded-lg transition-colors p-1"
+                                  />
                                   <button
                                     onClick={() => {
                                       setEditingFriend(friend);
@@ -2902,6 +2992,20 @@ function Home() {
                 setShowFriendForm(false);
                 setEditingFriend(null);
               }}
+            />
+          )}
+
+          {/* Reminder Modal */}
+          {showReminderModal && reminderForFriend && (
+            <ReminderModal
+              isOpen={showReminderModal}
+              onClose={() => {
+                setShowReminderModal(false);
+                setReminderForFriend(null);
+              }}
+              friendId={reminderForFriend.id}
+              friendName={reminderForFriend.name}
+              onSave={handleSaveReminder}
             />
           )}
 

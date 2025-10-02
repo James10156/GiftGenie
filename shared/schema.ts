@@ -8,6 +8,27 @@ export const users = pgTable("users", {
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
   isAdmin: boolean("is_admin").default(false),
+  
+  // Notification preferences
+  notificationPreferences: jsonb("notification_preferences").$type<{
+    email?: {
+      enabled: boolean;
+      address: string;
+    };
+    sms?: {
+      enabled: boolean;
+      phoneNumber: string;
+    };
+    push?: {
+      enabled: boolean;
+    };
+    defaultAdvanceDays: number;
+  }>().default({
+    email: { enabled: false, address: "" },
+    sms: { enabled: false, phoneNumber: "" },
+    push: { enabled: false },
+    defaultAdvanceDays: 7
+  }),
 });
 
 export const friends = pgTable("friends", {
@@ -45,6 +66,45 @@ export const savedGifts = pgTable("saved_gifts", {
     }>;
   }>().notNull(),
   createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
+});
+
+// Gift Reminders Table
+export const giftReminders = pgTable("gift_reminders", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  friendId: varchar("friend_id").notNull().references(() => friends.id, { onDelete: "cascade" }),
+  savedGiftId: varchar("saved_gift_id").references(() => savedGifts.id, { onDelete: "cascade" }), // Optional - specific gift
+  title: text("title").notNull(), // e.g., "Birthday gift for John", "Christmas gift for Mom"
+  reminderDate: text("reminder_date").notNull(), // ISO date string when to send reminder
+  occasionDate: text("occasion_date"), // Optional - actual date of the occasion
+  occasionType: text("occasion_type"), // e.g., "birthday", "anniversary", "christmas", "custom"
+  
+  // Notification settings (flexible for future expansion)
+  notificationMethods: jsonb("notification_methods").$type<{
+    email?: {
+      enabled: boolean;
+      address: string;
+    };
+    sms?: {
+      enabled: boolean;
+      phoneNumber: string;
+    };
+    push?: {
+      enabled: boolean;
+    };
+  }>().notNull(),
+  
+  message: text("message"), // Custom reminder message
+  advanceDays: integer("advance_days").default(7), // How many days before occasion to remind
+  
+  // Status and metadata
+  status: text("status").notNull().default("active"), // "active", "sent", "cancelled", "snoozed"
+  isRecurring: boolean("is_recurring").default(false), // For annual occasions
+  lastSentAt: text("last_sent_at"), // When reminder was last sent
+  snoozeUntil: text("snooze_until"), // If snoozed, when to check again
+  
+  createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at").default(sql`CURRENT_TIMESTAMP`),
 });
 
 // Analytics Tables
@@ -159,6 +219,23 @@ export const insertPerformanceMetricsSchema = createInsertSchema(performanceMetr
   success: true,
   errorMessage: true,
   metadata: z.record(z.string(), z.any()), // Ensure metadata is a plain object
+});
+
+// Gift Reminders Types and Schemas
+export type GiftReminder = typeof giftReminders.$inferSelect;
+export type InsertGiftReminder = typeof giftReminders.$inferInsert;
+
+export const insertGiftReminderSchema = createInsertSchema(giftReminders).pick({
+  friendId: true,
+  savedGiftId: true,
+  title: true,
+  reminderDate: true,
+  occasionDate: true,
+  occasionType: true,
+  notificationMethods: true,
+  message: true,
+  advanceDays: true,
+  isRecurring: true,
 });
 
 export const insertBlogPostSchema = createInsertSchema(blogPosts).pick({

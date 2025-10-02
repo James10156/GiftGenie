@@ -5,7 +5,7 @@ import multer from "multer";
 import { v2 as cloudinary } from "cloudinary";
 import { CloudinaryStorage } from "multer-storage-cloudinary";
 import { storageAdapter } from "./storage-adapter";
-import { insertFriendSchema, insertSavedGiftSchema, insertUserAnalyticsSchema, insertRecommendationFeedbackSchema, insertPerformanceMetricsSchema, insertBlogPostSchema } from "@shared/schema";
+import { insertFriendSchema, insertSavedGiftSchema, insertUserAnalyticsSchema, insertRecommendationFeedbackSchema, insertPerformanceMetricsSchema, insertBlogPostSchema, insertGiftReminderSchema } from "@shared/schema";
 import { setupAuth, setupAuthRoutes, requireAuth, requireAdmin, type AuthenticatedRequest } from "./auth";
 import { generateGiftRecommendations } from "./services/openai";
 
@@ -302,6 +302,160 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(friend);
     } catch (error) {
       res.status(500).json({ message: "Failed to update friend theme" });
+    }
+  });
+
+  // Gift Reminders endpoints
+  app.get("/api/reminders", async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user?.id) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      const reminders = await storageAdapter.getUserGiftReminders(req.user.id);
+      res.json(reminders);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch reminders" });
+    }
+  });
+
+  app.get("/api/reminders/:id", async (req: AuthenticatedRequest, res) => {
+    try {
+      const reminder = await storageAdapter.getGiftReminder(req.params.id, req.user?.id);
+      if (!reminder) {
+        return res.status(404).json({ message: "Reminder not found" });
+      }
+      res.json(reminder);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch reminder" });
+    }
+  });
+
+  app.get("/api/friends/:friendId/reminders", async (req: AuthenticatedRequest, res) => {
+    try {
+      const reminders = await storageAdapter.getFriendGiftReminders(req.params.friendId, req.user?.id);
+      res.json(reminders);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch friend reminders" });
+    }
+  });
+
+  app.post("/api/reminders", async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user?.id) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      // Calculate reminder date based on occasion date and advance days
+      const { occasionDate, advanceDays, ...reminderData } = req.body;
+      const reminderDate = new Date(occasionDate);
+      reminderDate.setDate(reminderDate.getDate() - (advanceDays || 7));
+
+      const newReminder = {
+        ...reminderData,
+        userId: req.user.id,
+        occasionDate,
+        advanceDays: advanceDays || 7,
+        reminderDate: reminderDate.toISOString(),
+        status: 'active'
+      };
+
+      const reminder = await storageAdapter.createGiftReminder(newReminder, req.user.id);
+      res.status(201).json(reminder);
+    } catch (error) {
+      console.error("Error creating reminder:", error);
+      res.status(500).json({ message: "Failed to create reminder" });
+    }
+  });
+
+  app.put("/api/reminders/:id", async (req: AuthenticatedRequest, res) => {
+    try {
+      const { occasionDate, advanceDays, ...reminderData } = req.body;
+      let updateData = reminderData;
+
+      // Recalculate reminder date if occasion date or advance days changed
+      if (occasionDate || advanceDays !== undefined) {
+        const currentReminder = await storageAdapter.getGiftReminder(req.params.id, req.user?.id);
+        if (!currentReminder) {
+          return res.status(404).json({ message: "Reminder not found" });
+        }
+
+        const newOccasionDate = occasionDate || currentReminder.occasionDate;
+        const newAdvanceDays = advanceDays !== undefined ? advanceDays : currentReminder.advanceDays;
+        
+        const reminderDate = new Date(newOccasionDate);
+        reminderDate.setDate(reminderDate.getDate() - newAdvanceDays);
+
+        updateData = {
+          ...updateData,
+          occasionDate: newOccasionDate,
+          advanceDays: newAdvanceDays,
+          reminderDate: reminderDate.toISOString()
+        };
+      }
+
+      const reminder = await storageAdapter.updateGiftReminder(req.params.id, updateData, req.user?.id);
+      if (!reminder) {
+        return res.status(404).json({ message: "Reminder not found" });
+      }
+      res.json(reminder);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update reminder" });
+    }
+  });
+
+  app.delete("/api/reminders/:id", async (req: AuthenticatedRequest, res) => {
+    try {
+      const deleted = await storageAdapter.deleteGiftReminder(req.params.id, req.user?.id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Reminder not found" });
+      }
+      res.json({ message: "Reminder deleted successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete reminder" });
+    }
+  });
+
+  // User notification preferences
+  app.put("/api/user/notification-preferences", async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user?.id) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
+      const user = await storageAdapter.updateUserNotificationPreferences(req.user.id, req.body);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      res.json(user);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update notification preferences" });
+    }
+  });
+
+  // Test reminder endpoint (admin only)
+  app.post("/api/reminders/:id/test", requireAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { reminderService } = await import("./services/reminder");
+      const success = await reminderService.testReminder(req.params.id);
+      
+      if (success) {
+        res.json({ message: "Test reminder sent successfully" });
+      } else {
+        res.status(404).json({ message: "Reminder not found or failed to send" });
+      }
+    } catch (error) {
+      res.status(500).json({ message: "Failed to test reminder" });
+    }
+  });
+
+  // Check due reminders endpoint (admin only)
+  app.post("/api/reminders/check-due", requireAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { reminderService } = await import("./services/reminder");
+      await reminderService.checkDueReminders();
+      res.json({ message: "Due reminders checked and processed" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to check due reminders" });
     }
   });
 
