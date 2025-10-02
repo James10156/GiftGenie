@@ -23,6 +23,7 @@ export const friends = pgTable("friends", {
   profilePicture: text("profile_picture"),
   gender: text("gender"), // Can be "Male", "Female", or null
   ageRange: text("age_range"), // Can be "18-25", "26-30", "31-35", etc., or null
+  theme: text("theme").default("default"), // Theme for friend card styling
   createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
 });
 
@@ -126,6 +127,7 @@ export const insertFriendSchema = createInsertSchema(friends).pick({
   profilePicture: true,
   gender: true,
   ageRange: true,
+  theme: true,
 });
 
 export const insertSavedGiftSchema = createInsertSchema(savedGifts).pick({

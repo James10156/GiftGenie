@@ -130,6 +130,7 @@ export class DatabaseStorage implements IStorage {
       if (friend.profilePicture !== undefined) updateData.profilePicture = friend.profilePicture;
       if (friend.gender !== undefined) updateData.gender = friend.gender;
       if (friend.ageRange !== undefined) updateData.ageRange = friend.ageRange;
+      if (friend.theme !== undefined) updateData.theme = friend.theme;
       
       const result = await db!.update(friends)
         .set(updateData)
@@ -152,6 +153,7 @@ export class DatabaseStorage implements IStorage {
       if (friend.profilePicture !== undefined) updateData.profilePicture = friend.profilePicture;
       if (friend.gender !== undefined) updateData.gender = friend.gender;
       if (friend.ageRange !== undefined) updateData.ageRange = friend.ageRange;
+      if (friend.theme !== undefined) updateData.theme = friend.theme;
       
       const result = await db!.update(friends)
         .set(updateData)

@@ -7,6 +7,8 @@ import { GiftWrappingAnimation } from "../components/gift-wrapping-animation";
 import { AuthModal } from "../components/auth-modal";
 import { AnalyticsDashboard } from "../components/analytics-dashboard";
 import { MobileTabsDropdown } from "../components/mobile-tabs-dropdown";
+import { ThemeSelector } from "../components/ThemeSelector";
+import { getThemeById } from "../lib/themes";
 import { useAnalytics, usePageTracking, usePerformanceTracking, useEngagementTracking } from "../hooks/use-analytics";
 
 function Home() {
@@ -50,6 +52,10 @@ function Home() {
   const [dragOverFriend, setDragOverFriend] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchExpanded, setSearchExpanded] = useState(false);
+  
+  // Theme-related state
+  const [showThemeSelector, setShowThemeSelector] = useState(false);
+  const [themeForFriend, setThemeForFriend] = useState<string | null>(null);
   
   // Recommendations view mode state
   const [recommendationsViewMode, setRecommendationsViewMode] = useState<'grid' | 'carousel'>(() => {
@@ -663,6 +669,24 @@ function Home() {
     },
   });
 
+  // Update friend theme mutation
+  const updateThemeMutation = useMutation({
+    mutationFn: async ({ friendId, theme }: { friendId: string; theme: string }) => {
+      const response = await fetch(`/api/friends/${friendId}/theme`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ theme }),
+      });
+      if (!response.ok) throw new Error("Failed to update theme");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["friends"] });
+    },
+  });
+
   // Delete saved gift mutation
   const deleteSavedGiftMutation = useMutation({
     mutationFn: async (giftId: string) => {
@@ -965,10 +989,12 @@ function Home() {
                 </div>
               ) : friendsViewMode === 'grid' ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4">
-                  {filteredFriends.map((friend, index) => (
+                  {filteredFriends.map((friend, index) => {
+                    const theme = getThemeById(friend.theme || 'default');
+                    return (
                     <div
                       key={friend.id}
-                      className={`group relative border rounded-lg p-3 md:p-4 transition-all duration-200 select-none ${
+                      className={`group relative ${theme.background} ${theme.border} border rounded-lg p-3 md:p-4 transition-all duration-200 select-none ${
                         draggedFriend === friend.id 
                           ? 'opacity-50 scale-95 rotate-2 cursor-grabbing shadow-2xl z-10' 
                           : dragOverFriend === friend.id
@@ -1026,12 +1052,12 @@ function Home() {
                           }
                         }}
                       >
-                        <h3 className="font-semibold text-base md:text-lg">{friend.name}</h3>
+                        <h3 className={`font-semibold text-base md:text-lg ${theme.text}`}>{friend.name}</h3>
                         {!isMobile && (
                           <>
-                            <p className="text-xs md:text-sm text-gray-500">{friend.country}</p>
+                            <p className={`text-xs md:text-sm ${theme.textSecondary}`}>{friend.country}</p>
                             {(friend.gender || friend.ageRange) && (
-                              <p className="text-xs text-gray-400">
+                              <p className={`text-xs ${theme.textSecondary}`}>
                                 {friend.gender && friend.ageRange 
                                   ? `${friend.gender}, ${friend.ageRange}`
                                   : friend.gender || friend.ageRange
@@ -1040,15 +1066,15 @@ function Home() {
                             )}
                             <p className={`text-xs italic transition-colors duration-200 ${
                               hoveredFriend === friend.id 
-                                ? 'text-blue-600' 
-                                : 'text-gray-400'
+                                ? theme.accent 
+                                : theme.textSecondary
                             }`}>
                               {hoveredFriend === friend.id ? 'Showing details...' : 'Hover profile to see details'}
                             </p>
                           </>
                         )}
                         {isMobile && (
-                          <p className="text-xs text-gray-400 mt-1">
+                          <p className={`text-xs ${theme.textSecondary} mt-1`}>
                             {expandedMobileFriend === friend.id ? 'Tap to collapse' : 'Tap to expand'}
                           </p>
                         )}
@@ -1067,6 +1093,16 @@ function Home() {
                           title="Edit friend"
                         >
                           ✏️
+                        </button>
+                        <button
+                          onClick={() => {
+                            setThemeForFriend(friend.id);
+                            setShowThemeSelector(true);
+                          }}
+                          className="text-purple-600 hover:text-purple-800 p-1 bg-white rounded-full shadow-sm hover:shadow-md transition-all text-xs md:text-sm"
+                          title="Customize theme"
+                        >
+                          🎨
                         </button>
                         <button
                           onClick={() => {
@@ -1178,7 +1214,8 @@ function Home() {
                         Generate Gifts
                       </button>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 // Carousel View
@@ -1249,12 +1286,14 @@ function Home() {
                               transition: isDragging ? 'none' : 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                             }}
                           >
-                            {filteredFriends.map((friend, index) => (
+                            {filteredFriends.map((friend, index) => {
+                              const theme = getThemeById(friend.theme || 'default');
+                              return (
                               <div 
                                 key={friend.id}
                                 className="w-full flex-shrink-0"
                               >
-                                <div className="group bg-white border-2 border-blue-200 rounded-2xl shadow-xl transition-all duration-300 overflow-hidden p-4 mx-2">
+                                <div className={`group ${theme.background} ${theme.border} border-2 rounded-2xl shadow-xl transition-all duration-300 overflow-hidden p-4 mx-2`}>
                                   {/* Profile Section */}
                                   <div className="text-center mb-4">
                                     {friend.profilePicture ? (
@@ -1279,7 +1318,7 @@ function Home() {
                                         👤
                                       </div>
                                     )}
-                                    <h3 className="font-bold text-gray-900 mb-1 text-xl">{friend.name}</h3>
+                                    <h3 className={`font-bold mb-1 text-xl ${theme.text}`}>{friend.name}</h3>
                                     
                                     {/* Basic info - Show on desktop, hide on mobile unless expanded */}
                                     <div className="space-y-1 text-sm cursor-pointer"
@@ -1395,6 +1434,16 @@ function Home() {
                                     </button>
                                     <button
                                       onClick={() => {
+                                        setThemeForFriend(friend.id);
+                                        setShowThemeSelector(true);
+                                      }}
+                                      className="text-purple-600 hover:text-purple-800 hover:bg-purple-50 rounded-lg transition-colors p-2"
+                                      title="Customize theme"
+                                    >
+                                      🎨
+                                    </button>
+                                    <button
+                                      onClick={() => {
                                         if (confirm(`Are you sure you want to delete ${friend.name}?`)) {
                                           deleteFriendMutation.mutate(friend.id);
                                           if (carouselIndex >= filteredFriends.length - 1) {
@@ -1410,7 +1459,8 @@ function Home() {
                                   </div>
                                 </div>
                               </div>
-                            ))}
+                              );
+                            })}
                           </div>
                         </div>
                       ) : (
@@ -1421,9 +1471,10 @@ function Home() {
                           {(() => {
                             const friend = filteredFriends[carouselIndex];
                             if (!friend) return null;
+                            const theme = getThemeById(friend.theme || 'default');
                             return (
                               <div 
-                                className="group bg-white border-2 border-blue-200 rounded-2xl shadow-xl transition-all duration-300 overflow-hidden p-6"
+                                className={`group ${theme.background} ${theme.border} border-2 rounded-2xl shadow-xl transition-all duration-300 overflow-hidden p-6`}
                               >
                                 {/* Desktop content - existing structure */}
                                 <div className="text-center mb-6">
@@ -1449,7 +1500,7 @@ function Home() {
                                       👤
                                     </div>
                                   )}
-                                  <h3 className="font-bold text-gray-900 mb-1 text-2xl">{friend.name}</h3>
+                                  <h3 className={`font-bold mb-1 text-2xl ${theme.text}`}>{friend.name}</h3>
                                   
                                   <div className="space-y-1 text-base">
                                     <p className="text-gray-600 flex items-center justify-center gap-1">
@@ -1555,6 +1606,16 @@ function Home() {
                                     title="Edit friend"
                                   >
                                     ✏️
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setThemeForFriend(friend.id);
+                                      setShowThemeSelector(true);
+                                    }}
+                                    className="text-purple-600 hover:text-purple-800 hover:bg-purple-50 rounded-lg transition-colors p-3"
+                                    title="Customize theme"
+                                  >
+                                    🎨
                                   </button>
                                   <button
                                     onClick={() => {
@@ -2831,6 +2892,20 @@ function Home() {
               onClose={() => {
                 setShowFriendForm(false);
                 setEditingFriend(null);
+              }}
+            />
+          )}
+
+          {/* Theme Selector Modal */}
+          {showThemeSelector && themeForFriend && (
+            <ThemeSelector
+              currentTheme={friends?.find(f => f.id === themeForFriend)?.theme || 'default'}
+              onThemeSelect={(themeId) => {
+                updateThemeMutation.mutate({ friendId: themeForFriend, theme: themeId });
+              }}
+              onClose={() => {
+                setShowThemeSelector(false);
+                setThemeForFriend(null);
               }}
             />
           )}

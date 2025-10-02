@@ -188,6 +188,7 @@ export class StorageAdapter implements IStorageAdapter {
         if (friend.profilePicture !== undefined) existingFriend.profilePicture = friend.profilePicture || null;
         if (friend.gender !== undefined) existingFriend.gender = friend.gender || null;
         if (friend.ageRange !== undefined) existingFriend.ageRange = friend.ageRange || null;
+        if (friend.theme !== undefined) existingFriend.theme = friend.theme || 'default';
         return existingFriend;
       }
       return undefined;
