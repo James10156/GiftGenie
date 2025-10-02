@@ -5,20 +5,15 @@ WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
-COPY client/package*.json ./client/
-COPY server/package*.json ./server/
 
-# Install dependencies
+# Install all dependencies
 RUN npm ci
-RUN cd client && npm ci
-RUN cd server && npm ci
 
 # Copy source code
 COPY . .
 
-# Build the application
-RUN cd client && npm run build
-RUN cd server && npm run build
+# Build the application (includes both client and server)
+RUN npm run build:railway
 
 # Production stage
 FROM node:18-alpine AS production
@@ -27,19 +22,17 @@ WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
-COPY server/package*.json ./server/
 
 # Install production dependencies only
 RUN npm ci --only=production
-RUN cd server && npm ci --only=production
 
 # Copy built application
 COPY --from=builder /app/client/dist ./client/dist
-COPY --from=builder /app/server/dist ./server/dist
+COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/shared ./shared
 
 # Expose port
 EXPOSE 5000
 
 # Start the application
-CMD ["node", "server/dist/index.js"]
+CMD ["npm", "run", "start:railway"]
