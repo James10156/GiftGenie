@@ -63,7 +63,7 @@ function Blog() {
   // Delete post mutation
   const deletePost = useMutation({
     mutationFn: async (postId: string) => {
-      const response = await fetch(`/api/blog/posts/${postId}`, {
+      const response = await fetch(`/api/blog-posts/${postId}`, {
         method: "DELETE",
       });
       if (!response.ok) throw new Error("Failed to delete post");
@@ -290,8 +290,8 @@ function BlogEditor({ post, onClose, onSave }: BlogEditorProps) {
     setSaving(true);
     try {
       const url = post
-        ? `/api/blog/posts/${post.id}`
-        : "/api/blog/posts";
+        ? `/api/blog-posts/${post.id}`
+        : "/api/blog-posts";
       
       const method = post ? "PUT" : "POST";
       

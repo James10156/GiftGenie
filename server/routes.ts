@@ -33,10 +33,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   // Configure multer with Cloudinary storage
-  let storage;
-  let upload;
+  let profileStorage;
+  let blogStorage;
+  let profileUpload;
+  let blogUpload;
   try {
-    storage = new CloudinaryStorage({
+    // Profile picture storage config
+    profileStorage = new CloudinaryStorage({
       cloudinary: cloudinary,
       params: {
         folder: 'gift-genie/profile-pictures',
@@ -48,9 +51,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ],
       } as any,
     });
-    console.log("[registerRoutes] Multer storage config complete.");
-    upload = multer({ storage });
-    console.log("[registerRoutes] Multer upload config complete.");
+
+    // Blog image storage config
+    blogStorage = new CloudinaryStorage({
+      cloudinary: cloudinary,
+      params: {
+        folder: 'gift-genie/blog-images',
+        allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'webp'],
+        transformation: [
+          { width: 1200, height: 800, crop: 'limit' },
+          { quality: 'auto' },
+          { fetch_format: 'auto' }
+        ],
+      } as any,
+    });
+
+    console.log("[registerRoutes] Multer storage configs complete.");
+    profileUpload = multer({ storage: profileStorage });
+    blogUpload = multer({ storage: blogStorage });
+    console.log("[registerRoutes] Multer upload configs complete.");
   } catch (err) {
     console.error("[registerRoutes] Error in Multer storage/upload config:", err);
   }
@@ -65,21 +84,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Profile picture upload endpoint
-  app.post("/api/upload/profile-picture", upload.single('profilePicture'), (req, res) => {
-    try {
-      if (!req.file) {
-        return res.status(400).json({ message: "No file uploaded" });
-      }
-      
-      // Return the Cloudinary URL in the format the frontend expects
-      res.json({ 
-        imageUrl: req.file.path,
-        message: "Profile picture uploaded successfully" 
-      });
-    } catch (error) {
-      console.error("Upload error:", error);
-      res.status(500).json({ message: "Failed to upload profile picture" });
+  app.post("/api/upload/profile-picture", (req, res) => {
+    if (!profileUpload) {
+      return res.status(500).json({ message: "Upload service not configured" });
     }
+    profileUpload.single('profilePicture')(req, res, (err) => {
+      if (err) {
+        console.error("Upload error:", err);
+        return res.status(500).json({ message: "Failed to upload profile picture" });
+      }
+      try {
+        if (!req.file) {
+          return res.status(400).json({ message: "No file uploaded" });
+        }
+        
+        // Return the Cloudinary URL in the format the frontend expects
+        res.json({ 
+          imageUrl: req.file.path,
+          message: "Profile picture uploaded successfully" 
+        });
+      } catch (error) {
+        console.error("Upload error:", error);
+        res.status(500).json({ message: "Failed to upload profile picture" });
+      }
+    });
+  });
+
+  // Blog image upload endpoint
+  app.post("/api/blog/upload-image", requireAuth, requireAdmin, (req, res) => {
+    if (!blogUpload) {
+      return res.status(500).json({ message: "Upload service not configured" });
+    }
+    blogUpload.single('image')(req, res, (err) => {
+      if (err) {
+        console.error("Blog image upload error:", err);
+        return res.status(500).json({ message: "Failed to upload blog image" });
+      }
+      try {
+        if (!req.file) {
+          return res.status(400).json({ message: "No file uploaded" });
+        }
+        
+        // Return the Cloudinary URL in the format the frontend expects
+        res.json({ 
+          imageUrl: req.file.path,
+          message: "Blog image uploaded successfully" 
+        });
+      } catch (error) {
+        console.error("Blog image upload error:", error);
+        res.status(500).json({ message: "Failed to upload blog image" });
+      }
+    });
   });
 
   // Debug endpoint to inspect current user context (used in tests/diagnostics)
@@ -500,17 +555,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/blog-posts", requireAuth, requireAdmin, async (req, res) => {
     try {
+      console.log("Blog post creation request:", req.body);
+      console.log("User:", req.user);
+      
       const result = insertBlogPostSchema.safeParse(req.body);
       if (!result.success) {
+        console.log("Schema validation failed:", result.error.issues);
         return res.status(400).json({ 
           message: "Invalid blog post data",
           errors: result.error.issues 
         });
       }
 
-      const post = await storageAdapter.createBlogPost({ ...result.data, authorId: req.user?.id });
+      const postData = { ...result.data, authorId: req.user?.id };
+      console.log("Creating blog post with data:", postData);
+      
+      const post = await storageAdapter.createBlogPost(postData);
+      console.log("Blog post created successfully:", post);
       res.status(201).json(post);
     } catch (error) {
+      console.error("Error creating blog post:", error);
       res.status(500).json({ message: "Failed to create blog post" });
     }
   });

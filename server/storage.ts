@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type Friend, type InsertFriend, type SavedGift, type InsertSavedGift, type UserAnalytics, type InsertUserAnalytics, type RecommendationFeedback, type InsertRecommendationFeedback, type PerformanceMetrics, type InsertPerformanceMetrics } from "@shared/schema";
+import { type User, type InsertUser, type Friend, type InsertFriend, type SavedGift, type InsertSavedGift, type UserAnalytics, type InsertUserAnalytics, type RecommendationFeedback, type InsertRecommendationFeedback, type PerformanceMetrics, type InsertPerformanceMetrics, type BlogPost, type InsertBlogPost } from "@shared/schema";
 import { randomUUID } from "crypto";
 
 export interface IStorage {
@@ -26,6 +26,13 @@ export interface IStorage {
   getRecommendationFeedback(userId: string, limit?: number): Promise<RecommendationFeedback[]>;
   createPerformanceMetrics(metrics: InsertPerformanceMetrics, userId?: string): Promise<PerformanceMetrics>;
   getPerformanceMetrics(operation?: string, limit?: number): Promise<PerformanceMetrics[]>;
+
+  // Blog post methods
+  getBlogPost(id: string): Promise<BlogPost | undefined>;
+  getAllBlogPosts(): Promise<BlogPost[]>;
+  createBlogPost(blogPost: InsertBlogPost & { authorId: string }): Promise<BlogPost>;
+  updateBlogPost(id: string, blogPost: Partial<InsertBlogPost> & { updatedAt?: string }): Promise<BlogPost | undefined>;
+  deleteBlogPost(id: string): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -35,6 +42,7 @@ export class MemStorage implements IStorage {
   private userAnalytics: Map<string, UserAnalytics>;
   private recommendationFeedback: Map<string, RecommendationFeedback>;
   private performanceMetrics: Map<string, PerformanceMetrics>;
+  private blogPosts: Map<string, BlogPost>;
 
   constructor() {
     this.users = new Map();
@@ -43,6 +51,7 @@ export class MemStorage implements IStorage {
     this.userAnalytics = new Map();
     this.recommendationFeedback = new Map();
     this.performanceMetrics = new Map();
+    this.blogPosts = new Map();
     
     // Add some initial demo friends outside of test runs
     if (process.env.NODE_ENV !== 'test') {
@@ -327,6 +336,48 @@ export class MemStorage implements IStorage {
     return metrics
       .sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime())
       .slice(0, limit);
+  }
+
+  // Blog post methods
+  async getBlogPost(id: string): Promise<BlogPost | undefined> {
+    return this.blogPosts.get(id);
+  }
+
+  async getAllBlogPosts(): Promise<BlogPost[]> {
+    return Array.from(this.blogPosts.values())
+      .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+  }
+
+  async createBlogPost(blogPost: InsertBlogPost & { authorId: string }): Promise<BlogPost> {
+    const id = randomUUID();
+    const now = new Date().toISOString();
+    const newPost: BlogPost = {
+      id,
+      ...blogPost,
+      createdAt: now,
+      updatedAt: now,
+    };
+    this.blogPosts.set(id, newPost);
+    return newPost;
+  }
+
+  async updateBlogPost(id: string, updateData: Partial<InsertBlogPost> & { updatedAt?: string }): Promise<BlogPost | undefined> {
+    const existingPost = this.blogPosts.get(id);
+    if (!existingPost) {
+      return undefined;
+    }
+
+    const updatedPost: BlogPost = {
+      ...existingPost,
+      ...updateData,
+      updatedAt: new Date().toISOString(),
+    };
+    this.blogPosts.set(id, updatedPost);
+    return updatedPost;
+  }
+
+  async deleteBlogPost(id: string): Promise<boolean> {
+    return this.blogPosts.delete(id);
   }
 }
 
