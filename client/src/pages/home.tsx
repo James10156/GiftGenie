@@ -613,8 +613,10 @@ function Home() {
         // First time generating or different friend
         setRecommendations(data);
         setRecommendationsForFriend(selectedFriend);
-        switchTab("recommendations");
       }
+      
+      // Always switch to recommendations tab after generation completes
+      switchTab("recommendations");
       
       // Track successful gift generation
       const friendForTracking = recommendationsForFriend?.id === variables.friendId ? recommendationsForFriend : selectedFriend;
@@ -3079,26 +3081,28 @@ function AIGenerationProgressBar({ friendName, onComplete }: AIGenerationProgres
   const [progress, setProgress] = useState(0);
   const [currentStage, setCurrentStage] = useState(0);
   const [timeElapsed, setTimeElapsed] = useState(0);
+  const [startTime] = useState(Date.now());
   
   const stages = [
-    { progress: 15, message: `🧠 Analyzing ${friendName}'s personality...`, duration: 2000 },
-    { progress: 35, message: `🎯 Searching gift databases...`, duration: 3000 },
-    { progress: 55, message: `🤖 AI generating creative ideas...`, duration: 4000 },
-    { progress: 75, message: `✨ Refining recommendations...`, duration: 2500 },
-    { progress: 90, message: `🎁 Finalizing perfect matches...`, duration: 2000 },
-    { progress: 100, message: `🎉 Complete! Loading your gifts...`, duration: 500 }
+    { progress: 12, message: `🧠 Analyzing ${friendName}'s personality...`, duration: 1800 },
+    { progress: 28, message: `🎯 Searching gift databases...`, duration: 2200 },
+    { progress: 48, message: `🤖 AI generating creative ideas...`, duration: 3500 },
+    { progress: 68, message: `💡 Finding unique matches...`, duration: 2800 },
+    { progress: 82, message: `✨ Refining recommendations...`, duration: 2000 },
+    { progress: 95, message: `🎁 Finalizing perfect matches...`, duration: 1500 },
+    { progress: 100, message: `🎉 Complete! Loading your gifts...`, duration: 300 }
   ];
 
-  // Estimated total time: ~14 seconds (realistic for AI processing)
-  const estimatedTime = 14;
+  // More accurate total time estimation based on stage durations
+  const totalEstimatedTime = stages.reduce((sum, stage) => sum + stage.duration, 0) / 1000;
 
   useEffect(() => {
     const timer = setInterval(() => {
-      setTimeElapsed(prev => prev + 0.1);
+      setTimeElapsed((Date.now() - startTime) / 1000);
     }, 100);
 
     return () => clearInterval(timer);
-  }, []);
+  }, [startTime]);
 
   useEffect(() => {
     let progressTimer: NodeJS.Timeout;
@@ -3129,7 +3133,24 @@ function AIGenerationProgressBar({ friendName, onComplete }: AIGenerationProgres
     return () => clearInterval(progressTimer);
   }, [currentStage, stages, onComplete]);
 
-  const remainingTime = Math.max(0, estimatedTime - timeElapsed);
+  // Calculate remaining time based on current stage progress
+  const getCurrentStageRemainingTime = () => {
+    if (currentStage >= stages.length) return 0;
+    
+    const stage = stages[currentStage];
+    const previousProgress = currentStage > 0 ? stages[currentStage - 1].progress : 0;
+    const stageProgress = ((progress - previousProgress) / (stage.progress - previousProgress)) * 100;
+    const stageRemainingMs = stage.duration * (1 - stageProgress / 100);
+    
+    // Add time for remaining stages
+    const remainingStagesTime = stages
+      .slice(currentStage + 1)
+      .reduce((sum, s) => sum + s.duration, 0);
+    
+    return Math.max(0, (stageRemainingMs + remainingStagesTime) / 1000);
+  };
+
+  const remainingTime = getCurrentStageRemainingTime();
 
   return (
     <div className="w-full">
@@ -3167,7 +3188,7 @@ function AIGenerationProgressBar({ friendName, onComplete }: AIGenerationProgres
           </div>
           
           <div className="text-xs md:text-sm text-gray-500 font-medium">
-            ~{Math.ceil(remainingTime)}s
+            {remainingTime > 0 ? `~${Math.ceil(remainingTime)}s` : 'Done!'}
           </div>
         </div>
       </div>
