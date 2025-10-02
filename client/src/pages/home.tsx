@@ -762,11 +762,11 @@ function Home() {
             {isMobile ? (
               <MobileTabsDropdown
                 tabs={[
-                  { id: "friends", label: "Friends" },
-                  { id: "generate", label: "Generate Gifts" },
-                  { id: "recommendations", label: "Recommendations" },
-                  { id: "saved", label: "Saved" },
-                  ...(currentUser?.isAdmin ? [{ id: "analytics", label: "Analytics" }] : [])
+                  { id: "friends", label: "👥 Friends" },
+                  { id: "generate", label: "🤖 Generate Gifts" },
+                  { id: "recommendations", label: "💡 Recommendations" },
+                  { id: "saved", label: "💝 Saved Gifts" },
+                  ...(currentUser?.isAdmin ? [{ id: "analytics", label: "📊 Analytics" }] : [])
                 ]}
                 activeTab={activeTab}
                 onTabChange={switchTab}
@@ -796,7 +796,7 @@ function Home() {
           {activeTab === "friends" && (
             <div className="bg-white rounded-lg p-3 lg:p-4 xl:p-6 shadow-sm">
               <div className="flex flex-col space-y-3 md:space-y-0 md:flex-row md:justify-between md:items-center mb-3 lg:mb-4">
-                <h2 className="text-lg md:text-xl lg:text-2xl font-semibold">👥 Your Friends</h2>
+                <h2 className="hidden md:block text-lg md:text-xl lg:text-2xl font-semibold">👥 Your Friends</h2>
                 <div className="flex flex-col space-y-2 md:space-y-0 md:flex-row md:items-center md:gap-4">
                   {/* Search and View Mode Controls */}
                   {friends.length > 0 && (
@@ -1645,7 +1645,7 @@ function Home() {
           {/* Generate Tab */}
           {activeTab === "generate" && (
             <div className="bg-white rounded-lg p-3 sm:p-4 md:p-6 shadow-sm">
-              <h2 className="text-lg sm:text-xl md:text-2xl font-semibold mb-4 md:mb-6">🤖 Generate Gift Recommendations</h2>
+              <h2 className="hidden md:block text-lg sm:text-xl md:text-2xl font-semibold mb-4 md:mb-6">🤖 Generate Gift Recommendations</h2>
               
               <div className="space-y-4 md:space-y-6">
                 {/* Friend Selection Section */}
@@ -1878,7 +1878,7 @@ function Home() {
           {/* Recommendations Tab */}
           {activeTab === "recommendations" && (
             <div className="bg-white rounded-lg p-3 lg:p-4 xl:p-6 shadow-sm" style={{overflow: 'visible'}}>
-              <h2 className="text-lg md:text-xl lg:text-2xl font-semibold mb-3 lg:mb-4">💡 Gift Recommendations</h2>
+              <h2 className="hidden md:block text-lg md:text-xl lg:text-2xl font-semibold mb-3 lg:mb-4">💡 Gift Recommendations</h2>
               
               {/* Show who recommendations are for */}
               {recommendationsForFriend && (
@@ -2429,7 +2429,7 @@ function Home() {
           {/* Saved Tab */}
           {activeTab === "saved" && (
             <div className="bg-white rounded-lg p-3 lg:p-4 xl:p-6 shadow-sm" style={{overflow: 'visible'}}>
-              <h2 className="text-lg md:text-xl lg:text-2xl font-semibold mb-3 lg:mb-4">💝 Saved Gifts</h2>
+              <h2 className="hidden md:block text-lg md:text-xl lg:text-2xl font-semibold mb-3 lg:mb-4">💝 Saved Gifts</h2>
               
               {savedGifts.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
