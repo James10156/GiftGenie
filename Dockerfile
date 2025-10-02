@@ -3,7 +3,7 @@ FROM node:18-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files
+# Copy package files first for better caching
 COPY package*.json ./
 
 # Install all dependencies
@@ -14,6 +14,9 @@ COPY . .
 
 # Build the application (includes both client and server)
 RUN npm run build:railway
+
+# Verify build outputs exist
+RUN ls -la client/dist/ && ls -la dist/
 
 # Production stage
 FROM node:18-alpine AS production
