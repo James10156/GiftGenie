@@ -50,6 +50,13 @@ function Home() {
   const [dragOverFriend, setDragOverFriend] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchExpanded, setSearchExpanded] = useState(false);
+  
+  // Recommendations view mode state
+  const [recommendationsViewMode, setRecommendationsViewMode] = useState<'grid' | 'carousel'>(() => {
+    return typeof window !== 'undefined' && window.innerWidth < 768 ? 'carousel' : 'grid';
+  });
+  const [recommendationsCarouselIndex, setRecommendationsCarouselIndex] = useState(0);
+  const [expandedMobileRecommendation, setExpandedMobileRecommendation] = useState<string | null>(null);
 
   // Touch/swipe support for carousel
   const [touchStart, setTouchStart] = useState(0);
@@ -57,6 +64,13 @@ function Home() {
   const [isAnimating, setIsAnimating] = useState(false);
   const [swipeOffset, setSwipeOffset] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
+  
+  // Recommendations touch/swipe support
+  const [recTouchStart, setRecTouchStart] = useState(0);
+  const [recTouchEnd, setRecTouchEnd] = useState(0);
+  const [recIsAnimating, setRecIsAnimating] = useState(false);
+  const [recSwipeOffset, setRecSwipeOffset] = useState(0);
+  const [recIsDragging, setRecIsDragging] = useState(false);
 
   const handleTouchStart = (e: React.TouchEvent) => {
     setTouchStart(e.targetTouches[0].clientX);
@@ -117,6 +131,69 @@ function Home() {
     } else {
       setSwipeOffset(0);
       setIsAnimating(false);
+    }
+  };
+
+  // Recommendations touch/swipe handlers
+  const handleRecTouchStart = (e: React.TouchEvent) => {
+    setRecTouchStart(e.targetTouches[0].clientX);
+    setRecTouchEnd(0);
+    setRecIsDragging(true);
+    setRecIsAnimating(false);
+  };
+
+  const handleRecTouchMove = (e: React.TouchEvent) => {
+    if (!recIsDragging) return;
+    const currentX = e.targetTouches[0].clientX;
+    setRecTouchEnd(currentX);
+    
+    // Calculate real-time offset for smooth dragging
+    const offset = currentX - recTouchStart;
+    
+    // Only prevent default if this is clearly a horizontal swipe
+    if (Math.abs(offset) > 10) {
+      e.preventDefault(); // Prevent page scrolling during horizontal swipe
+    }
+    
+    const maxOffset = 150; // Maximum drag distance
+    const clampedOffset = Math.max(-maxOffset, Math.min(maxOffset, offset));
+    setRecSwipeOffset(clampedOffset);
+  };
+
+  const handleRecTouchEnd = () => {
+    if (!recTouchStart || !recTouchEnd || !recIsDragging) {
+      setRecIsDragging(false);
+      setRecSwipeOffset(0);
+      return;
+    }
+    
+    setRecIsDragging(false);
+    const distance = recTouchStart - recTouchEnd;
+    const minSwipeDistance = 50;
+    
+    if (recommendations.length > 0) {
+      setRecIsAnimating(true);
+      
+      if (Math.abs(distance) > minSwipeDistance) {
+        if (distance > 0) {
+          // Swipe left - next recommendation
+          setRecommendationsCarouselIndex((recommendationsCarouselIndex + 1) % recommendations.length);
+        } else {
+          // Swipe right - previous recommendation
+          setRecommendationsCarouselIndex((recommendationsCarouselIndex - 1 + recommendations.length) % recommendations.length);
+        }
+        
+        // Immediately reset offset for smooth continuous transition
+        setRecSwipeOffset(0);
+        setRecIsAnimating(false);
+      } else {
+        // Snap back to center if swipe wasn't strong enough
+        setRecSwipeOffset(0);
+        setRecIsAnimating(false);
+      }
+    } else {
+      setRecSwipeOffset(0);
+      setRecIsAnimating(false);
     }
   };
 
@@ -1855,8 +1932,54 @@ function Home() {
                 </div>
               ) : (
                 <>
-                  <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-6" style={{overflow: 'visible'}}>
-                    {recommendations.map((gift, index) => (
+                  {/* View Mode Toggle for Recommendations */}
+                  <div className="flex justify-center mb-4">
+                    <div className="bg-gray-100 rounded-lg p-1 flex gap-1">
+                      <button
+                        onTouchStart={(e) => {
+                          e.preventDefault();
+                          setRecommendationsViewMode('grid');
+                        }}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setRecommendationsViewMode('grid');
+                        }}
+                        className={`px-2 md:px-3 py-1 text-xs md:text-sm rounded-md transition-colors ${
+                          recommendationsViewMode === 'grid'
+                            ? 'bg-white text-gray-900 shadow-sm'
+                            : 'text-gray-600 hover:text-gray-900'
+                        }`}
+                        type="button"
+                      >
+                        📱 Grid
+                      </button>
+                      <button
+                        onTouchStart={(e) => {
+                          e.preventDefault();
+                          setRecommendationsViewMode('carousel');
+                        }}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setRecommendationsViewMode('carousel');
+                        }}
+                        className={`px-2 md:px-3 py-1 text-xs md:text-sm rounded-md transition-colors ${
+                          recommendationsViewMode === 'carousel'
+                            ? 'bg-white text-gray-900 shadow-sm'
+                            : 'text-gray-600 hover:text-gray-900'
+                        }`}
+                        type="button"
+                      >
+                        🔄 {isMobile ? 'Swipe' : 'Carousel'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Recommendations Grid/Carousel */}
+                  {recommendationsViewMode === 'grid' ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4">
+                      {recommendations.map((gift, index) => (
                                         <div key={index} className="border rounded-lg shadow-sm hover:shadow-md transition-shadow relative flex flex-col" style={{overflow: 'visible'}}>
                       {/* Gift Image */}
                       {gift.image && (
@@ -2054,6 +2177,227 @@ function Home() {
                     </div>
                   ))}
                   </div>
+                  ) : (
+                    // Carousel View for Recommendations
+                    <div className="relative">
+                      {/* Carousel Navigation */}
+                      <div className="flex justify-center items-center mb-6 gap-4">
+                        <button
+                          onClick={() => recommendations.length > 0 && setRecommendationsCarouselIndex((recommendationsCarouselIndex - 1 + recommendations.length) % recommendations.length)}
+                          className="p-3 bg-blue-100 text-blue-600 hover:bg-blue-200 rounded-full transition-colors"
+                          disabled={recommendations.length === 0}
+                        >
+                          ←
+                        </button>
+                        <span className="text-sm text-gray-600 font-medium">
+                          {recommendations.length > 0 ? `${recommendationsCarouselIndex + 1} of ${recommendations.length}` : '0 of 0'}
+                        </span>
+                        <button
+                          onClick={() => recommendations.length > 0 && setRecommendationsCarouselIndex((recommendationsCarouselIndex + 1) % recommendations.length)}
+                          className="p-3 bg-blue-100 text-blue-600 hover:bg-blue-200 rounded-full transition-colors"
+                          disabled={recommendations.length === 0}
+                        >
+                          →
+                        </button>
+                      </div>
+
+                      {/* Carousel Content */}
+                      <div 
+                        className={`relative overflow-hidden ${
+                          isMobile && recIsDragging ? 'bg-gradient-to-r from-blue-50 via-white to-blue-50' : ''
+                        }`}
+                        onTouchStart={handleRecTouchStart}
+                        onTouchMove={handleRecTouchMove}
+                        onTouchEnd={handleRecTouchEnd}
+                        style={isMobile ? {
+                          transition: recIsDragging ? 'background 0.2s ease' : 'background 0.3s ease',
+                          touchAction: 'pan-y pinch-zoom',
+                        } : {}}
+                      >
+                        {recommendations.length === 0 ? (
+                          <div className="text-center py-8 text-gray-500">
+                            No recommendations generated yet.
+                          </div>
+                        ) : isMobile ? (
+                          /* Mobile Gallery Style for Recommendations */
+                          <div className="w-full max-w-sm mx-auto overflow-hidden">
+                            <div 
+                              className="flex transition-transform duration-300 ease-out"
+                              style={{
+                                transform: `translateX(${-recommendationsCarouselIndex * 100 + (recSwipeOffset / (window.innerWidth * 0.8)) * 100}%)`,
+                                transition: recIsDragging ? 'none' : 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                              }}
+                            >
+                              {recommendations.map((gift, index) => (
+                                <div 
+                                  key={index}
+                                  className="w-full flex-shrink-0"
+                                >
+                                  <div className="border rounded-lg shadow-sm mx-2 flex flex-col bg-white p-4">
+                                    {/* Gift Image */}
+                                    {gift.image && (
+                                      <div 
+                                        className="h-48 rounded-t-lg flex-shrink-0 relative cursor-pointer group overflow-hidden mb-4"
+                                        onClick={() => setFocusedImage({src: gift.image, alt: gift.name})}
+                                      >
+                                        <img
+                                          src={gift.image}
+                                          alt={gift.name}
+                                          className="w-full h-full object-cover rounded transition-transform duration-300 group-hover:scale-105"
+                                        />
+                                      </div>
+                                    )}
+
+                                    {/* Gift Details */}
+                                    <div className="flex flex-col flex-grow">
+                                      <h3 className="font-semibold text-lg mb-2 line-clamp-2">{gift.name}</h3>
+                                      <p className="text-gray-600 text-sm mb-3 line-clamp-3">{gift.description}</p>
+                                      <p className="text-lg font-bold text-green-600 mb-3">{gift.price}</p>
+
+                                      {/* Expandable section for mobile */}
+                                      <div className={`cursor-pointer ${expandedMobileRecommendation === `rec-${index}` ? 'mb-3' : ''}`}
+                                        onClick={() => {
+                                          setExpandedMobileRecommendation(expandedMobileRecommendation === `rec-${index}` ? null : `rec-${index}`);
+                                        }}
+                                      >
+                                        <p className="text-xs text-gray-400">
+                                          {expandedMobileRecommendation === `rec-${index}` ? 'Tap to collapse' : 'Tap to see details'}
+                                        </p>
+                                      </div>
+
+                                      {/* Expandable Details */}
+                                      <div className={`transition-all duration-300 overflow-hidden ${
+                                        expandedMobileRecommendation === `rec-${index}`
+                                          ? 'max-h-96 opacity-100 mb-3' 
+                                          : 'max-h-0 opacity-0'
+                                      }`}>
+                                        <div className="text-sm text-gray-600 space-y-2">
+                                          <p><strong>Why it's perfect:</strong> {gift.reasoning}</p>
+                                          {gift.category && <p><strong>Category:</strong> {gift.category}</p>}
+                                        </div>
+                                      </div>
+
+                                      {/* Action Buttons */}
+                                      <div className="flex gap-2 mt-auto">
+                                        <button
+                                          onClick={() => handleSaveGift(gift)}
+                                          disabled={saveGiftMutation.isPending}
+                                          className="flex-1 bg-green-600 text-white py-2 px-3 rounded-md hover:bg-green-700 disabled:bg-gray-300 transition-colors flex items-center justify-center gap-1"
+                                        >
+                                          💝 Save Gift
+                                        </button>
+                                        {gift.shops && gift.shops.length > 0 && (
+                                          <button
+                                            onClick={() => window.open(gift.shops[0].url, "_blank")}
+                                            className="flex-1 bg-blue-600 text-white py-2 px-3 rounded-md hover:bg-blue-700 transition-colors flex items-center justify-center gap-1"
+                                          >
+                                            🛒 Shop
+                                          </button>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ) : (
+                          /* Desktop Carousel */
+                          <div className="flex justify-center">
+                            <div className="w-96">
+                              {(() => {
+                                const gift = recommendations[recommendationsCarouselIndex];
+                                if (!gift) return null;
+                                return (
+                                  <div className="border rounded-lg shadow-sm hover:shadow-md transition-shadow relative flex flex-col bg-white">
+                                    {/* Desktop gift card content */}
+                                    {gift.image && (
+                                      <div 
+                                        className="h-64 rounded-t-lg flex-shrink-0 relative cursor-pointer group overflow-hidden"
+                                        onClick={() => setFocusedImage({src: gift.image, alt: gift.name})}
+                                      >
+                                        <img
+                                          src={gift.image}
+                                          alt={gift.name}
+                                          className="w-full h-full object-cover rounded-t-lg transition-transform duration-300 group-hover:scale-105"
+                                        />
+                                      </div>
+                                    )}
+
+                                    <div className="p-4 flex flex-col flex-grow">
+                                      <h3 className="font-semibold text-xl mb-3">{gift.name}</h3>
+                                      <p className="text-gray-600 mb-4">{gift.description}</p>
+                                      <p className="text-xl font-bold text-green-600 mb-4">{gift.price}</p>
+                                      
+                                      <div className="text-sm text-gray-600 mb-4">
+                                        <p><strong>Why it's perfect:</strong> {gift.reasoning}</p>
+                                        {gift.category && <p className="mt-2"><strong>Category:</strong> {gift.category}</p>}
+                                      </div>
+
+                                      {/* Action Buttons */}
+                                      <div className="flex gap-2 mt-auto">
+                                        <button
+                                          onClick={() => handleSaveGift(gift)}
+                                          disabled={saveGiftMutation.isPending}
+                                          className="flex-1 bg-green-600 text-white py-3 px-4 rounded-md hover:bg-green-700 disabled:bg-gray-300 transition-colors flex items-center justify-center gap-1"
+                                        >
+                                          💝 Save Gift
+                                        </button>
+                                        {gift.shops && gift.shops.length > 0 && (
+                                          <button
+                                            onClick={() => window.open(gift.shops[0].url, "_blank")}
+                                            className="flex-1 bg-blue-600 text-white py-3 px-4 rounded-md hover:bg-blue-700 transition-colors flex items-center justify-center gap-1"
+                                          >
+                                            🛒 Shop at {gift.shops[0].name}
+                                          </button>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })()}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Mobile Swipe Indicators for Recommendations */}
+                        {isMobile && recommendations.length > 1 && (
+                          <div className="absolute inset-y-0 left-0 right-0 flex items-center justify-between pointer-events-none">
+                            <div className={`ml-4 transition-all duration-200 ${
+                              recSwipeOffset > 30 ? 'opacity-70 scale-110' : 'opacity-30'
+                            }`}>
+                              <div className="bg-white/80 backdrop-blur-sm rounded-full p-2 shadow-lg">
+                                <span className="text-blue-600">👈</span>
+                              </div>
+                            </div>
+                            
+                            <div className={`mr-4 transition-all duration-200 ${
+                              recSwipeOffset < -30 ? 'opacity-70 scale-110' : 'opacity-30'
+                            }`}>
+                              <div className="bg-white/80 backdrop-blur-sm rounded-full p-2 shadow-lg">
+                                <span className="text-blue-600">👉</span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Dots Indicator */}
+                      <div className="flex justify-center gap-2 mt-6">
+                        {recommendations.map((_, index) => (
+                          <button
+                            key={index}
+                            onClick={() => setRecommendationsCarouselIndex(index)}
+                            className={`rounded-full transition-colors ${
+                              index === recommendationsCarouselIndex
+                                ? 'bg-blue-600 w-3 h-3'
+                                : 'bg-gray-300 w-2 h-2 hover:bg-gray-400'
+                            }`}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   
                   {/* Suggest More Button */}
                   <div className="mt-6 text-center">
