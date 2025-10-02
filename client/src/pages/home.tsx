@@ -597,10 +597,8 @@ function Home() {
         <div className="container mx-auto px-4 py-2 md:py-4">
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-4">
-              <Link href="/blog">
-                <a className="text-xs md:text-sm text-blue-600 hover:text-blue-800 font-medium">
-                  About us
-                </a>
+              <Link href="/blog" className="text-xs md:text-sm text-blue-600 hover:text-blue-800 font-medium">
+                About us
               </Link>
             </div>
             <div className="flex items-center gap-2 md:gap-3">
@@ -1019,6 +1017,7 @@ function Home() {
                           {(() => {
                             const prevIndex = (carouselIndex - 1 + filteredFriends.length) % filteredFriends.length;
                             const prevFriend = filteredFriends[prevIndex];
+                            if (!prevFriend) return null;
                             return (
                               <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-md">
                                 <div className="text-center">
@@ -1050,6 +1049,7 @@ function Home() {
                       }`}>
                         {(() => {
                           const friend = filteredFriends[carouselIndex];
+                          if (!friend) return null;
                           return (
                             <div 
                               className={`group bg-white border-2 border-blue-200 rounded-2xl shadow-xl transition-all duration-300 ${
@@ -1243,6 +1243,7 @@ function Home() {
                           {(() => {
                             const nextIndex = (carouselIndex + 1) % filteredFriends.length;
                             const nextFriend = filteredFriends[nextIndex];
+                            if (!nextFriend) return null;
                             return (
                               <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-md">
                                 <div className="text-center">
