@@ -674,6 +674,41 @@ function Home() {
     },
   });
 
+  // Create test friend function
+  const createTestFriend = async () => {
+    try {
+      const testFriendData = {
+        name: "John Smith",
+        personalityTraits: ["Adventurous", "Creative", "Funny"],
+        interests: ["Photography", "Hiking", "Coffee", "Technology"],
+        category: "Friend",
+        notes: "My adventurous friend who loves exploring new places and trying the latest gadgets. Always up for a good coffee and deep conversation.",
+        profilePicture: "https://res.cloudinary.com/dwno2tfxm/image/upload/v1759404541/giftgenie/profile-gallery/realistic-michael.png",
+        gender: "Male",
+        ageRange: "25-35",
+        currency: "USD",
+        country: "United States"
+      };
+
+      const response = await fetch("/api/friends", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(testFriendData),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to create test friend");
+      }
+
+      // Refresh the friends list
+      queryClient.invalidateQueries({ queryKey: ["friends"] });
+    } catch (error) {
+      console.error("Error creating test friend:", error);
+    }
+  };
+
   const handleGenerateRecommendations = () => {
     if (selectedFriend && budget) {
       const formattedBudget = getFormattedBudget();
@@ -918,9 +953,10 @@ function Home() {
               {friendsLoading ? (
                 <div className="text-center py-8">Loading friends...</div>
               ) : friends.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  No friends added yet. Add your first friend to get started!
-                </div>
+                <EmptyFriendsState 
+                  onAddFriend={() => setShowFriendForm(true)}
+                  onAddTestFriend={createTestFriend}
+                />
               ) : filteredFriends.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
                   No friends found matching your search. Try a different search term.
@@ -2756,6 +2792,166 @@ function Home() {
         onClose={() => setShowAuthModal(false)}
         onAuthSuccess={(user) => setCurrentUser(user)}
       />
+    </div>
+  );
+}
+
+// Empty Friends State Component
+interface EmptyFriendsStateProps {
+  onAddFriend: () => void;
+  onAddTestFriend: () => void;
+}
+
+function EmptyFriendsState({ onAddFriend, onAddTestFriend }: EmptyFriendsStateProps) {
+  const [currentSlide, setCurrentSlide] = useState(0);
+  
+  // Example friend cards to showcase
+  const exampleFriends = [
+    {
+      name: "Sarah Johnson",
+      profilePicture: "https://res.cloudinary.com/dwno2tfxm/image/upload/v1759404539/giftgenie/profile-gallery/realistic-sarah.png",
+      interests: ["Yoga", "Reading", "Coffee"],
+      personalityTraits: ["Thoughtful", "Creative", "Calm"],
+      category: "Friend"
+    },
+    {
+      name: "Alex Chen",
+      profilePicture: "https://res.cloudinary.com/dwno2tfxm/image/upload/v1759404526/giftgenie/profile-gallery/cartoon-luna.png",
+      interests: ["Gaming", "Anime", "Technology"],
+      personalityTraits: ["Enthusiastic", "Tech-savvy", "Loyal"],
+      category: "Friend"
+    },
+    {
+      name: "Emma Wilson",
+      profilePicture: "https://res.cloudinary.com/dwno2tfxm/image/upload/v1759404544/giftgenie/profile-gallery/realistic-emma.png",
+      interests: ["Photography", "Travel", "Art"],
+      personalityTraits: ["Adventurous", "Artistic", "Outgoing"],
+      category: "Friend"
+    }
+  ];
+
+  // Auto-advance slideshow
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % exampleFriends.length);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [exampleFriends.length]);
+
+  return (
+    <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+      {/* Hero Message */}
+      <div className="mb-8">
+        <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-4">
+          🎁 Get gifts for your friends today
+        </h2>
+        <p className="text-lg text-gray-600 max-w-2xl">
+          Create profiles for your friends and family, then get personalized gift recommendations 
+          powered by AI. Never run out of gift ideas again!
+        </p>
+      </div>
+
+      {/* Friend Card Slideshow */}
+      <div className="mb-8 w-full max-w-md">
+        <h3 className="text-xl font-semibold text-gray-700 mb-4">
+          See what friend profiles look like:
+        </h3>
+        
+        <div className="relative bg-white border rounded-lg p-4 shadow-lg mx-auto">
+          {/* Slideshow indicator */}
+          <div className="absolute top-2 right-2 bg-blue-100 text-blue-600 px-2 py-1 rounded-full text-xs font-medium">
+            {currentSlide + 1} of {exampleFriends.length}
+          </div>
+          
+          {/* Friend card preview */}
+          <div className="flex items-start space-x-3">
+            <img
+              src={exampleFriends[currentSlide].profilePicture}
+              alt={exampleFriends[currentSlide].name}
+              className="w-12 h-12 rounded-full object-cover flex-shrink-0"
+            />
+            <div className="flex-1 text-left">
+              <div className="flex items-center justify-between mb-1">
+                <h4 className="font-semibold text-gray-800">
+                  {exampleFriends[currentSlide].name}
+                </h4>
+                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
+                  {exampleFriends[currentSlide].category}
+                </span>
+              </div>
+              
+              <div className="mb-2">
+                <p className="text-xs text-gray-600 mb-1">Interests:</p>
+                <div className="flex flex-wrap gap-1">
+                  {exampleFriends[currentSlide].interests.slice(0, 3).map((interest, idx) => (
+                    <span key={idx} className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded">
+                      {interest}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              
+              <div>
+                <p className="text-xs text-gray-600 mb-1">Personality:</p>
+                <div className="flex flex-wrap gap-1">
+                  {exampleFriends[currentSlide].personalityTraits.slice(0, 2).map((trait, idx) => (
+                    <span key={idx} className="text-xs bg-green-100 text-green-600 px-2 py-0.5 rounded">
+                      {trait}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {/* Slide dots */}
+        <div className="flex justify-center space-x-2 mt-3">
+          {exampleFriends.map((_, idx) => (
+            <button
+              key={idx}
+              onClick={() => setCurrentSlide(idx)}
+              className={`w-2 h-2 rounded-full transition-colors ${
+                idx === currentSlide ? 'bg-blue-500' : 'bg-gray-300'
+              }`}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Action buttons */}
+      <div className="flex flex-col sm:flex-row gap-4 items-center">
+        <button
+          onClick={onAddFriend}
+          className="group relative bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+        >
+          <span className="flex items-center gap-2">
+            👤 Add Your First Friend
+          </span>
+          
+          {/* Floating hint */}
+          <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">
+            Click here to get started! ✨
+          </div>
+        </button>
+        
+        <div className="text-gray-400 hidden sm:block">or</div>
+        
+        <button
+          onClick={onAddTestFriend}
+          className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-3 rounded-lg font-medium transition-all duration-200 border border-gray-300"
+        >
+          <span className="flex items-center gap-2">
+            🧪 Try with "John Smith"
+          </span>
+        </button>
+      </div>
+      
+      {/* Additional help text */}
+      <p className="text-sm text-gray-500 mt-6 max-w-lg">
+        💡 Tip: The more details you add about your friends' interests and personality, 
+        the better our AI can suggest perfect gifts for them!
+      </p>
     </div>
   );
 }
