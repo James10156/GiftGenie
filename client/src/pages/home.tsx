@@ -1886,19 +1886,20 @@ function Home() {
                       </div>
                     )}
                     
-                    <button
-                      onClick={handleGenerateRecommendations}
-                      disabled={!selectedFriend || !budget || generateRecommendationsMutation.isPending}
-                      className={`w-full py-3 md:py-4 rounded-lg text-base md:text-lg font-semibold transition-all duration-300 ${
-                        generateRecommendationsMutation.isPending
-                          ? "bg-blue-400 text-white cursor-not-allowed"
-                          : "bg-blue-600 text-white hover:bg-blue-700 hover:shadow-lg transform hover:scale-[1.02]"
-                      }`}
-                    >
-                      {generateRecommendationsMutation.isPending
-                        ? "🎁 Generating Perfect Gifts..."
-                        : "🎁 Generate Gift Recommendations"}
-                    </button>
+                    {generateRecommendationsMutation.isPending ? (
+                      <AIGenerationProgressBar 
+                        friendName={selectedFriend.name}
+                        onComplete={() => {}} // The mutation handles completion
+                      />
+                    ) : (
+                      <button
+                        onClick={handleGenerateRecommendations}
+                        disabled={!selectedFriend || !budget}
+                        className="w-full py-3 md:py-4 rounded-lg text-base md:text-lg font-semibold transition-all duration-300 bg-blue-600 text-white hover:bg-blue-700 hover:shadow-lg transform hover:scale-[1.02]"
+                      >
+                        🎁 Generate Gift Recommendations
+                      </button>
+                    )}
                   </div>
                 )}
 
@@ -2936,6 +2937,121 @@ function EmptyFriendsState({ onAddFriend, onAddTestFriend }: EmptyFriendsStatePr
       <p className="text-gray-500 max-w-md leading-relaxed">
         Add details about your friends' interests and personality for better gift recommendations
       </p>
+    </div>
+  );
+}
+
+// AI Generation Progress Bar Component
+interface AIGenerationProgressBarProps {
+  friendName: string;
+  onComplete: () => void;
+}
+
+function AIGenerationProgressBar({ friendName, onComplete }: AIGenerationProgressBarProps) {
+  const [progress, setProgress] = useState(0);
+  const [currentStage, setCurrentStage] = useState(0);
+  const [timeElapsed, setTimeElapsed] = useState(0);
+  
+  const stages = [
+    { progress: 15, message: `🧠 Analyzing ${friendName}'s personality...`, duration: 2000 },
+    { progress: 35, message: `🎯 Searching gift databases...`, duration: 3000 },
+    { progress: 55, message: `🤖 AI generating creative ideas...`, duration: 4000 },
+    { progress: 75, message: `✨ Refining recommendations...`, duration: 2500 },
+    { progress: 90, message: `🎁 Finalizing perfect matches...`, duration: 2000 },
+    { progress: 100, message: `🎉 Complete! Loading your gifts...`, duration: 500 }
+  ];
+
+  // Estimated total time: ~14 seconds (realistic for AI processing)
+  const estimatedTime = 14;
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTimeElapsed(prev => prev + 0.1);
+    }, 100);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    let progressTimer: NodeJS.Timeout;
+    
+    if (currentStage < stages.length) {
+      const stage = stages[currentStage];
+      const progressIncrement = (stage.progress - (currentStage > 0 ? stages[currentStage - 1].progress : 0)) / (stage.duration / 50);
+      
+      progressTimer = setInterval(() => {
+        setProgress(prev => {
+          const newProgress = prev + progressIncrement;
+          if (newProgress >= stage.progress) {
+            clearInterval(progressTimer);
+            setTimeout(() => {
+              if (currentStage < stages.length - 1) {
+                setCurrentStage(currentStage + 1);
+              } else {
+                onComplete();
+              }
+            }, 200);
+            return stage.progress;
+          }
+          return newProgress;
+        });
+      }, 50);
+    }
+
+    return () => clearInterval(progressTimer);
+  }, [currentStage, stages, onComplete]);
+
+  const remainingTime = Math.max(0, estimatedTime - timeElapsed);
+
+  return (
+    <div className="w-full">
+      {/* Progress Bar Container */}
+      <div className="relative w-full h-12 md:h-14 bg-gray-200 rounded-lg overflow-hidden shadow-inner">
+        {/* Progress Fill */}
+        <div 
+          className="h-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-lg transition-all duration-300 ease-out relative overflow-hidden"
+          style={{ width: `${progress}%` }}
+        >
+          {/* Shimmer Effect */}
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-30 transform -skew-x-12 animate-pulse"></div>
+          
+          {/* Animated Dots */}
+          <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex space-x-1">
+            {[0, 1, 2].map((dot) => (
+              <div
+                key={dot}
+                className="w-1.5 h-1.5 bg-white rounded-full animate-bounce opacity-80"
+                style={{ animationDelay: `${dot * 150}ms`, animationDuration: '1s' }}
+              ></div>
+            ))}
+          </div>
+        </div>
+
+        {/* Progress Text Overlay */}
+        <div className="absolute inset-0 flex items-center justify-between px-4">
+          <div className="flex items-center space-x-2">
+            <span className="text-sm md:text-base font-semibold text-gray-700">
+              {Math.round(progress)}%
+            </span>
+            <span className="text-xs md:text-sm text-gray-600">
+              {currentStage < stages.length ? stages[currentStage].message : "Complete!"}
+            </span>
+          </div>
+          
+          <div className="text-xs md:text-sm text-gray-500 font-medium">
+            ~{Math.ceil(remainingTime)}s
+          </div>
+        </div>
+      </div>
+
+      {/* Additional Info */}
+      <div className="mt-2 flex justify-between items-center text-xs text-gray-500">
+        <span>AI is working hard to find perfect gifts for {friendName}</span>
+        <span className="flex items-center space-x-1">
+          <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+          <span>Processing...</span>
+        </span>
+      </div>
     </div>
   );
 }
