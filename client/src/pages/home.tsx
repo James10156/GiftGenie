@@ -1881,8 +1881,8 @@ function Home() {
                   <div className="space-y-6">
                     {/* Three Column Layout: Friend Info | Animation | Search Parameters */}
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-center">
-                      {/* Left Column - Friend Info */}
-                      <div className="bg-white rounded-xl p-6 shadow-sm border border-blue-100">
+                      {/* Left Column - Friend Info (Hidden on Mobile) */}
+                      <div className="hidden lg:block bg-white rounded-xl p-6 shadow-sm border border-blue-100">
                         <h4 className="font-semibold text-gray-800 mb-4 text-center">🎯 Gift Recipient</h4>
                         
                         <div className="flex flex-col items-center space-y-4">
@@ -1937,18 +1937,22 @@ function Home() {
                       </div>
 
                       {/* Center Column - Animation */}
-                      <div className="flex flex-col items-center space-y-4">
+                      <div className="flex flex-col items-center space-y-4 lg:col-span-1 col-span-full">
                         <h3 className="text-xl font-semibold text-gray-800 text-center">
                           🎁 Creating Perfect Gifts
                         </h3>
+                        {/* Mobile: Show friend name since info cards are hidden */}
+                        <p className="lg:hidden text-center text-gray-600 font-medium">
+                          for {selectedFriend.name}
+                        </p>
                         <GiftWrappingAnimation 
                           friendName={selectedFriend.name}
                           friendAvatar={selectedFriend.profilePicture}
                         />
                       </div>
 
-                      {/* Right Column - Search Parameters */}
-                      <div className="bg-white rounded-xl p-6 shadow-sm border border-green-100">
+                      {/* Right Column - Search Parameters (Hidden on Mobile) */}
+                      <div className="hidden lg:block bg-white rounded-xl p-6 shadow-sm border border-green-100">
                         <h4 className="font-semibold text-gray-800 mb-4 text-center">⚙️ Search Settings</h4>
                         
                         <div className="space-y-4">
