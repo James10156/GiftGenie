@@ -1685,115 +1685,117 @@ function Home() {
               
               <div className="space-y-4 md:space-y-6">
                 {/* Friend Selection Section */}
-                <div>
-                  <label className="block text-sm font-medium mb-2 md:mb-3">Select Friend</label>
-                  <select
-                    value={selectedFriend?.id || ""}
-                    onChange={(e) => {
-                      const friend = friends.find(f => f.id === e.target.value);
-                      selectFriend(friend || null);
-                    }}
-                    className="w-full p-3 border rounded-lg text-base"
-                  >
-                    <option value="">Choose a friend...</option>
-                    {friends.map((friend) => (
-                      <option key={friend.id} value={friend.id}>
-                        {friend.name}
-                      </option>
-                    ))}
-                  </select>
+                {!generateRecommendationsMutation.isPending && (
+                  <div>
+                    <label className="block text-sm font-medium mb-2 md:mb-3">Select Friend</label>
+                    <select
+                      value={selectedFriend?.id || ""}
+                      onChange={(e) => {
+                        const friend = friends.find(f => f.id === e.target.value);
+                        selectFriend(friend || null);
+                      }}
+                      className="w-full p-3 border rounded-lg text-base"
+                    >
+                      <option value="">Choose a friend...</option>
+                      {friends.map((friend) => (
+                        <option key={friend.id} value={friend.id}>
+                          {friend.name}
+                        </option>
+                      ))}
+                    </select>
 
-                  {/* Selected Friend Display */}
-                  {selectedFriend && (
-                    <div className="mt-3 md:mt-4 p-3 md:p-4 bg-gradient-to-r from-blue-50 to-green-50 rounded-lg border border-blue-200">
-                      <div className="flex items-start sm:items-center gap-3 md:gap-4">
-                        {/* Profile Picture */}
-                        {selectedFriend.profilePicture ? (
-                          <div 
-                            className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full transition-all duration-300 ring-2 ring-blue-200 cursor-pointer flex-shrink-0"
-                            onClick={() => selectedFriend.profilePicture && setFocusedImage({src: selectedFriend.profilePicture, alt: `${selectedFriend.name}'s profile picture`})}
-                          >
-                            <img
-                              src={selectedFriend.profilePicture}
-                              alt={selectedFriend.name}
-                              className="w-full h-full object-cover rounded-full"
-                            />
-                          </div>
-                        ) : (
-                          <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 bg-gradient-to-br from-blue-400 to-green-400 rounded-full flex items-center justify-center text-white text-lg sm:text-xl font-bold transition-all duration-300 cursor-pointer flex-shrink-0">
-                            {selectedFriend.name.charAt(0).toUpperCase()}
-                          </div>
-                        )}
+                    {/* Selected Friend Display */}
+                    {selectedFriend && (
+                      <div className="mt-3 md:mt-4 p-3 md:p-4 bg-gradient-to-r from-blue-50 to-green-50 rounded-lg border border-blue-200">
+                        <div className="flex items-start sm:items-center gap-3 md:gap-4">
+                          {/* Profile Picture */}
+                          {selectedFriend.profilePicture ? (
+                            <div 
+                              className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full transition-all duration-300 ring-2 ring-blue-200 cursor-pointer flex-shrink-0"
+                              onClick={() => selectedFriend.profilePicture && setFocusedImage({src: selectedFriend.profilePicture, alt: `${selectedFriend.name}'s profile picture`})}
+                            >
+                              <img
+                                src={selectedFriend.profilePicture}
+                                alt={selectedFriend.name}
+                                className="w-full h-full object-cover rounded-full"
+                              />
+                            </div>
+                          ) : (
+                            <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 bg-gradient-to-br from-blue-400 to-green-400 rounded-full flex items-center justify-center text-white text-lg sm:text-xl font-bold transition-all duration-300 cursor-pointer flex-shrink-0">
+                              {selectedFriend.name.charAt(0).toUpperCase()}
+                            </div>
+                          )}
 
-                        {/* Friend Info */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1 min-w-0">
-                              <h3 className="font-semibold text-base md:text-lg text-gray-800 truncate">{selectedFriend.name}</h3>
-                              <div className="flex flex-col sm:flex-row sm:items-center sm:gap-3 text-xs sm:text-sm text-gray-600 mt-1 space-y-1 sm:space-y-0">
-                                <span className="flex items-center gap-1">
-                                  <span>📍</span>
-                                  <span className="truncate">{selectedFriend.country}</span>
-                                </span>
-                                {(selectedFriend.gender || selectedFriend.ageRange) && (
+                          {/* Friend Info */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1 min-w-0">
+                                <h3 className="font-semibold text-base md:text-lg text-gray-800 truncate">{selectedFriend.name}</h3>
+                                <div className="flex flex-col sm:flex-row sm:items-center sm:gap-3 text-xs sm:text-sm text-gray-600 mt-1 space-y-1 sm:space-y-0">
                                   <span className="flex items-center gap-1">
-                                    <span>👤</span>
-                                    <span className="truncate">
-                                      {selectedFriend.gender && selectedFriend.ageRange 
-                                        ? `${selectedFriend.gender}, ${selectedFriend.ageRange}`
-                                        : selectedFriend.gender || selectedFriend.ageRange
-                                      }
-                                    </span>
+                                    <span>📍</span>
+                                    <span className="truncate">{selectedFriend.country}</span>
                                   </span>
-                                )}
+                                  {(selectedFriend.gender || selectedFriend.ageRange) && (
+                                    <span className="flex items-center gap-1">
+                                      <span>👤</span>
+                                      <span className="truncate">
+                                        {selectedFriend.gender && selectedFriend.ageRange 
+                                          ? `${selectedFriend.gender}, ${selectedFriend.ageRange}`
+                                          : selectedFriend.gender || selectedFriend.ageRange
+                                        }
+                                      </span>
+                                    </span>
+                                  )}
+                                </div>
                               </div>
+                              
+                              {/* Edit Button */}
+                              <button
+                                onClick={() => {
+                                  setEditingFriend(selectedFriend);
+                                  setShowFriendForm(true);
+                                }}
+                                className="text-blue-600 hover:text-blue-800 p-1.5 md:p-2 bg-white rounded-full shadow-sm hover:shadow-md transition-all flex-shrink-0 ml-2"
+                                title="Edit friend"
+                              >
+                                ✏️
+                              </button>
                             </div>
                             
-                            {/* Edit Button */}
-                            <button
-                              onClick={() => {
-                                setEditingFriend(selectedFriend);
-                                setShowFriendForm(true);
-                              }}
-                              className="text-blue-600 hover:text-blue-800 p-1.5 md:p-2 bg-white rounded-full shadow-sm hover:shadow-md transition-all flex-shrink-0 ml-2"
-                              title="Edit friend"
-                            >
-                              ✏️
-                            </button>
-                          </div>
-                          
-                          {/* Quick Preview of Interests/Traits */}
-                          <div className="mt-2 md:mt-3 flex flex-wrap gap-1">
-                            {selectedFriend.interests.slice(0, isMobile ? 2 : 3).map((interest, index) => (
-                              <span
-                                key={index}
-                                className="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded border border-blue-200"
-                              >
-                                {interest}
-                              </span>
-                            ))}
-                            {selectedFriend.personalityTraits.slice(0, isMobile ? 1 : 2).map((trait, index) => (
-                              <span
-                                key={index}
-                                className="bg-green-100 text-green-700 text-xs px-2 py-1 rounded border border-green-200"
-                              >
-                                {trait}
-                              </span>
-                            ))}
-                            {((selectedFriend.interests.length > (isMobile ? 2 : 3)) || (selectedFriend.personalityTraits.length > (isMobile ? 1 : 2))) && (
-                              <span className="text-xs text-gray-500 px-2 py-1">
-                                +{Math.max(0, selectedFriend.interests.length - (isMobile ? 2 : 3)) + Math.max(0, selectedFriend.personalityTraits.length - (isMobile ? 1 : 2))} more
-                              </span>
-                            )}
+                            {/* Quick Preview of Interests/Traits */}
+                            <div className="mt-2 md:mt-3 flex flex-wrap gap-1">
+                              {selectedFriend.interests.slice(0, isMobile ? 2 : 3).map((interest, index) => (
+                                <span
+                                  key={index}
+                                  className="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded border border-blue-200"
+                                >
+                                  {interest}
+                                </span>
+                              ))}
+                              {selectedFriend.personalityTraits.slice(0, isMobile ? 1 : 2).map((trait, index) => (
+                                <span
+                                  key={index}
+                                  className="bg-green-100 text-green-700 text-xs px-2 py-1 rounded border border-green-200"
+                                >
+                                  {trait}
+                                </span>
+                              ))}
+                              {((selectedFriend.interests.length > (isMobile ? 2 : 3)) || (selectedFriend.personalityTraits.length > (isMobile ? 1 : 2))) && (
+                                <span className="text-xs text-gray-500 px-2 py-1">
+                                  +{Math.max(0, selectedFriend.interests.length - (isMobile ? 2 : 3)) + Math.max(0, selectedFriend.personalityTraits.length - (isMobile ? 1 : 2))} more
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  )}
-                </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Budget Selection Section */}
-                {selectedFriend && (
+                {selectedFriend && !generateRecommendationsMutation.isPending && (
                   <div>
                     <label className="block text-sm font-medium mb-2 md:mb-3">
                       Budget: {getFormattedBudget()} {currentCurrency !== 'USD' ? `(${currentCurrency})` : ''}
@@ -1874,37 +1876,159 @@ function Home() {
                   </div>
                 )}
 
-                {/* Generate Button */}
-                {selectedFriend && (
-                  <div className="pt-2">
-                    {generateRecommendationsMutation.isPending && (
-                      <div className="mb-4 md:mb-6 flex justify-center">
+                {/* AI Generation Display */}
+                {generateRecommendationsMutation.isPending && selectedFriend && (
+                  <div className="space-y-6">
+                    {/* Three Column Layout: Friend Info | Animation | Search Parameters */}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-center">
+                      {/* Left Column - Friend Info */}
+                      <div className="bg-white rounded-xl p-6 shadow-sm border border-blue-100">
+                        <h4 className="font-semibold text-gray-800 mb-4 text-center">🎯 Gift Recipient</h4>
+                        
+                        <div className="flex flex-col items-center space-y-4">
+                          <img
+                            src={selectedFriend.profilePicture}
+                            alt={selectedFriend.name}
+                            className="w-16 h-16 rounded-full object-cover shadow-md"
+                          />
+                          
+                          <div className="text-center">
+                            <h5 className="font-semibold text-gray-800 text-lg">{selectedFriend.name}</h5>
+                            {(selectedFriend.gender || selectedFriend.ageRange) && (
+                              <p className="text-sm text-gray-600">
+                                {selectedFriend.gender && selectedFriend.ageRange 
+                                  ? `${selectedFriend.gender}, ${selectedFriend.ageRange}`
+                                  : selectedFriend.gender || selectedFriend.ageRange
+                                }
+                              </p>
+                            )}
+                          </div>
+                          
+                          <div className="w-full space-y-3">
+                            <div>
+                              <p className="text-xs font-medium text-gray-600 mb-2 text-center">Interests</p>
+                              <div className="flex flex-wrap gap-1 justify-center">
+                                {selectedFriend.interests.slice(0, 4).map((interest, idx) => (
+                                  <span key={idx} className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
+                                    {interest}
+                                  </span>
+                                ))}
+                                {selectedFriend.interests.length > 4 && (
+                                  <span className="text-xs text-gray-500">+{selectedFriend.interests.length - 4}</span>
+                                )}
+                              </div>
+                            </div>
+                            
+                            <div>
+                              <p className="text-xs font-medium text-gray-600 mb-2 text-center">Personality</p>
+                              <div className="flex flex-wrap gap-1 justify-center">
+                                {selectedFriend.personalityTraits.slice(0, 3).map((trait, idx) => (
+                                  <span key={idx} className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
+                                    {trait}
+                                  </span>
+                                ))}
+                                {selectedFriend.personalityTraits.length > 3 && (
+                                  <span className="text-xs text-gray-500">+{selectedFriend.personalityTraits.length - 3}</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Center Column - Animation */}
+                      <div className="flex flex-col items-center space-y-4">
+                        <h3 className="text-xl font-semibold text-gray-800 text-center">
+                          🎁 Creating Perfect Gifts
+                        </h3>
                         <GiftWrappingAnimation 
                           friendName={selectedFriend.name}
                           friendAvatar={selectedFriend.profilePicture}
                         />
                       </div>
-                    )}
-                    
-                    {generateRecommendationsMutation.isPending ? (
-                      <AIGenerationProgressBar 
-                        friendName={selectedFriend.name}
-                        onComplete={() => {}} // The mutation handles completion
-                      />
-                    ) : (
+
+                      {/* Right Column - Search Parameters */}
+                      <div className="bg-white rounded-xl p-6 shadow-sm border border-green-100">
+                        <h4 className="font-semibold text-gray-800 mb-4 text-center">⚙️ Search Settings</h4>
+                        
+                        <div className="space-y-4">
+                          <div className="text-center">
+                            <p className="text-sm text-gray-600 mb-1">Budget</p>
+                            <p className="font-bold text-green-600 text-2xl">
+                              {getFormattedBudget()}
+                            </p>
+                            <p className="text-xs text-gray-500">{currentCurrency}</p>
+                          </div>
+                          
+                          <div className="space-y-3 text-sm">
+                            <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                              <span className="text-gray-600">Category:</span>
+                              <span className="font-medium">{selectedFriend.category}</span>
+                            </div>
+                            
+                            {selectedFriend.country && (
+                              <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                                <span className="text-gray-600">Location:</span>
+                                <span className="font-medium">{selectedFriend.country}</span>
+                              </div>
+                            )}
+                            
+                            <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                              <span className="text-gray-600">Interests:</span>
+                              <span className="font-medium">{selectedFriend.interests.length}</span>
+                            </div>
+                            
+                            <div className="flex justify-between items-center py-2">
+                              <span className="text-gray-600">Traits:</span>
+                              <span className="font-medium">{selectedFriend.personalityTraits.length}</span>
+                            </div>
+                          </div>
+                          
+                          <div className="bg-green-50 rounded-lg p-3 text-center">
+                            <p className="text-xs text-green-700 font-medium">
+                              🤖 AI analyzing {selectedFriend.interests.length + selectedFriend.personalityTraits.length} data points
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Progress Bar */}
+                    <AIGenerationProgressBar 
+                      friendName={selectedFriend.name}
+                      onComplete={() => {}} // The mutation handles completion
+                    />
+
+                    {/* Cancel Button */}
+                    <div className="flex justify-center">
                       <button
-                        onClick={handleGenerateRecommendations}
-                        disabled={!selectedFriend || !budget}
-                        className="w-full py-3 md:py-4 rounded-lg text-base md:text-lg font-semibold transition-all duration-300 bg-blue-600 text-white hover:bg-blue-700 hover:shadow-lg transform hover:scale-[1.02]"
+                        onClick={() => {
+                          // Cancel the generation
+                          generateRecommendationsMutation.reset();
+                        }}
+                        className="px-6 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-all duration-200 border border-gray-300 hover:border-gray-400"
                       >
-                        🎁 Generate Gift Recommendations
+                        ❌ Cancel Search
                       </button>
-                    )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Generate Button */}
+                {selectedFriend && !generateRecommendationsMutation.isPending && (
+                  <div className="pt-2">
+                    <button
+                      onClick={handleGenerateRecommendations}
+                      disabled={!selectedFriend || !budget}
+                      className="w-full py-3 md:py-4 rounded-lg text-base md:text-lg font-semibold transition-all duration-300 bg-blue-600 text-white hover:bg-blue-700 hover:shadow-lg transform hover:scale-[1.02]"
+                    >
+                      🎁 Generate Gift Recommendations
+                    </button>
                   </div>
                 )}
 
                 {/* Help Text */}
-                {!selectedFriend && (
+                {!selectedFriend && !generateRecommendationsMutation.isPending && (
                   <div className="text-center py-6 md:py-8 text-gray-500">
                     <div className="text-3xl md:text-4xl mb-3 md:mb-4">👆</div>
                     <h3 className="text-base md:text-lg font-medium mb-2">Select a friend to get started</h3>
