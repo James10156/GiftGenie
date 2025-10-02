@@ -12,7 +12,7 @@ marked.setOptions({
 // Custom renderer for images
 const renderer = new marked.Renderer();
 renderer.image = function({ href, title, text }: { href: string; title: string | null; text: string }) {
-  return `<img src="${href}" alt="${text}" title="${title || ''}" style="max-width: 100%; height: auto; border-radius: 8px; margin: 20px 0; box-shadow: 0 4px 8px rgba(0,0,0,0.1);" />`;
+  return `<div style="text-align: center; margin: 20px 0;"><img src="${href}" alt="${text}" title="${title || ''}" style="max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); display: inline-block;" /></div>`;
 };
 
 marked.use({ renderer });
