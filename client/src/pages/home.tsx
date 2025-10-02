@@ -1879,7 +1879,10 @@ function Home() {
                   <div className="pt-2">
                     {generateRecommendationsMutation.isPending && (
                       <div className="mb-4 md:mb-6 flex justify-center">
-                        <GiftWrappingAnimation />
+                        <GiftWrappingAnimation 
+                          friendName={selectedFriend.name}
+                          friendAvatar={selectedFriend.profilePicture}
+                        />
                       </div>
                     )}
                     
