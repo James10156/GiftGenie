@@ -700,21 +700,95 @@ function Home() {
     },
   });
 
-  // Create test friend function
+  // Create test friend function - randomly selects a pop culture character
   const createTestFriend = async () => {
     try {
-      const testFriendData = {
-        name: "John Smith",
-        personalityTraits: ["Adventurous", "Creative", "Funny"],
-        interests: ["Photography", "Hiking", "Coffee", "Technology"],
-        category: "Friend",
-        notes: "My adventurous friend who loves exploring new places and trying the latest gadgets. Always up for a good coffee and deep conversation.",
-        profilePicture: "https://res.cloudinary.com/dwno2tfxm/image/upload/v1759404541/giftgenie/profile-gallery/realistic-michael.png",
-        gender: "Male",
-        ageRange: "25-35",
-        currency: "USD",
-        country: "United States"
-      };
+      // Pop culture demo characters
+      const demoCharacters = [
+        {
+          name: "Sherlock Holmes",
+          personalityTraits: ["Analytical", "Observant", "Logical"],
+          interests: ["Mystery solving", "Violin", "Chemistry"],
+          category: "Friend",
+          notes: "The world's greatest consulting detective, known for his keen deductive reasoning and attention to detail",
+          profilePicture: "https://res.cloudinary.com/dwno2tfxm/image/upload/v1759418318/giftgenie/demo-friends/sherlock-holmes.svg",
+          gender: "Male",
+          ageRange: "31-35",
+          currency: "GBP",
+          country: "United Kingdom",
+          theme: "elegant"
+        },
+        {
+          name: "Snow White",
+          personalityTraits: ["Kind", "Gentle", "Optimistic"],
+          interests: ["Nature", "Cooking", "Animals"],
+          category: "Friend",
+          notes: "Known for her pure heart and ability to befriend all woodland creatures. Loves baking and forest walks",
+          profilePicture: "https://res.cloudinary.com/dwno2tfxm/image/upload/v1759418320/giftgenie/demo-friends/snow-white.svg",
+          gender: "Female",
+          ageRange: "18-25",
+          currency: "EUR",
+          country: "Germany",
+          theme: "cherry-blossom"
+        },
+        {
+          name: "Tarzan",
+          personalityTraits: ["Adventurous", "Strong", "Protective"],
+          interests: ["Jungle exploration", "Wildlife", "Vine swinging"],
+          category: "Friend",
+          notes: "Lord of the jungle who communicates with animals and protects the forest. Incredibly athletic and brave",
+          profilePicture: "https://res.cloudinary.com/dwno2tfxm/image/upload/v1759418322/giftgenie/demo-friends/tarzan.svg",
+          gender: "Male",
+          ageRange: "26-30",
+          currency: "USD",
+          country: "United States",
+          theme: "jungle-vibes"
+        },
+        {
+          name: "Robin Hood",
+          personalityTraits: ["Heroic", "Generous", "Clever"],
+          interests: ["Archery", "Forest life", "Justice"],
+          category: "Friend",
+          notes: "The legendary outlaw who steals from the rich to help the poor. Master archer and leader of the Merry Men",
+          profilePicture: "https://res.cloudinary.com/dwno2tfxm/image/upload/v1759418324/giftgenie/demo-friends/robin-hood.svg",
+          gender: "Male",
+          ageRange: "26-30",
+          currency: "GBP",
+          country: "United Kingdom",
+          theme: "forest-green"
+        },
+        {
+          name: "Sleeping Beauty",
+          personalityTraits: ["Graceful", "Patient", "Dreamy"],
+          interests: ["Dancing", "Spinning", "Garden walks"],
+          category: "Friend",
+          notes: "Known as Aurora or Briar Rose, she has a gift for bringing beauty and peace wherever she goes",
+          profilePicture: "https://res.cloudinary.com/dwno2tfxm/image/upload/v1759418326/giftgenie/demo-friends/sleeping-beauty.svg",
+          gender: "Female",
+          ageRange: "18-25",
+          currency: "EUR",
+          country: "France",
+          theme: "rose-gold"
+        },
+        {
+          name: "Peter Pan",
+          personalityTraits: ["Playful", "Brave", "Mischievous"],
+          interests: ["Flying", "Adventure", "Storytelling"],
+          category: "Friend",
+          notes: "The boy who never grows up, leader of the Lost Boys in Neverland. Can fly and loves exciting adventures",
+          profilePicture: "https://res.cloudinary.com/dwno2tfxm/image/upload/v1759418329/giftgenie/demo-friends/peter-pan.svg",
+          gender: "Male",
+          ageRange: "18-25",
+          currency: "GBP",
+          country: "United Kingdom",
+          theme: "forest-green"
+        }
+      ];
+
+      // Randomly select a character
+      const randomCharacter = demoCharacters[Math.floor(Math.random() * demoCharacters.length)];
+      
+      const testFriendData = randomCharacter;
 
       const response = await fetch("/api/friends", {
         method: "POST",
