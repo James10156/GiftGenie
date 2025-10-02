@@ -2942,7 +2942,7 @@ function EmptyFriendsState({ onAddFriend, onAddTestFriend }: EmptyFriendsStatePr
           className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-3 rounded-lg font-medium transition-all duration-200 border border-gray-300"
         >
           <span className="flex items-center gap-2">
-            🧪 Try with "John Smith"
+            🧪 Try a Demo Friend
           </span>
         </button>
       </div>
