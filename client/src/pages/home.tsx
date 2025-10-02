@@ -1145,27 +1145,6 @@ function Home() {
               ) : (
                 // Carousel View
                 <div className="relative">
-                  {/* Carousel Navigation */}
-                  <div className="flex justify-center items-center mb-6 gap-4">
-                    <button
-                      onClick={() => filteredFriends.length > 0 && setCarouselIndex((carouselIndex - 1 + filteredFriends.length) % filteredFriends.length)}
-                      className="p-3 bg-blue-100 text-blue-600 hover:bg-blue-200 rounded-full transition-colors"
-                      disabled={filteredFriends.length === 0}
-                    >
-                      ←
-                    </button>
-                    <span className="text-sm text-gray-600 font-medium">
-                      {filteredFriends.length > 0 ? `${carouselIndex + 1} of ${filteredFriends.length}` : '0 of 0'}
-                    </span>
-                    <button
-                      onClick={() => filteredFriends.length > 0 && setCarouselIndex((carouselIndex + 1) % filteredFriends.length)}
-                      className="p-3 bg-blue-100 text-blue-600 hover:bg-blue-200 rounded-full transition-colors"
-                      disabled={filteredFriends.length === 0}
-                    >
-                      →
-                    </button>
-                  </div>
-
                   {/* Carousel Content - Responsive Three Card View */}
                   <div 
                     className={`relative overflow-hidden ${
@@ -1636,6 +1615,27 @@ function Home() {
                         }`}
                       />
                     ))}
+                  </div>
+
+                  {/* Carousel Navigation - Below Cards */}
+                  <div className="flex justify-center items-center mt-4 gap-4">
+                    <button
+                      onClick={() => filteredFriends.length > 0 && setCarouselIndex((carouselIndex - 1 + filteredFriends.length) % filteredFriends.length)}
+                      className="p-3 bg-blue-100 text-blue-600 hover:bg-blue-200 rounded-full transition-colors"
+                      disabled={filteredFriends.length === 0}
+                    >
+                      ←
+                    </button>
+                    <span className="text-sm text-gray-600 font-medium">
+                      {filteredFriends.length > 0 ? `${carouselIndex + 1} of ${filteredFriends.length}` : '0 of 0'}
+                    </span>
+                    <button
+                      onClick={() => filteredFriends.length > 0 && setCarouselIndex((carouselIndex + 1) % filteredFriends.length)}
+                      className="p-3 bg-blue-100 text-blue-600 hover:bg-blue-200 rounded-full transition-colors"
+                      disabled={filteredFriends.length === 0}
+                    >
+                      →
+                    </button>
                   </div>
                 </div>
               )}
@@ -2180,27 +2180,6 @@ function Home() {
                   ) : (
                     // Carousel View for Recommendations
                     <div className="relative">
-                      {/* Carousel Navigation */}
-                      <div className="flex justify-center items-center mb-6 gap-4">
-                        <button
-                          onClick={() => recommendations.length > 0 && setRecommendationsCarouselIndex((recommendationsCarouselIndex - 1 + recommendations.length) % recommendations.length)}
-                          className="p-3 bg-blue-100 text-blue-600 hover:bg-blue-200 rounded-full transition-colors"
-                          disabled={recommendations.length === 0}
-                        >
-                          ←
-                        </button>
-                        <span className="text-sm text-gray-600 font-medium">
-                          {recommendations.length > 0 ? `${recommendationsCarouselIndex + 1} of ${recommendations.length}` : '0 of 0'}
-                        </span>
-                        <button
-                          onClick={() => recommendations.length > 0 && setRecommendationsCarouselIndex((recommendationsCarouselIndex + 1) % recommendations.length)}
-                          className="p-3 bg-blue-100 text-blue-600 hover:bg-blue-200 rounded-full transition-colors"
-                          disabled={recommendations.length === 0}
-                        >
-                          →
-                        </button>
-                      </div>
-
                       {/* Carousel Content */}
                       <div 
                         className={`relative overflow-hidden ${
@@ -2395,6 +2374,27 @@ function Home() {
                             }`}
                           />
                         ))}
+                      </div>
+
+                      {/* Carousel Navigation - Below Cards */}
+                      <div className="flex justify-center items-center mt-4 gap-4">
+                        <button
+                          onClick={() => recommendations.length > 0 && setRecommendationsCarouselIndex((recommendationsCarouselIndex - 1 + recommendations.length) % recommendations.length)}
+                          className="p-3 bg-blue-100 text-blue-600 hover:bg-blue-200 rounded-full transition-colors"
+                          disabled={recommendations.length === 0}
+                        >
+                          ←
+                        </button>
+                        <span className="text-sm text-gray-600 font-medium">
+                          {recommendations.length > 0 ? `${recommendationsCarouselIndex + 1} of ${recommendations.length}` : '0 of 0'}
+                        </span>
+                        <button
+                          onClick={() => recommendations.length > 0 && setRecommendationsCarouselIndex((recommendationsCarouselIndex + 1) % recommendations.length)}
+                          className="p-3 bg-blue-100 text-blue-600 hover:bg-blue-200 rounded-full transition-colors"
+                          disabled={recommendations.length === 0}
+                        >
+                          →
+                        </button>
                       </div>
                     </div>
                   )}
