@@ -2281,8 +2281,44 @@ function Home() {
                             </div>
                           </div>
                         ) : (
-                          /* Desktop Carousel */
-                          <div className="flex justify-center">
+                          /* Desktop Carousel with Previews */
+                          <div className="flex justify-center items-center px-4 py-8 gap-4">
+                            {/* Previous Gift (Preview) */}
+                            {recommendations.length > 1 && (
+                              <div 
+                                className="flex-shrink-0 w-48 transform scale-75 opacity-60 cursor-pointer transition-all duration-300 hover:scale-80 hover:opacity-80"
+                                onClick={() => recommendations.length > 0 && setRecommendationsCarouselIndex((recommendationsCarouselIndex - 1 + recommendations.length) % recommendations.length)}
+                              >
+                                {(() => {
+                                  const prevIndex = (recommendationsCarouselIndex - 1 + recommendations.length) % recommendations.length;
+                                  const prevGift = recommendations[prevIndex];
+                                  if (!prevGift) return null;
+                                  return (
+                                    <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-md">
+                                      <div className="text-center">
+                                        {prevGift.image ? (
+                                          <div className="w-16 h-16 mx-auto rounded-lg mb-3 overflow-hidden">
+                                            <img
+                                              src={prevGift.image}
+                                              alt={prevGift.name}
+                                              className="w-full h-full object-cover"
+                                            />
+                                          </div>
+                                        ) : (
+                                          <div className="w-16 h-16 bg-gray-200 rounded-lg mx-auto flex items-center justify-center text-2xl mb-3">
+                                            🎁
+                                          </div>
+                                        )}
+                                        <h4 className="font-semibold text-gray-900 mb-1 text-sm line-clamp-2">{prevGift.name}</h4>
+                                        <p className="text-xs text-green-600 font-semibold">{prevGift.price}</p>
+                                      </div>
+                                    </div>
+                                  );
+                                })()}
+                              </div>
+                            )}
+
+                            {/* Main Gift Card */}
                             <div className="w-96">
                               {(() => {
                                 const gift = recommendations[recommendationsCarouselIndex];
@@ -2336,6 +2372,41 @@ function Home() {
                                 );
                               })()}
                             </div>
+
+                            {/* Next Gift (Preview) */}
+                            {recommendations.length > 1 && (
+                              <div 
+                                className="flex-shrink-0 w-48 transform scale-75 opacity-60 cursor-pointer transition-all duration-300 hover:scale-80 hover:opacity-80"
+                                onClick={() => recommendations.length > 0 && setRecommendationsCarouselIndex((recommendationsCarouselIndex + 1) % recommendations.length)}
+                              >
+                                {(() => {
+                                  const nextIndex = (recommendationsCarouselIndex + 1) % recommendations.length;
+                                  const nextGift = recommendations[nextIndex];
+                                  if (!nextGift) return null;
+                                  return (
+                                    <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-md">
+                                      <div className="text-center">
+                                        {nextGift.image ? (
+                                          <div className="w-16 h-16 mx-auto rounded-lg mb-3 overflow-hidden">
+                                            <img
+                                              src={nextGift.image}
+                                              alt={nextGift.name}
+                                              className="w-full h-full object-cover"
+                                            />
+                                          </div>
+                                        ) : (
+                                          <div className="w-16 h-16 bg-gray-200 rounded-lg mx-auto flex items-center justify-center text-2xl mb-3">
+                                            🎁
+                                          </div>
+                                        )}
+                                        <h4 className="font-semibold text-gray-900 mb-1 text-sm line-clamp-2">{nextGift.name}</h4>
+                                        <p className="text-xs text-green-600 font-semibold">{nextGift.price}</p>
+                                      </div>
+                                    </div>
+                                  );
+                                })()}
+                              </div>
+                            )}
                           </div>
                         )}
 

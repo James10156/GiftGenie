@@ -1092,65 +1092,134 @@ export function FriendForm({ friend, onClose }: FriendFormProps) {
         </div>
 
         {/* Footer */}
-        <div className="border-t border-gray-200 px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={prevStep}
-              disabled={currentStep === 1}
-              className="px-4 py-2 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Previous
-            </button>
-            <button
-              onClick={onClose}
-              className="px-4 py-2 text-gray-600 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100"
-              type="button"
-            >
-              Cancel
-            </button>
+        <div className="border-t border-gray-200 px-6 py-4">
+          {/* Mobile Layout - Stack buttons vertically */}
+          <div className="block md:hidden space-y-3">
+            {/* Top row - Navigation buttons */}
+            <div className="flex items-center justify-between gap-2">
+              <button
+                onClick={prevStep}
+                disabled={currentStep === 1}
+                className="flex-1 px-3 py-2 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+              >
+                Previous
+              </button>
+              {currentStep < 5 && (
+                <button
+                  onClick={nextStep}
+                  disabled={!canProceed()}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                  title={
+                    currentStep === 3 && formData.personalityTraits.length === 0 
+                      ? "Please select at least one personality trait"
+                      : currentStep === 4 && formData.interests.length === 0
+                      ? "Please select at least one interest"
+                      : "Continue to next step"
+                  }
+                >
+                  Next
+                </button>
+              )}
+            </div>
+            
+            {/* Bottom row - Action buttons */}
+            <div className="flex gap-2">
+              <button
+                onClick={onClose}
+                className="flex-1 px-3 py-2 text-gray-600 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 text-sm"
+                type="button"
+              >
+                Cancel
+              </button>
+              {/* Save button only available when editing existing friends */}
+              {friend && (
+                <button
+                  onClick={handleSubmit}
+                  disabled={createFriendMutation.isPending || updateFriendMutation.isPending || !isFormValid()}
+                  className="flex-1 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                  title={!isFormValid() ? "Name, personality traits, and interests are required" : "Save friend data"}
+                >
+                  {updateFriendMutation.isPending
+                    ? 'Saving...'
+                    : 'Save Changes'
+                  }
+                </button>
+              )}
+              {/* Final save button on last step for new friends */}
+              {currentStep === 5 && !friend && (
+                <button
+                  onClick={handleSubmit}
+                  disabled={createFriendMutation.isPending || !isFormValid()}
+                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 text-sm"
+                  title={!isFormValid() ? "Name, personality traits, and interests are required" : "Save friend"}
+                >
+                  {createFriendMutation.isPending ? 'Saving...' : 'Save Friend'}
+                </button>
+              )}
+            </div>
           </div>
-          <div className="flex space-x-2">
-            {/* Save button only available when editing existing friends */}
-            {friend && (
+
+          {/* Desktop Layout - Original horizontal layout */}
+          <div className="hidden md:flex items-center justify-between">
+            <div className="flex items-center gap-2">
               <button
-                onClick={handleSubmit}
-                disabled={createFriendMutation.isPending || updateFriendMutation.isPending || !isFormValid()}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                title={!isFormValid() ? "Name, personality traits, and interests are required" : "Save friend data"}
+                onClick={prevStep}
+                disabled={currentStep === 1}
+                className="px-4 py-2 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {updateFriendMutation.isPending
-                  ? 'Saving...'
-                  : 'Save Changes'
-                }
+                Previous
               </button>
-            )}
-            {currentStep < 5 && (
               <button
-                onClick={nextStep}
-                disabled={!canProceed()}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                title={
-                  currentStep === 3 && formData.personalityTraits.length === 0 
-                    ? "Please select at least one personality trait"
-                    : currentStep === 4 && formData.interests.length === 0
-                    ? "Please select at least one interest"
-                    : "Continue to next step"
-                }
+                onClick={onClose}
+                className="px-4 py-2 text-gray-600 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100"
+                type="button"
               >
-                Next
+                Cancel
               </button>
-            )}
-            {/* Final save button on last step for new friends */}
-            {currentStep === 5 && !friend && (
-              <button
-                onClick={handleSubmit}
-                disabled={createFriendMutation.isPending || !isFormValid()}
-                className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
-                title={!isFormValid() ? "Name, personality traits, and interests are required" : "Save friend"}
-              >
-                {createFriendMutation.isPending ? 'Saving...' : 'Save Friend'}
-              </button>
-            )}
+            </div>
+            <div className="flex space-x-2">
+              {/* Save button only available when editing existing friends */}
+              {friend && (
+                <button
+                  onClick={handleSubmit}
+                  disabled={createFriendMutation.isPending || updateFriendMutation.isPending || !isFormValid()}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title={!isFormValid() ? "Name, personality traits, and interests are required" : "Save friend data"}
+                >
+                  {updateFriendMutation.isPending
+                    ? 'Saving...'
+                    : 'Save Changes'
+                  }
+                </button>
+              )}
+              {currentStep < 5 && (
+                <button
+                  onClick={nextStep}
+                  disabled={!canProceed()}
+                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title={
+                    currentStep === 3 && formData.personalityTraits.length === 0 
+                      ? "Please select at least one personality trait"
+                      : currentStep === 4 && formData.interests.length === 0
+                      ? "Please select at least one interest"
+                      : "Continue to next step"
+                  }
+                >
+                  Next
+                </button>
+              )}
+              {/* Final save button on last step for new friends */}
+              {currentStep === 5 && !friend && (
+                <button
+                  onClick={handleSubmit}
+                  disabled={createFriendMutation.isPending || !isFormValid()}
+                  className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+                  title={!isFormValid() ? "Name, personality traits, and interests are required" : "Save friend"}
+                >
+                  {createFriendMutation.isPending ? 'Saving...' : 'Save Friend'}
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
