@@ -165,6 +165,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get random demo friend from admin account
+  app.get("/api/friends/demo/random", async (req: AuthenticatedRequest, res) => {
+    try {
+      const ADMIN_USER_ID = "bd7e40b3-e207-439e-9575-f25774dbf6d5";
+      const adminFriends = await storageAdapter.getAllFriends(ADMIN_USER_ID);
+      
+      // Filter for demo characters by name
+      const demoNames = ["Sherlock Holmes", "Snow White", "Tarzan", "Robin Hood", "Sleeping Beauty", "Peter Pan"];
+      const demoFriends = adminFriends.filter(friend => 
+        demoNames.includes(friend.name)
+      );
+      
+      if (demoFriends.length === 0) {
+        return res.status(404).json({ message: "No demo friends found" });
+      }
+      
+      // Return random demo friend
+      const randomDemo = demoFriends[Math.floor(Math.random() * demoFriends.length)];
+      res.json(randomDemo);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch demo friend" });
+    }
+  });
+
   app.get("/api/friends/:id", async (req: AuthenticatedRequest, res) => {
     try {
       const friend = await storageAdapter.getFriend(req.params.id, req.user?.id);

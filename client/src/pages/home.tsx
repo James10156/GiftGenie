@@ -700,97 +700,34 @@ function Home() {
     },
   });
 
-  // Create test friend function - randomly selects a pop culture character
+  // Create test friend function - fetches a random demo friend from admin account
   const createTestFriend = async () => {
     try {
-      // Pop culture demo characters
-      const demoCharacters = [
-        {
-          name: "Sherlock Holmes",
-          personalityTraits: ["Analytical", "Observant", "Logical"],
-          interests: ["Mystery solving", "Violin", "Chemistry"],
-          category: "Friend",
-          notes: "The world's greatest consulting detective, known for his keen deductive reasoning and attention to detail",
-          profilePicture: "https://res.cloudinary.com/dwno2tfxm/image/upload/v1759418318/giftgenie/demo-friends/sherlock-holmes.svg",
-          gender: "Male",
-          ageRange: "31-35",
-          currency: "GBP",
-          country: "United Kingdom",
-          theme: "elegant"
-        },
-        {
-          name: "Snow White",
-          personalityTraits: ["Kind", "Gentle", "Optimistic"],
-          interests: ["Nature", "Cooking", "Animals"],
-          category: "Friend",
-          notes: "Known for her pure heart and ability to befriend all woodland creatures. Loves baking and forest walks",
-          profilePicture: "https://res.cloudinary.com/dwno2tfxm/image/upload/v1759418320/giftgenie/demo-friends/snow-white.svg",
-          gender: "Female",
-          ageRange: "18-25",
-          currency: "EUR",
-          country: "Germany",
-          theme: "cherry-blossom"
-        },
-        {
-          name: "Tarzan",
-          personalityTraits: ["Adventurous", "Strong", "Protective"],
-          interests: ["Jungle exploration", "Wildlife", "Vine swinging"],
-          category: "Friend",
-          notes: "Lord of the jungle who communicates with animals and protects the forest. Incredibly athletic and brave",
-          profilePicture: "https://res.cloudinary.com/dwno2tfxm/image/upload/v1759418322/giftgenie/demo-friends/tarzan.svg",
-          gender: "Male",
-          ageRange: "26-30",
-          currency: "USD",
-          country: "United States",
-          theme: "jungle-vibes"
-        },
-        {
-          name: "Robin Hood",
-          personalityTraits: ["Heroic", "Generous", "Clever"],
-          interests: ["Archery", "Forest life", "Justice"],
-          category: "Friend",
-          notes: "The legendary outlaw who steals from the rich to help the poor. Master archer and leader of the Merry Men",
-          profilePicture: "https://res.cloudinary.com/dwno2tfxm/image/upload/v1759418324/giftgenie/demo-friends/robin-hood.svg",
-          gender: "Male",
-          ageRange: "26-30",
-          currency: "GBP",
-          country: "United Kingdom",
-          theme: "forest-green"
-        },
-        {
-          name: "Sleeping Beauty",
-          personalityTraits: ["Graceful", "Patient", "Dreamy"],
-          interests: ["Dancing", "Spinning", "Garden walks"],
-          category: "Friend",
-          notes: "Known as Aurora or Briar Rose, she has a gift for bringing beauty and peace wherever she goes",
-          profilePicture: "https://res.cloudinary.com/dwno2tfxm/image/upload/v1759418326/giftgenie/demo-friends/sleeping-beauty.svg",
-          gender: "Female",
-          ageRange: "18-25",
-          currency: "EUR",
-          country: "France",
-          theme: "rose-gold"
-        },
-        {
-          name: "Peter Pan",
-          personalityTraits: ["Playful", "Brave", "Mischievous"],
-          interests: ["Flying", "Adventure", "Storytelling"],
-          category: "Friend",
-          notes: "The boy who never grows up, leader of the Lost Boys in Neverland. Can fly and loves exciting adventures",
-          profilePicture: "https://res.cloudinary.com/dwno2tfxm/image/upload/v1759418329/giftgenie/demo-friends/peter-pan.svg",
-          gender: "Male",
-          ageRange: "18-25",
-          currency: "GBP",
-          country: "United Kingdom",
-          theme: "forest-green"
-        }
-      ];
-
-      // Randomly select a character
-      const randomCharacter = demoCharacters[Math.floor(Math.random() * demoCharacters.length)];
+      // Fetch a random demo friend from the admin account
+      const response = await fetch("/api/friends/demo/random");
       
-      const testFriendData = randomCharacter;
+      if (!response.ok) {
+        throw new Error("Failed to fetch demo friend");
+      }
+      
+      const demoFriend = await response.json();
+      
+      // Create a copy of the demo friend for the current user
+      const testFriendData = {
+        name: demoFriend.name,
+        personalityTraits: demoFriend.personalityTraits,
+        interests: demoFriend.interests,
+        category: demoFriend.category,
+        notes: demoFriend.notes,
+        profilePicture: demoFriend.profilePicture,
+        gender: demoFriend.gender,
+        ageRange: demoFriend.ageRange,
+        currency: demoFriend.currency,
+        country: demoFriend.country,
+        theme: demoFriend.theme
+      };
 
-      const response = await fetch("/api/friends", {
+      const createResponse = await fetch("/api/friends", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -798,7 +735,7 @@ function Home() {
         body: JSON.stringify(testFriendData),
       });
 
-      if (!response.ok) {
+      if (!createResponse.ok) {
         throw new Error("Failed to create test friend");
       }
 
