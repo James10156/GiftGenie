@@ -117,3 +117,4 @@ tests/
 archive/
 client/tests/
 server/tests/
+.vercel
