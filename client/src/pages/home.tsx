@@ -2811,21 +2811,21 @@ function EmptyFriendsState({ onAddFriend, onAddTestFriend }: EmptyFriendsStatePr
       name: "Sarah Johnson",
       profilePicture: "https://res.cloudinary.com/dwno2tfxm/image/upload/v1759404539/giftgenie/profile-gallery/realistic-sarah.png",
       interests: ["Yoga", "Reading", "Coffee"],
-      personalityTraits: ["Thoughtful", "Creative", "Calm"],
+      personalityTraits: ["Thoughtful", "Creative"],
       category: "Friend"
     },
     {
       name: "Alex Chen",
       profilePicture: "https://res.cloudinary.com/dwno2tfxm/image/upload/v1759404526/giftgenie/profile-gallery/cartoon-luna.png",
       interests: ["Gaming", "Anime", "Technology"],
-      personalityTraits: ["Enthusiastic", "Tech-savvy", "Loyal"],
+      personalityTraits: ["Enthusiastic", "Tech-savvy"],
       category: "Friend"
     },
     {
       name: "Emma Wilson",
       profilePicture: "https://res.cloudinary.com/dwno2tfxm/image/upload/v1759404544/giftgenie/profile-gallery/realistic-emma.png",
       interests: ["Photography", "Travel", "Art"],
-      personalityTraits: ["Adventurous", "Artistic", "Outgoing"],
+      personalityTraits: ["Adventurous", "Artistic"],
       category: "Friend"
     }
   ];
@@ -2834,123 +2834,104 @@ function EmptyFriendsState({ onAddFriend, onAddTestFriend }: EmptyFriendsStatePr
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % exampleFriends.length);
-    }, 3000);
+    }, 4000);
     return () => clearInterval(interval);
   }, [exampleFriends.length]);
 
   return (
-    <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+    <div className="flex flex-col items-center justify-center py-16 px-6 text-center max-w-4xl mx-auto">
       {/* Hero Message */}
-      <div className="mb-8">
-        <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-4">
+      <div className="mb-12">
+        <h2 className="text-4xl md:text-5xl font-bold text-gray-800 mb-6">
           🎁 Get gifts for your friends today
         </h2>
-        <p className="text-lg text-gray-600 max-w-2xl">
-          Create profiles for your friends and family, then get personalized gift recommendations 
-          powered by AI. Never run out of gift ideas again!
+        <p className="text-xl text-gray-600 max-w-2xl leading-relaxed mx-auto">
+          Create profiles for your friends and get personalized gift recommendations powered by AI
         </p>
       </div>
 
-      {/* Friend Card Slideshow */}
-      <div className="mb-8 w-full max-w-md">
-        <h3 className="text-xl font-semibold text-gray-700 mb-4">
-          See what friend profiles look like:
-        </h3>
-        
-        <div className="relative bg-white border rounded-lg p-4 shadow-lg mx-auto">
-          {/* Slideshow indicator */}
-          <div className="absolute top-2 right-2 bg-blue-100 text-blue-600 px-2 py-1 rounded-full text-xs font-medium">
-            {currentSlide + 1} of {exampleFriends.length}
+      {/* Simplified Friend Card Preview */}
+      <div className="mb-12 w-full max-w-sm">
+        <div className="relative bg-white border rounded-xl p-6 shadow-sm mx-auto transition-all duration-500">
+          {/* Slide indicator - simplified */}
+          <div className="absolute top-4 right-4 text-gray-400 text-sm">
+            {currentSlide + 1} / {exampleFriends.length}
           </div>
           
-          {/* Friend card preview */}
-          <div className="flex items-start space-x-3">
+          {/* Clean friend card */}
+          <div className="text-center">
             <img
               src={exampleFriends[currentSlide].profilePicture}
               alt={exampleFriends[currentSlide].name}
-              className="w-12 h-12 rounded-full object-cover flex-shrink-0"
+              className="w-16 h-16 rounded-full object-cover mx-auto mb-4"
             />
-            <div className="flex-1 text-left">
-              <div className="flex items-center justify-between mb-1">
-                <h4 className="font-semibold text-gray-800">
-                  {exampleFriends[currentSlide].name}
-                </h4>
-                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
-                  {exampleFriends[currentSlide].category}
+            <h4 className="font-semibold text-gray-800 text-lg mb-3">
+              {exampleFriends[currentSlide].name}
+            </h4>
+            
+            {/* Simplified interests */}
+            <div className="mb-4">
+              <div className="flex flex-wrap justify-center gap-2">
+                {exampleFriends[currentSlide].interests.map((interest, idx) => (
+                  <span key={idx} className="text-sm bg-blue-50 text-blue-600 px-3 py-1 rounded-full">
+                    {interest}
+                  </span>
+                ))}
+              </div>
+            </div>
+            
+            {/* Simplified personality */}
+            <div className="flex flex-wrap justify-center gap-2">
+              {exampleFriends[currentSlide].personalityTraits.map((trait, idx) => (
+                <span key={idx} className="text-sm bg-green-50 text-green-600 px-3 py-1 rounded-full">
+                  {trait}
                 </span>
-              </div>
-              
-              <div className="mb-2">
-                <p className="text-xs text-gray-600 mb-1">Interests:</p>
-                <div className="flex flex-wrap gap-1">
-                  {exampleFriends[currentSlide].interests.slice(0, 3).map((interest, idx) => (
-                    <span key={idx} className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded">
-                      {interest}
-                    </span>
-                  ))}
-                </div>
-              </div>
-              
-              <div>
-                <p className="text-xs text-gray-600 mb-1">Personality:</p>
-                <div className="flex flex-wrap gap-1">
-                  {exampleFriends[currentSlide].personalityTraits.slice(0, 2).map((trait, idx) => (
-                    <span key={idx} className="text-xs bg-green-100 text-green-600 px-2 py-0.5 rounded">
-                      {trait}
-                    </span>
-                  ))}
-                </div>
-              </div>
+              ))}
             </div>
           </div>
         </div>
         
-        {/* Slide dots */}
-        <div className="flex justify-center space-x-2 mt-3">
+        {/* Minimal slide dots */}
+        <div className="flex justify-center space-x-2 mt-6">
           {exampleFriends.map((_, idx) => (
             <button
               key={idx}
               onClick={() => setCurrentSlide(idx)}
-              className={`w-2 h-2 rounded-full transition-colors ${
-                idx === currentSlide ? 'bg-blue-500' : 'bg-gray-300'
+              className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                idx === currentSlide ? 'bg-blue-500 w-6' : 'bg-gray-300'
               }`}
             />
           ))}
         </div>
       </div>
 
-      {/* Action buttons */}
-      <div className="flex flex-col sm:flex-row gap-4 items-center">
+      {/* Clean action buttons */}
+      <div className="flex flex-col sm:flex-row gap-4 items-center mb-8">
         <button
           onClick={onAddFriend}
-          className="group relative bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+          className="group relative bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
         >
-          <span className="flex items-center gap-2">
-            👤 Add Your First Friend
-          </span>
+          Add Your First Friend
           
           {/* Floating hint */}
-          <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="absolute -top-10 left-1/2 transform -translate-x-1/2 bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200">
             Click here to get started! ✨
           </div>
         </button>
         
-        <div className="text-gray-400 hidden sm:block">or</div>
+        <span className="text-gray-400 hidden sm:block">or</span>
         
         <button
           onClick={onAddTestFriend}
-          className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-3 rounded-lg font-medium transition-all duration-200 border border-gray-300"
+          className="text-blue-600 hover:text-blue-700 px-6 py-4 rounded-xl font-medium transition-all duration-200 hover:bg-blue-50"
         >
-          <span className="flex items-center gap-2">
-            🧪 Try a Demo Friend
-          </span>
+          Try a Demo Friend
         </button>
       </div>
       
-      {/* Additional help text */}
-      <p className="text-sm text-gray-500 mt-6 max-w-lg">
-        💡 Tip: The more details you add about your friends' interests and personality, 
-        the better our AI can suggest perfect gifts for them!
+      {/* Simplified help text */}
+      <p className="text-gray-500 max-w-md leading-relaxed">
+        Add details about your friends' interests and personality for better gift recommendations
       </p>
     </div>
   );
