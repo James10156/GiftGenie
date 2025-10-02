@@ -1194,7 +1194,7 @@ function Home() {
                       {/* Interests and Personality - Click to expand on mobile, hover on desktop */}
                       <div className={`transition-all duration-300 overflow-hidden ${
                         (!isMobile && hoveredFriend === friend.id) || (isMobile && expandedMobileFriend === friend.id)
-                          ? `${isMobile ? 'max-h-96' : 'max-h-40'} opacity-100 mb-3`
+                          ? `${isMobile ? 'max-h-96' : 'max-h-60'} opacity-100 mb-3`
                           : 'max-h-0 opacity-0 mb-0'
                       }`}>
                         {/* Basic Info - Mobile only */}
@@ -1266,13 +1266,11 @@ function Home() {
                         {/* Notes Section (if exists) */}
                         {friend.notes && (
                           <div className={`${isMobile ? 'mb-3' : 'mb-4'}`}>
-                            <h4 className={`font-semibold text-gray-800 mb-2 ${
-                              isMobile ? 'text-base' : 'text-lg'
-                            }`}>📝 Notes</h4>
-                            <p className={`text-gray-600 bg-gray-50 p-3 rounded-lg italic ${
-                              isMobile ? 'text-sm' : 'text-base'
-                            }`}>
-                              "{friend.notes.length > 100 ? friend.notes.substring(0, 100) + '...' : friend.notes}"
+                            <h4 className={`font-semibold ${theme.text} mb-1 text-xs flex items-center gap-1`}>
+                              📝 Notes
+                            </h4>
+                            <p className={`${theme.textSecondary} bg-gray-50 p-2 rounded-lg italic text-xs leading-tight`}>
+                              "{friend.notes.length > 150 ? friend.notes.substring(0, 150) + '...' : friend.notes}"
                             </p>
                           </div>
                         )}
