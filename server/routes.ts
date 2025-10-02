@@ -181,11 +181,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "No demo friends found" });
       }
       
-      // Return random demo friend
-      const randomDemo = demoFriends[Math.floor(Math.random() * demoFriends.length)];
-      res.json(randomDemo);
+      // Get the count parameter (default to 1 for backward compatibility)
+      const count = parseInt(req.query.count as string) || 1;
+      const maxCount = Math.min(count, demoFriends.length);
+      
+      // Shuffle and select random demo friends
+      const shuffled = [...demoFriends].sort(() => Math.random() - 0.5);
+      const selectedFriends = shuffled.slice(0, maxCount);
+      
+      // Return single friend or array based on count
+      if (count === 1) {
+        res.json(selectedFriends[0]);
+      } else {
+        res.json(selectedFriends);
+      }
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch demo friend" });
+    }
+  });
+
+  // Get multiple random demo friends from admin account
+  app.get("/api/friends/demo/random/:count", async (req: AuthenticatedRequest, res) => {
+    try {
+      const count = parseInt(req.params.count) || 3;
+      const maxCount = Math.min(count, 6); // Limit to max 6 (all available demo friends)
+      
+      const ADMIN_USER_ID = "bd7e40b3-e207-439e-9575-f25774dbf6d5";
+      const adminFriends = await storageAdapter.getAllFriends(ADMIN_USER_ID);
+      
+      // Filter for demo characters by name
+      const demoNames = ["Sherlock Holmes", "Snow White", "Tarzan", "Robin Hood", "Sleeping Beauty", "Peter Pan"];
+      const demoFriends = adminFriends.filter(friend => 
+        demoNames.includes(friend.name)
+      );
+      
+      if (demoFriends.length === 0) {
+        return res.status(404).json({ message: "No demo friends found" });
+      }
+      
+      // Shuffle and return the requested number of demo friends
+      const shuffled = [...demoFriends].sort(() => 0.5 - Math.random());
+      const selectedFriends = shuffled.slice(0, maxCount);
+      
+      res.json(selectedFriends);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch demo friends" });
     }
   });
 

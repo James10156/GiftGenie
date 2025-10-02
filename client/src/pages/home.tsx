@@ -705,49 +705,56 @@ function Home() {
     },
   });
 
-  // Create test friend function - fetches a random demo friend from admin account
+  // Create test friend function - fetches 3 random demo friends from admin account
   const createTestFriend = async () => {
     try {
-      // Fetch a random demo friend from the admin account
-      const response = await fetch("/api/friends/demo/random");
+      // Fetch 3 random demo friends from the admin account
+      const response = await fetch("/api/friends/demo/random?count=3");
       
       if (!response.ok) {
-        throw new Error("Failed to fetch demo friend");
+        throw new Error("Failed to fetch demo friends");
       }
       
-      const demoFriend = await response.json();
+      const demoFriends = await response.json();
       
-      // Create a copy of the demo friend for the current user
-      const testFriendData = {
-        name: demoFriend.name,
-        personalityTraits: demoFriend.personalityTraits,
-        interests: demoFriend.interests,
-        category: demoFriend.category,
-        notes: demoFriend.notes,
-        profilePicture: demoFriend.profilePicture,
-        gender: demoFriend.gender,
-        ageRange: demoFriend.ageRange,
-        currency: demoFriend.currency,
-        country: demoFriend.country,
-        theme: demoFriend.theme
-      };
+      // Create all 3 demo friends for the current user
+      const createdFriends = [];
+      
+      for (const demoFriend of demoFriends) {
+        const testFriendData = {
+          name: demoFriend.name,
+          personalityTraits: demoFriend.personalityTraits,
+          interests: demoFriend.interests,
+          category: demoFriend.category,
+          notes: demoFriend.notes,
+          profilePicture: demoFriend.profilePicture,
+          gender: demoFriend.gender,
+          ageRange: demoFriend.ageRange,
+          currency: demoFriend.currency,
+          country: demoFriend.country,
+          theme: demoFriend.theme
+        };
 
-      const createResponse = await fetch("/api/friends", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(testFriendData),
-      });
+        const createResponse = await fetch("/api/friends", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(testFriendData),
+        });
 
-      if (!createResponse.ok) {
-        throw new Error("Failed to create test friend");
+        if (createResponse.ok) {
+          const createdFriend = await createResponse.json();
+          createdFriends.push(createdFriend);
+        }
       }
+
+      console.log(`Successfully created ${createdFriends.length} demo friends`);
 
       // Refresh the friends list
       queryClient.invalidateQueries({ queryKey: ["friends"] });
     } catch (error) {
-      console.error("Error creating test friend:", error);
+      console.error("Error creating demo friends:", error);
     }
   };
 
