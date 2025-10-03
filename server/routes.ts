@@ -153,9 +153,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.set('Pragma', 'no-cache');
       res.set('Expires', '0');
       
+      console.log('DEBUG: /api/friends called');
+      console.log('DEBUG: req.user:', req.user);
+      console.log('DEBUG: req.user?.id:', req.user?.id);
+      
       const friends = await storageAdapter.getAllFriends(req.user?.id);
+      console.log('DEBUG: friends returned:', friends.length, 'friends');
+      
       res.json(friends);
     } catch (error) {
+      console.error('DEBUG: Error in /api/friends:', error);
       res.status(500).json({ message: "Failed to fetch friends" });
     }
   });
