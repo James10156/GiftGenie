@@ -1,8 +1,11 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import session from "express-session";
+import connectPgSimple from "connect-pg-simple";
 import bcrypt from "bcryptjs";
 import { storageAdapter } from "./storage-adapter";
 import { registerUserSchema } from "@shared/schema";
+
+const PgSession = connectPgSimple(session);
 
 // Extend Express Request to include user session
 declare module "express-session" {
@@ -23,8 +26,17 @@ export interface AuthenticatedRequest extends Request {
 }
 
 export function setupAuth(app: Express) {
-  // Session middleware
+  // Session middleware with PostgreSQL store for production
+  const sessionStore = process.env.NODE_ENV === 'production' && process.env.DATABASE_URL
+    ? new PgSession({
+        conString: process.env.DATABASE_URL,
+        tableName: 'session', // Use lowercase for PostgreSQL
+        createTableIfMissing: true,
+      })
+    : undefined; // Use MemoryStore for development
+
   app.use(session({
+    store: sessionStore,
     secret: process.env.SESSION_SECRET || 'gift-genie-session-secret-change-in-production',
     resave: false,
     saveUninitialized: false,
