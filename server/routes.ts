@@ -148,6 +148,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Friends endpoints
   app.get("/api/friends", async (req: AuthenticatedRequest, res) => {
     try {
+      // Prevent caching of friends data
+      res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.set('Pragma', 'no-cache');
+      res.set('Expires', '0');
+      
       const friends = await storageAdapter.getAllFriends(req.user?.id);
       res.json(friends);
     } catch (error) {
