@@ -35,6 +35,9 @@ export function setupAuth(app: Express) {
       })
     : undefined; // Use MemoryStore for development
 
+  console.log('DEBUG: NODE_ENV:', process.env.NODE_ENV);
+  console.log('DEBUG: Using session store:', sessionStore ? 'PostgreSQL' : 'MemoryStore');
+
   app.use(session({
     store: sessionStore,
     secret: process.env.SESSION_SECRET || 'gift-genie-session-secret-change-in-production',
@@ -160,6 +163,9 @@ export function setupAuthRoutes(app: Express) {
       req.session.userId = user.id;
       req.session.username = user.username;
       req.session.isAdmin = user.isAdmin || false;
+
+      console.log('DEBUG: Login successful, setting session for user:', user.id);
+      console.log('DEBUG: Session after login:', req.session);
 
       res.json({ 
         id: user.id, 
