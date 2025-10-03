@@ -1,14 +1,4 @@
-import type { Express, Request, Response  app.use(session({
-    store: sessionStore,
-    secret: process.env.SESSION_SECRET || 'gift-genie-session-secret-change-in-production',
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      secure: false, // Temporarily disable for Railway debugging
-      httpOnly: true,
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    }
-  }));ion } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import bcrypt from "bcryptjs";
